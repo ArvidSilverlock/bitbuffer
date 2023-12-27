@@ -1,0 +1,12 @@
+{
+	"name": "bitbuffer",
+	"tree": {
+		"$className": "DataModel",
+
+		"ReplicatedStorage": {
+			"bitbuffer": {
+				"$path": "src"
+			}
+		}
+	}
+}
