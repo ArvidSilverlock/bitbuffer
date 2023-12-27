@@ -5,7 +5,7 @@ Only truly supports `UInts`, and I only plan to support `UInts`, roblox's `bit32
 
 ## Benchmarks
 The following test cases were ran in 'native' mode with the optimisation level set to `2`.
-Bare in mind direct buffer calls (in native) are ~20ns, so this is relatively slow.
+Bare in mind direct buffer calls (in native) are ~10-15ns, so this is relatively slow.
 
 |case                    |write (ns)|read (ns)|
 |------------------------|----------|---------|
