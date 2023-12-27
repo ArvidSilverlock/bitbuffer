@@ -1,3 +1,5 @@
+> Allegedally `os.clock` does not measure with a precision of <1μs, so these benchmarks are likely inaccurate, but they seem fairly consistent across multiple tests, so I am unsure.
+
 # bitbuffer
 Bit level manipulation of roblox's byte level buffers. :sunglasses:
 
