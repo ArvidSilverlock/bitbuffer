@@ -5,15 +5,15 @@ Only truly supports `UInts`, and I only plan to support `UInts`, roblox's `bit32
 
 ## Benchmarks
 The following test cases were ran in 'native' mode with the optimisation level set to `2`.
-Bare in mind direct buffer calls (in native) are ~0.02μs, so this is relatively slow.
+Bare in mind direct buffer calls (in native) are ~20ns, so this is relatively slow.
 
-|case                    |write (μs)|read (μs)|
+|case                    |write (ns)|read (ns)|
 |------------------------|----------|---------|
-|byte aligned            |0.1135    |0.1153   |
-|byte confined           |0.1203    |0.1622   |
-|cross-byte              |0.2761    |0.1956   |
-|end overhang            |0.0847    |0.0810   |
-|end & beginning overhang|0.0829    |0.0821   |
+|byte aligned            |113.5     |115.3    |
+|byte confined           |120.3     |162.2    |
+|cross-byte              |276.1     |195.6    |
+|end overhang            |84.7      |81.0     |
+|end & beginning overhang|82.9      |82.1     |
 
 ## API
 
