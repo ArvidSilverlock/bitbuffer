@@ -70,7 +70,7 @@ local function toBufferSpace(bufferLength: number, offset: number, width: number
 	local byte = bit32.rshift(offset, 3)
 	local bit = invertedOffset % 8
 
-	local remainingBits = bit32.lshift(bufferLength, 3) - offset
+	local remainingBits = bit32.lshift(bufferLength - byte, 3)
 	return byte, bit, maxWidth, remainingBits
 end
 
@@ -88,7 +88,7 @@ function bitbuffer.read(b: buffer, offset: number, width: number): number
 		byte = bufferLength - bit32.rshift(maxWidth, 3)
 
 		if byte < 0 then -- Hangs over the beginning and the end, the only case for this is 3 bytes.
-			return buffer.readu8(b, 0) + bit32.lshift(buffer.readu16(b, 1), 8)
+			return buffer.readu16(b, 0) + bit32.lshift(buffer.readu8(b, 2), 16)
 		else -- Hangs over only the end.
 			bit = offset - bit32.lshift(byte, 3)
 			local read = BUFFER_READ[maxWidth]
@@ -106,7 +106,7 @@ function bitbuffer.read(b: buffer, offset: number, width: number): number
 		local s = width - f
 
 		local readA, readB = BUFFER_READ[maxWidth], BUFFER_READ[WIDTH_MAP[s]]
-		return bit32.extract(readA(b, byte), bit, f) + bit32.lshift(bit32.extract(readB(b, nextByte), 0, s), f)
+		return bit32.lshift(bit32.extract(readA(b, byte), 0, s), f) + bit32.extract(readB(b, nextByte), bit, f)
 	end
 end
 
@@ -122,8 +122,8 @@ function bitbuffer.write(b: buffer, offset: number, value: number, width: number
 		byte = bufferLength - bit32.rshift(maxWidth, 3)
 
 		if byte < 0 then -- Hangs over the beginning and end, the only case for this is 3 bytes.
-			buffer.writeu8(b, 0, bit32.extract(value, 0, 8))
-			buffer.writeu16(b, 1, bit32.extract(value, 8, 24))
+			buffer.writeu16(b, 0, value)
+			buffer.writeu8(b, 2, bit32.rshift(value, 16))
 		else -- Hangs over only the end.
 			bit = offset - bit32.lshift(byte, 3)
 			local read, write = BUFFER_READ[maxWidth], BUFFER_WRITE[maxWidth]
@@ -141,19 +141,19 @@ function bitbuffer.write(b: buffer, offset: number, value: number, width: number
 		local s = width - f
 
 		local readA, writeA = BUFFER_READ[maxWidth], BUFFER_WRITE[maxWidth]
-		writeA(b, byte, bit32.replace(readA(b, byte), bit32.extract(value, 0, f), bit, f))
+		writeA(b, byte, bit32.replace(readA(b, byte), bit32.extract(value, f, s), 0, s))
 
 		local widthB = WIDTH_MAP[s]
 		local readB, writeB = BUFFER_READ[widthB], BUFFER_WRITE[widthB]
-		writeB(b, nextByte, bit32.replace(readB(b, nextByte), bit32.extract(value, f, s), 0, s))
+		writeB(b, nextByte, bit32.replace(readB(b, nextByte), bit32.extract(value, 0, f), bit, f))
 	end
 end
 
-local function tobase(lookup: { [number]: string })
+local function tobase(prefix: string, defaultSeparator: string, lookup: { [number]: string })
 	local width = math.log(#lookup + 1, 2)
 	assert(width % 1 == 0, "invalid length of lookup table")
 
-	return function(b: buffer, separator: string?): string
+	return function(b: buffer, separator: string?, addPrefix: boolean?): string
 		local bufferLength = buffer.len(b)
 
 		local bitCount = bit32.lshift(bufferLength, 3)
@@ -166,7 +166,7 @@ local function tobase(lookup: { [number]: string })
 			table.insert(output, lookup[byte])
 		end
 
-		return table.concat(output, separator or "")
+		return (if addPrefix ~= false then prefix else "") .. table.concat(output, separator or defaultSeparator)
 	end
 end
 
@@ -178,8 +178,8 @@ end
 	Ignore the `read` and `write` functions being practically the same. They are different in
 	spirit, and that's what counts (except in the case of the three lines below).
 ]]
-bitbuffer.tobinary = tobase(BINARY_LOOKUP)
-bitbuffer.tohex = tobase(HEX_LOOKUP)
-bitbuffer.tobase64 = tobase(BASE64_LOOKUP)
+bitbuffer.tobinary = tobase("0b", "_", BINARY_LOOKUP)
+bitbuffer.tohex = tobase("0x", "_", HEX_LOOKUP)
+bitbuffer.tobase64 = tobase("", "", BASE64_LOOKUP)
 
 return bitbuffer
