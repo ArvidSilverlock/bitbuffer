@@ -5,18 +5,6 @@ Bit level manipulation of roblox's byte level buffers. :sunglasses:
 
 Only truly supports `UInts`, and I only plan to support `UInts`, roblox's `bit32` library (one of the two backbones of this whole module) doesn't support anything besides 32 bit unsigned integers.
 
-## Benchmarks
-The following test cases were ran in 'native' mode with the optimisation level set to `2`.
-Bare in mind direct buffer calls (in native) are ~10-15ns, so this is relatively slow.
-
-|case                    |write (ns)|read (ns)|
-|------------------------|----------|---------|
-|byte aligned            |113.5     |115.3    |
-|byte confined           |120.3     |162.2    |
-|cross-byte              |276.1     |195.6    |
-|end overhang            |84.7      |81.0     |
-|end & beginning overhang|82.9      |82.1     |
-
 ## API
 
 - read(buffer, offset, width)
@@ -27,7 +15,19 @@ The offset that each function requires is a 0 indexed *bit* offset, the width is
 
 The reason the `write` function takes the `value` to write before the `width` is to more closely mimic the `bit32` library.
 
-There is a grand total of **1** security check! So it will not prevent you from writing values out of the range of your specified width, not tested what happens.
+There is one security check present, this only exists to prevent crashes when the user is actually at fault (rather than my bad maths).
+
+## Benchmarks
+The following test cases were ran in native mode with the optimisation level set to `2`.
+Bare in mind direct buffer calls (in native) are ~10-15ns, so this is relatively slow.
+
+|case                    |write (ns)|read (ns)|
+|------------------------|----------|---------|
+|byte aligned            |113.5     |115.3    |
+|byte confined           |120.3     |162.2    |
+|cross-byte              |276.1     |195.6    |
+|end overhang            |84.7      |81.0     |
+|end & beginning overhang|82.9      |82.1     |
 
 ## Base Conversion API
 
