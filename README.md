@@ -1,4 +1,4 @@
-> Allegedally `os.clock` does not measure with a precision of <1μs, so these benchmarks are likely inaccurate, but they seem fairly consistent across multiple tests, so I am unsure.
+> Allegedly `os.clock` does not measure with a precision of <1μs, so these benchmarks are likely inaccurate, but they seem fairly consistent across multiple tests, so I am unsure.
 
 # bitbuffer
 Bit level manipulation of roblox's byte level buffers. :sunglasses:
@@ -31,8 +31,16 @@ Bare in mind direct buffer calls (in native) are ~10-15ns, so this is relatively
 
 ## Base Conversion API
 
-There are three functions, `tobinary`, `tohex`, `tobase64`, each takes a buffer as an input and outputs a string. The benchmarks for these three functions are as follows (ran on buffers of length 1,000):
+There are three functions, `tobinary`, `tohex`, `tobase64`. Each of them take the same parameters, the `buffer` to convert to a string, an optional `separator` string which defines the character(s) to separate each chunk of the buffer by, and whether or not to add a base prefix (defaults to `true`).
 
+An example of how the format might look (with default parameters).
+```lua
+print(bitbuffer.tobinary(b)) -- 0b11110011_10100110_00110100_01011010
+print(bitbuffer.tohex(b)) -- 0xf3_a6_34_5a
+print(bitbuffer.tobase64(b)) -- 86Y0Wg
+```
+
+The benchmarks for these three functions are as follows (ran on buffers of length 1,000):
 |function   |time (μs)|
 |-----------|---------|
 |binary     |182.4    |
