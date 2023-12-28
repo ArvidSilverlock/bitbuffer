@@ -35,7 +35,7 @@ There are three functions, `tobinary`, `tohex`, `tobase64`, each takes a buffer 
 
 |function   |time (μs)|
 |-----------|---------|
-|binary     |185.6    |
+|binary     |182.4    |
 |hexadecimal|174.3    |
 |base64     |272.5    |
 
