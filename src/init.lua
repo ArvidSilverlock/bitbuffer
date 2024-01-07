@@ -20,11 +20,14 @@ do -- Population of the `tobase` formats.
 		HEX_LOOKUP[i] = string.format("%02x", i)
 	end
 
+	-- Convert the `BASE64_VALUES` string into a table.
 	for i = 0, 63 do
 		BASE64_LOOKUP[i] = BASE64_VALUES:sub(i + 1, i + 1)
 	end
 end
 
+-- `read` and `write` functions for 8, 16, 24 and 32 bits, 24 bits is custom and uses a secondary
+-- buffer to read/write the values using the `writeu32` function.
 local U24_BUFFER = buffer.create(4)
 
 local BUFFER_READ = {
@@ -55,7 +58,7 @@ local function toBufferSpace(b: buffer, offset: number, width: number): (number,
 	local bit = bit32.band(offset, 0b111) -- offset % 8
 
 	local remainingBytes = buffer.len(b) - byte
-	local byteWidth = bit32.rshift(bit + width + 7, 3) -- math.ceil(( bit + width ) // 8)
+	local byteWidth = bit32.rshift(bit + width + 7, 3) -- math.ceil(( bit + width ) / 8)
 
 	return byte, bit, byteWidth, remainingBytes
 end
@@ -122,20 +125,20 @@ end
 -- A functio that automatically constructs `tobase` functions given the lookup of numbers to their
 -- string forms, along with some other configuration parameters.
 local function tobase(prefix: string, defaultSeparator: string, lookup: { [number]: string })
-	local width = math.log(#lookup + 1, 2) -- calculates how many bits are represented by the lookup table
-	assert(width % 1 == 0, "invalid length of lookup table") -- validates whether the lookup table's length is a power of 2
+	local width = math.log(#lookup + 1, 2) -- Calculates how many bits are represented by the lookup table.
+	assert(width % 1 == 0, "invalid length of lookup table") -- Validates whether the lookup table's length is a power of 2.
 
 	return function(b: buffer, separator: string?, addPrefix: boolean?): string
 		local bitCount = bit32.lshift(buffer.len(b), 3) -- buffer.len(b) * 8
-		local characterCount = math.ceil(bitCount / width) -- how many `width`s fit into `bitCount`
+		local characterCount = math.ceil(bitCount / width)
 
 		local output = table.create(characterCount + (if addPrefix then 1 else 0))
-		if addPrefix then table.insert(output, prefix) end
+		if addPrefix then table.insert(output, prefix) end -- Add the prefix if need be.
 
 		-- iterate over each code in the buffer
 		for offset = 0, (characterCount - 1) * width, width do
-			local byteWidth = math.min(width, bitCount - offset) -- prevent reading over the end of the buffer
-			local byte = bit32.lshift(bitbuffer.read(b, offset, byteWidth), width - byteWidth) -- `lshift` to account for missing bits if we're at the end
+			local byteWidth = math.min(width, bitCount - offset) -- Prevent reading over the end of the buffer.
+			local byte = bit32.lshift(bitbuffer.read(b, offset, byteWidth), width - byteWidth) -- `lshift` to account for missing bits if we're at the end.
 			table.insert(output, lookup[byte])
 		end
 
