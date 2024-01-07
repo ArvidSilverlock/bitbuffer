@@ -22,7 +22,7 @@ local HEX_LOOKUP = {}
 do -- Precalculation of the `tobase` formats.
 	for i = 0, 255 do
 		local binaryValue = table.create(8)
-		for j = 7, 0, -1 do
+		for j = 0, 7 do
 			table.insert(binaryValue, bit32.extract(i, j, 1))
 		end
 
@@ -42,16 +42,26 @@ for i = 1, 32 do
 end
 
 -- Getting the `read`/`write` functions from the width map values.
+local U24_BUFFER = buffer.create(4)
+
 local BUFFER_READ = {
-	[8] = buffer.readu8,
-	[16] = buffer.readu16,
-	[32] = buffer.readu32,
+	[1] = buffer.readu8,
+	[2] = buffer.readu16,
+	[3] = function(b: buffer, offset: number)
+		buffer.copy(U24_BUFFER, 0, b, offset, 3)
+		return buffer.readu32(U24_BUFFER, 0)
+	end,
+	[4] = buffer.readu32,
 }
 
 local BUFFER_WRITE = {
-	[8] = buffer.writeu8,
-	[16] = buffer.writeu16,
-	[32] = buffer.writeu32,
+	[1] = buffer.writeu8,
+	[2] = buffer.writeu16,
+	[3] = function(b: buffer, offset: number, value: number)
+		buffer.writeu32(U24_BUFFER, 0, value)
+		buffer.copy(b, offset, U24_BUFFER, 0, 3)
+	end,
+	[4] = buffer.writeu32,
 }
 
 --[[
@@ -63,89 +73,67 @@ local BUFFER_WRITE = {
 	index is left to right but the `bit` index is right to left.
 ]]
 local function toBufferSpace(bufferLength: number, offset: number, width: number): (number, number, number)
-	local maxWidth = WIDTH_MAP[width]
-
-	local invertedOffset = bit32.lshift(bufferLength, 3) - (offset + width)
-
 	local byte = bit32.rshift(offset, 3)
-	local bit = invertedOffset % 8
+	local bit = bit32.band(offset, 0b111)
 
-	local remainingBits = bit32.lshift(bufferLength - byte, 3)
-	return byte, bit, maxWidth, remainingBits
+	local remainingBytes = bufferLength - byte
+	local readWidth = bit32.rshift(bit + width + 7, 3)
+
+	return byte, bit, readWidth, remainingBytes
 end
 
 local bitbuffer = {}
 
 function bitbuffer.read(b: buffer, offset: number, width: number): number
 	local bufferLength = buffer.len(b)
-	local byte, bit, maxWidth, remainingBits = toBufferSpace(bufferLength, offset, width)
+	local byte, bit, readWidth, remainingBytes = toBufferSpace(bufferLength, offset, width)
 
-	if remainingBits < maxWidth then -- Hangs over the end.
-		assert(width <= remainingBits, "buffer access out of bounds")
+	assert(remainingBytes >= readWidth, "buffer access out of bounds")
 
-		-- Recalculate our buffer position, except it's anchored to the end.
-		maxWidth = WIDTH_MAP[remainingBits]
-		byte = bufferLength - bit32.rshift(maxWidth, 3)
+	if readWidth > 4 then -- Outside of `bit32`'s functionality
+		-- `chunkSize` is initialised as this to align the rest of calls to bytes
+		local value, position, chunkSize = 0, 0, 8 - bit
+		repeat
+			value += bitbuffer.read(b, offset + position, chunkSize) * bit32.lshift(1, position)
 
-		if byte < 0 then -- Hangs over the beginning and the end, the only case for this is 3 bytes.
-			return buffer.readu16(b, 0) + bit32.lshift(buffer.readu8(b, 2), 16)
-		else -- Hangs over only the end.
-			bit = offset - bit32.lshift(byte, 3)
-			local read = BUFFER_READ[maxWidth]
-			return bit32.extract(read(b, byte), bit, width)
-		end
-	elseif bit == 0 and width == maxWidth then -- Fully aligned to bytes 8, 16 and 32.
-		local read = BUFFER_READ[maxWidth]
+			position += chunkSize
+			chunkSize = math.min(width - position, 32)
+		until position == width
+
+		return value
+	elseif bit == 0 and width == readWidth then -- Fully aligned to bits 8, 16 and 32.
+		local read = BUFFER_READ[readWidth]
 		return read(b, byte)
-	elseif bit + width <= maxWidth then -- Fits within one read call.
-		local read = BUFFER_READ[maxWidth]
+	elseif bit + width <= bit32.lshift(readWidth, 3) then -- Fits within one read call.
+		local read = BUFFER_READ[readWidth]
 		return bit32.extract(read(b, byte), bit, width)
-	else -- Spans over two read calls.
-		local nextByte = byte + bit32.rshift(maxWidth, 3)
-		local f = maxWidth - bit
-		local s = width - f
-
-		local readA, readB = BUFFER_READ[maxWidth], BUFFER_READ[WIDTH_MAP[s]]
-		return bit32.lshift(bit32.extract(readA(b, byte), 0, s), f) + bit32.extract(readB(b, nextByte), bit, f)
 	end
 end
 
 function bitbuffer.write(b: buffer, offset: number, value: number, width: number)
 	local bufferLength = buffer.len(b)
-	local byte, bit, maxWidth, remainingBits = toBufferSpace(bufferLength, offset, width)
+	local byte, bit, readWidth, remainingBytes = toBufferSpace(bufferLength, offset, width)
 
-	if remainingBits < maxWidth then -- Hangs over the end.
-		assert(width <= remainingBits, "buffer access out of bounds")
+	assert(remainingBytes >= readWidth, "buffer access out of bounds")
 
-		-- Recalculate our buffer position, except it's anchored to the end.
-		maxWidth = WIDTH_MAP[remainingBits]
-		byte = bufferLength - bit32.rshift(maxWidth, 3)
+	if readWidth > 4 then -- Outside of `bit32`'s functionality
+		-- `chunkSize` is initialised as this to align the rest of calls to bytes
+		local position, chunkSize = 0, 8 - bit
+		repeat
+			local chunk = value % bit32.lshift(1, chunkSize)
+			value = value // bit32.lshift(1, chunkSize)
 
-		if byte < 0 then -- Hangs over the beginning and end, the only case for this is 3 bytes.
-			buffer.writeu16(b, 0, value)
-			buffer.writeu8(b, 2, bit32.rshift(value, 16))
-		else -- Hangs over only the end.
-			bit = offset - bit32.lshift(byte, 3)
-			local read, write = BUFFER_READ[maxWidth], BUFFER_WRITE[maxWidth]
-			write(b, byte, bit32.replace(read(b, byte), value, bit, width))
-		end
-	elseif bit == 0 and width == maxWidth then -- Fully aligned to bytes 8, 16 and 32.
-		local write = BUFFER_WRITE[maxWidth]
+			bitbuffer.write(b, offset + position, chunk, chunkSize)
+
+			position += chunkSize
+			chunkSize = math.min(width - position, 32)
+		until position == width
+	elseif bit == 0 and width == readWidth then -- Fully aligned to bits 8, 16, 24 and 32.
+		local write = BUFFER_WRITE[readWidth]
 		write(b, byte, value)
-	elseif bit + width <= maxWidth then -- Fits within one write call.
-		local read, write = BUFFER_READ[maxWidth], BUFFER_WRITE[maxWidth]
+	elseif bit + width <= bit32.lshift(readWidth, 3) then -- Fits within one write call.
+		local read, write = BUFFER_READ[readWidth], BUFFER_WRITE[readWidth]
 		write(b, byte, bit32.replace(read(b, byte), value, bit, width))
-	else -- Spans over two write calls.
-		local nextByte = byte + bit32.rshift(maxWidth, 3)
-		local f = maxWidth - bit
-		local s = width - f
-
-		local readA, writeA = BUFFER_READ[maxWidth], BUFFER_WRITE[maxWidth]
-		writeA(b, byte, bit32.replace(readA(b, byte), bit32.extract(value, f, s), 0, s))
-
-		local widthB = WIDTH_MAP[s]
-		local readB, writeB = BUFFER_READ[widthB], BUFFER_WRITE[widthB]
-		writeB(b, nextByte, bit32.replace(readB(b, nextByte), bit32.extract(value, 0, f), bit, f))
 	end
 end
 
