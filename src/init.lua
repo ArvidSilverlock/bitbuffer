@@ -129,8 +129,8 @@ function bitbuffer.write(b: buffer, offset: number, value: number, width: number
 			local chunkSize = math.min(width - position, 24) -- When we're on the final read call we can't read a full 3 bytes.
 
 			local mask = bit32.lshift(1, chunkSize) -- 2^chunkSize
-			local chunk = value % mask -- bit32.band(value, chunkSize - 1)
-			value = value // mask -- bit32.rshift(value, )
+			local chunk = value % mask -- bit32.band(value, mask - 1)
+			value = value // mask -- bit32.rshift(value, chunkSize)
 
 			bitbuffer.write(b, offset + position, chunk, chunkSize)
 			position += chunkSize
