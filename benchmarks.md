@@ -1,4 +1,4 @@
-Average `read` and `write` times in nanoseconds, calculated by calling the `read`/`write` functions at every possible position in a buffer containing 65,536 bytes.
+Average `read` and `write` times in microseconds, calculated by calling the `read`/`write` functions at every possible position in a buffer containing 65,536 bytes.
 
 Benchmarks ran on a Late 2013 iMac with a 3.2 GHz Quad-Core Intel Core i5 CPU.
 
