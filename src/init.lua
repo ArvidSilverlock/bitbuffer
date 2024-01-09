@@ -1,147 +1,70 @@
---!native
---!optimize 2
-
-local BASE64_VALUES = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-
--- These make the `tostring` functions much faster, as it doesn't need to re-create the string forms
--- of all the numbers again, just reads if from the lookup tables.
-local BINARY_LOOKUP = {}
-local BASE64_LOOKUP = {}
-local HEX_LOOKUP = {}
-
-do -- Population of the `tobase` formats.
-	for i = 0, 255 do
-		local binaryValue = table.create(8)
-		for j = 7, 0, -1 do
-			binaryValue[8 - j] = bit32.extract(i, j, 1)
-		end
-		local binaryString = table.concat(binaryValue)
-
-		BINARY_LOOKUP[i] = binaryString
-		HEX_LOOKUP[i] = string.format("%02x", i)
-	end
-
-	-- Convert the `BASE64_VALUES` string into a table.
-	for i = 0, 63 do
-		BASE64_LOOKUP[i] = BASE64_VALUES:sub(i + 1, i + 1)
-	end
-end
-
-local FLIP_ENDIAN = {
-	[1] = function(value)
-		return value
-	end,
-	[2] = function(value)
-		return bit32.bor(bit32.lshift(value, 8), bit32.rshift(value, 8))
-	end,
-	[3] = function(value)
-		return bit32.bor(
-			bit32.rshift(bit32.band(value, 0xFF0000), 16),
-			bit32.lshift(bit32.band(value, 0x0000FF), 16),
-			bit32.band(value, 0x00FF00)
-		)
-	end,
-	[4] = function(value)
-		return bit32.bor(
-			bit32.rshift(bit32.band(value, 0xFF000000), 24),
-			bit32.rshift(bit32.band(value, 0x00FF0000), 8),
-			bit32.lshift(bit32.band(value, 0x0000FF00), 8),
-			bit32.lshift(bit32.band(value, 0x000000FF), 24)
-		)
-	end,
-}
-
--- `read` and `write` functions for 8, 16, 24 and 32 bits, 24 bits is custom and uses a secondary
--- buffer to read/write the values using the `writeu32` function.
-local U24_BUFFER = buffer.create(4)
-
-local BUFFER_READ = {
-	[1] = buffer.readu8,
-	[2] = buffer.readu16,
-	[3] = function(b: buffer, offset: number)
-		buffer.copy(U24_BUFFER, 0, b, offset, 3)
-		return buffer.readu32(U24_BUFFER, 0)
-	end,
-	[4] = buffer.readu32,
-}
-
-local BUFFER_WRITE = {
-	[1] = buffer.writeu8,
-	[2] = buffer.writeu16,
-	[3] = function(b: buffer, offset: number, value: number)
-		buffer.writeu32(U24_BUFFER, 0, value)
-		buffer.copy(b, offset, U24_BUFFER, 0, 3)
-	end,
-	[4] = buffer.writeu32,
-}
-
 -- Any usage of `bit32.lshift` and `bit32.rshift` where the displacement is `3` emulate integer division
 -- and multiplication by 8 (2^3, hence the 3), this is done because bitshifting is faster than generic
 -- mathmatical operations.
-local function toBufferSpace(b: buffer, offset: number, width: number): (number, number, number)
-	local byte = bit32.rshift(offset, 3) -- offset * 8
-	local bit = bit32.band(offset, 0b111) -- offset % 8
 
-	local remainingBytes = buffer.len(b) - byte
-	local byteWidth = bit32.rshift(bit + width + 7, 3) -- math.ceil(( bit + width ) / 8)
-
-	bit = (bit32.lshift(byteWidth, 3) - width) - bit
-
-	return byte, bit, byteWidth, remainingBytes
-end
+local Bases = require(script.BaseLookup)
+local Mutators = require(script.Mutators)
 
 local bitbuffer = {}
 
-function bitbuffer.read(b: buffer, offset: number, width: number): number
-	local byte, bit, byteWidth, remainingBytes = toBufferSpace(b, offset, width)
-	assert(remainingBytes >= byteWidth, "buffer access out of bounds") -- prevent crashes in --!native mode
+local function writer(options)
+	local toBufferSpace, readers, writers = options.toBufferSpace, options.read, options.write
 
-	if byteWidth > 4 then -- outside of `bit32`'s functionality
-		assert(width <= 48, "`bitbuffer` does not suppoer `width`s greater than 48")
+	local function write(b: buffer, offset: number, value: number, width: number)
+		local byte, bit, byteWidth = toBufferSpace(offset, width)
+		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
 
-		local value, position = 0, 0
+		if byteWidth > 4 then -- outside of `bit32`'s functionality
+			assert(width <= 48, "`bitbuffer` does not suppoer `width`s greater than 48")
 
-		repeat
-			local chunkSize = math.min(width - position, 24) -- When we're on the final read call we can't read a full 3 bytes.
-			value += bitbuffer.read(b, offset + position, chunkSize) * bit32.lshift(1, position) -- * 2^position
-			position += chunkSize
-		until position == width
+			local position = 0
+			repeat
+				local chunkSize = math.min(width - position, 24) -- When we're on the final read call we can't read a full 3 bytes.
 
-		return value
-	elseif bit == 0 and width == byteWidth then -- Fully aligned to bits 8, 16, 24 and 32, allows for normal functions to be used.
-		local read, flip = BUFFER_READ[byteWidth], FLIP_ENDIAN[byteWidth]
-		return flip(read(b, byte))
-	else -- Confined within one read call.
-		local read, flip = BUFFER_READ[byteWidth], FLIP_ENDIAN[byteWidth]
-		return bit32.extract(flip(read(b, byte)), bit, width)
+				local mask = bit32.lshift(1, chunkSize) -- 2^chunkSize
+				local chunk = value % mask -- bit32.band(value, mask - 1)
+				value = value // mask -- bit32.rshift(value, chunkSize)
+
+				write(b, offset + position, chunk, chunkSize)
+				position += chunkSize
+			until position == width
+		elseif bit == 0 and width == byteWidth then -- Fully aligned to bits 8, 16, 24 and 32, allows for normal functions to be used.
+			writers[byteWidth](b, byte, value)
+		else -- Confined within one write call.
+			writers[byteWidth](b, byte, bit32.replace(readers[byteWidth](b, byte), value, bit, width))
+		end
 	end
+
+	return write
 end
 
-function bitbuffer.write(b: buffer, offset: number, value: number, width: number)
-	local byte, bit, byteWidth, remainingBytes = toBufferSpace(b, offset, width)
-	assert(remainingBytes >= byteWidth, "buffer access out of bounds") -- prevent crashes in --!native mode
+local function reader(options)
+	local toBufferSpace, readers, writers = options.toBufferSpace, options.read, options.write
 
-	if byteWidth > 4 then -- outside of `bit32`'s functionality
-		assert(width <= 48, "`bitbuffer` does not suppoer `width`s greater than 48")
+	local function read(b: buffer, offset: number, width: number)
+		local byte, bit, byteWidth = toBufferSpace(offset, width)
+		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
 
-		local position = 0
-		repeat
-			local chunkSize = math.min(width - position, 24) -- When we're on the final read call we can't read a full 3 bytes.
+		if byteWidth > 4 then -- outside of `bit32`'s functionality
+			assert(width <= 48, "`bitbuffer` does not suppoer `width`s greater than 48")
 
-			local mask = bit32.lshift(1, chunkSize) -- 2^chunkSize
-			local chunk = value % mask -- bit32.band(value, mask - 1)
-			value = value // mask -- bit32.rshift(value, chunkSize)
+			local value, position = 0, 0
 
-			bitbuffer.write(b, offset + position, chunk, chunkSize)
-			position += chunkSize
-		until position == width
-	elseif bit == 0 and width == byteWidth then -- Fully aligned to bits 8, 16, 24 and 32, allows for normal functions to be used.
-		local write, flip = BUFFER_WRITE[byteWidth], FLIP_ENDIAN[byteWidth]
-		write(b, byte, flip(value))
-	else -- Confined within one write call.
-		local read, write, flip = BUFFER_READ[byteWidth], BUFFER_WRITE[byteWidth], FLIP_ENDIAN[byteWidth]
-		write(b, byte, flip(bit32.replace(flip(read(b, byte)), value, bit, width)))
+			repeat
+				local chunkSize = math.min(width - position, 24) -- When we're on the final read call we can't read a full 3 bytes.
+				value += read(b, offset + position, chunkSize) * bit32.lshift(1, position) -- * 2^position
+				position += chunkSize
+			until position == width
+
+			return value
+		elseif bit == 0 and width == byteWidth then -- Fully aligned to bits 8, 16, 24 and 32, allows for normal functions to be used.
+			return readers[byteWidth](b, byte)
+		else -- Confined within one read call.
+			return bit32.extract(readers[byteWidth](b, byte), bit, width)
+		end
 	end
+
+	return read
 end
 
 -- A function that automatically constructs `tobase` functions given the lookup of numbers to their
@@ -152,7 +75,7 @@ local function tobase(options: {
 	paddingCharacters: { string }?,
 	characters: { [number]: string },
 })
-	local prefix, defaultSeparator, paddingCharacters, characters =
+	local defaultPrefix, defaultSeparator, paddingCharacters, characters =
 		options.prefix, options.separator, options.paddingCharacters, options.characters
 
 	local width = math.log(#characters + 1, 2) -- Calculates how many bits are represented by the lookup table.
@@ -167,10 +90,7 @@ local function tobase(options: {
 		local bitCount = bit32.lshift(byteCount, 3) -- buffer.len(b) * 8
 		local characterCount = math.ceil(bitCount / width)
 
-		local output = table.create(characterCount + (if addPrefix then 1 else 0))
-		if addPrefix then
-			table.insert(output, prefix)
-		end -- Add the prefix if need be.
+		local output = table.create(characterCount)
 
 		-- iterate over each code in the buffer
 		local endOffset = (characterCount - 1) * width
@@ -180,25 +100,33 @@ local function tobase(options: {
 			table.insert(output, characters[byte])
 		end
 
-		local padding = if paddingCharacters then paddingCharacters[byteCount % #paddingCharacters + 1] else ""
-		return table.concat(output, separator or defaultSeparator) .. padding
+		local prefix = if addPrefix then defaultPrefix else ""
+		local suffix = if paddingCharacters then paddingCharacters[byteCount % #paddingCharacters + 1] else ""
+
+		return string.format("%s%s%s", prefix, table.concat(output, separator or defaultSeparator), suffix)
 	end
 end
 
+bitbuffer.read = reader(Mutators.Logical)
+bitbuffer.write = writer(Mutators.Logical)
+
+bitbuffer.fastread = reader(Mutators.Fast)
+bitbuffer.fastwrite = writer(Mutators.Fast)
+
 bitbuffer.tobinary = tobase({
-	characters = BINARY_LOOKUP,
+	characters = Bases.Binary,
 	prefix = "0b",
 	separator = "_",
 })
 
 bitbuffer.tohex = tobase({
-	characters = HEX_LOOKUP,
+	characters = Bases.Hexadecimal,
 	prefix = "0x",
-	separator = "_",
+	separator = " ",
 })
 
-bitbuffer.tohex = tobase({
-	characters = BASE64_LOOKUP,
+bitbuffer.tobase64 = tobase({
+	characters = Bases.Base64,
 	paddingCharacters = { "", "==", "=" },
 	prefix = "",
 	separator = "",
