@@ -1,7 +1,5 @@
---!native
---!optimize 2
-
 local BASE64_VALUES = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local BASE64_CODE_SIZE = 6 -- 2^6 == 64
 
 -- These make the `tostring` functions much faster, as it doesn't need to re-create the string forms
 -- of all the numbers again, just reads if from the lookup tables.
@@ -12,11 +10,12 @@ local HEX_LOOKUP = {}
 do -- Population of the `tobase` formats.
 	for i = 0, 255 do
 		local binaryValue = table.create(8)
-		for j = 0, 7 do
-			binaryValue[j + 1] = bit32.extract(i, j, 1)
+		for j = 7, 0, -1 do
+			binaryValue[8 - j] = bit32.extract(i, j, 1)
 		end
+		local binaryString = table.concat(binaryValue)
 
-		BINARY_LOOKUP[i] = table.concat(binaryValue)
+		BINARY_LOOKUP[i] = binaryString
 		HEX_LOOKUP[i] = string.format("%02x", i)
 	end
 
@@ -25,6 +24,30 @@ do -- Population of the `tobase` formats.
 		BASE64_LOOKUP[i] = BASE64_VALUES:sub(i + 1, i + 1)
 	end
 end
+
+local FLIP_ENDIAN = {
+	[1] = function(value)
+		return value
+	end,
+	[2] = function(value)
+		return bit32.bor(bit32.lshift(value, 8), bit32.rshift(value, 8))
+	end,
+	[3] = function(value)
+		return bit32.bor(
+			bit32.rshift(bit32.band(value, 0xFF0000), 16),
+			bit32.lshift(bit32.band(value, 0x0000FF), 16),
+			bit32.band(value, 0x00FF00)
+		)
+	end,
+	[4] = function(value)
+		return bit32.bor(
+			bit32.rshift(bit32.band(value, 0xFF000000), 24),
+			bit32.rshift(bit32.band(value, 0x00FF0000), 8),
+			bit32.lshift(bit32.band(value, 0x0000FF00), 8),
+			bit32.lshift(bit32.band(value, 0x000000FF), 24)
+		)
+	end,
+}
 
 -- `read` and `write` functions for 8, 16, 24 and 32 bits, 24 bits is custom and uses a secondary
 -- buffer to read/write the values using the `writeu32` function.
@@ -60,6 +83,8 @@ local function toBufferSpace(b: buffer, offset: number, width: number): (number,
 	local remainingBytes = buffer.len(b) - byte
 	local byteWidth = bit32.rshift(bit + width + 7, 3) -- math.ceil(( bit + width ) / 8)
 
+	bit = (bit32.lshift(byteWidth, 3) - width) - bit
+
 	return byte, bit, byteWidth, remainingBytes
 end
 
@@ -70,25 +95,23 @@ function bitbuffer.read(b: buffer, offset: number, width: number): number
 	assert(remainingBytes >= byteWidth, "buffer access out of bounds") -- prevent crashes in --!native mode
 
 	if byteWidth > 4 then -- outside of `bit32`'s functionality
-		-- `chunkSize` is initialised as this to align the rest of calls to bytes, otherwise it is likely that
-		-- a stack overflow occurs if it's not already byte aligned, this is because reading an unaligned 32 bit
-		-- integer needs to read 5 bytes of data rather than just 4.
-		local value, position, chunkSize = 0, 0, 8 - bit
+		assert(width <= 48, "`bitbuffer` does not suppoer `width`s greater than 48")
 
-		-- This effectively iterates over all the groups of 32 bits, but clamps 32 to how many bits are left.
+		local value, position = 0, 0
+
 		repeat
-			-- bit32.lshift(1, position) is equivalent to 2^position
-			value += bitbuffer.read(b, offset + position, chunkSize) * bit32.lshift(1, position)
+			local chunkSize = math.min(width - position, 24) -- When we're on the final read call we can't read a full 3 bytes.
+			value += bitbuffer.read(b, offset + position, chunkSize) * bit32.lshift(1, position) -- * 2^position
 			position += chunkSize
-
-			chunkSize = math.min(width - position, 32) -- When we're on the final read call we can't read a full 4 bytes.
 		until position == width
 
 		return value
 	elseif bit == 0 and width == byteWidth then -- Fully aligned to bits 8, 16, 24 and 32, allows for normal functions to be used.
-		return BUFFER_READ[byteWidth](b, byte)
+		local read, flip = BUFFER_READ[byteWidth], FLIP_ENDIAN[byteWidth]
+		return flip(read(b, byte))
 	else -- Confined within one read call.
-		return bit32.extract(BUFFER_READ[byteWidth](b, byte), bit, width)
+		local read, flip = BUFFER_READ[byteWidth], FLIP_ENDIAN[byteWidth]
+		return bit32.extract(flip(read(b, byte)), bit, width)
 	end
 end
 
@@ -97,58 +120,87 @@ function bitbuffer.write(b: buffer, offset: number, value: number, width: number
 	assert(remainingBytes >= byteWidth, "buffer access out of bounds") -- prevent crashes in --!native mode
 
 	if byteWidth > 4 then -- outside of `bit32`'s functionality
-		-- `chunkSize` is initialised as this to align the rest of calls to bytes, otherwise it is likely that
-		-- a stack overflow occurs if it's not already byte aligned, this is because reading an unaligned 32 bit
-		-- integer needs to read 5 bytes of data rather than just 4.
-		local position, chunkSize = 0, 8 - bit
+		assert(width <= 48, "`bitbuffer` does not suppoer `width`s greater than 48")
 
-		-- This effectively iterates over all the groups of 32 bits, but clamps 32 to how many bits are left.
+		local position = 0
+		local chunk
+
 		repeat
-			local mask = bit32.lshift(1, chunkSize) -- 2^chunkSize
+			local chunkSize = math.min(width - position, 24) -- When we're on the final read call we can't read a full 3 bytes.
 
-			-- effectively rshift the value
-			local chunk = value % mask
-			value //= mask
+			local mask = bit32.lshift(1, chunkSize) -- 2^chunkSize
+			chunk, value = value % mask, value // mask -- effectively rshift `value` by `chunkSize`
 
 			bitbuffer.write(b, offset + position, chunk, chunkSize)
-
 			position += chunkSize
-			chunkSize = math.min(width - position, 32) -- When we're on the final read call we can't read a full 4 bytes.
 		until position == width
 	elseif bit == 0 and width == byteWidth then -- Fully aligned to bits 8, 16, 24 and 32, allows for normal functions to be used.
-		BUFFER_WRITE[byteWidth](b, byte, value)
+		local write, flip = BUFFER_WRITE[byteWidth], FLIP_ENDIAN[byteWidth]
+		write(b, byte, flip(value))
 	else -- Confined within one write call.
-		BUFFER_WRITE[byteWidth](b, byte, bit32.replace(BUFFER_READ[byteWidth](b, byte), value, bit, width))
+		local read, write, flip = BUFFER_READ[byteWidth], BUFFER_WRITE[byteWidth], FLIP_ENDIAN[byteWidth]
+		write(b, byte, flip(bit32.replace(flip(read(b, byte)), value, bit, width)))
 	end
 end
 
--- A functio that automatically constructs `tobase` functions given the lookup of numbers to their
+-- A function that automatically constructs `tobase` functions given the lookup of numbers to their
 -- string forms, along with some other configuration parameters.
-local function tobase(prefix: string, defaultSeparator: string, lookup: { [number]: string })
-	local width = math.log(#lookup + 1, 2) -- Calculates how many bits are represented by the lookup table.
-	assert(width % 1 == 0, "invalid length of lookup table") -- Validates whether the lookup table's length is a power of 2.
+local function tobase(options: {
+	prefix: string,
+	separator: string,
+	paddingCharacters: { string }?,
+	characters: { [number]: string },
+})
+	local prefix, defaultSeparator, paddingCharacters, characters =
+		options.prefix, options.separator, options.paddingCharacters, options.characters
+
+	local width = math.log(#characters + 1, 2) -- Calculates how many bits are represented by the lookup table.
+	assert(width % 1 == 0, "this lookup table does not represent a whole number of bits")
+	assert(
+		not paddingCharacters and width % 8 == 0 or paddingCharacters,
+		"padding is required for bases that are not byte aligned"
+	)
 
 	return function(b: buffer, separator: string?, addPrefix: boolean?): string
-		local bitCount = bit32.lshift(buffer.len(b), 3) -- buffer.len(b) * 8
+		local byteCount = buffer.len(b)
+		local bitCount = bit32.lshift(byteCount, 3) -- buffer.len(b) * 8
 		local characterCount = math.ceil(bitCount / width)
 
 		local output = table.create(characterCount + (if addPrefix then 1 else 0))
-		if addPrefix then table.insert(output, prefix) end -- Add the prefix if need be.
+		if addPrefix then
+			table.insert(output, prefix)
+		end -- Add the prefix if need be.
 
 		-- iterate over each code in the buffer
-		for offset = 0, (characterCount - 1) * width, width do
+		local endOffset = (characterCount - 1) * width
+		for offset = 0, endOffset, width do
 			local byteWidth = math.min(width, bitCount - offset) -- Prevent reading over the end of the buffer.
 			local byte = bit32.lshift(bitbuffer.read(b, offset, byteWidth), width - byteWidth) -- `lshift` to account for missing bits if we're at the end.
-			table.insert(output, lookup[byte])
+			table.insert(output, characters[byte])
 		end
 
-		return table.concat(output, separator or defaultSeparator)
+		local padding = if paddingCharacters then paddingCharacters[byteCount % #paddingCharacters + 1] else ""
+		return table.concat(output, separator or defaultSeparator) .. padding
 	end
 end
 
--- Use the `tobase` constructor function for some debug/serialisation functions.
-bitbuffer.tobinary = tobase("0b", "_", BINARY_LOOKUP)
-bitbuffer.tohex = tobase("0x", "_", HEX_LOOKUP)
-bitbuffer.tobase64 = tobase("", "", BASE64_LOOKUP)
+bitbuffer.tobinary = tobase({
+	characters = BINARY_LOOKUP,
+	prefix = "0b",
+	separator = "_",
+})
+
+bitbuffer.tohex = tobase({
+	characters = HEX_LOOKUP,
+	prefix = "0x",
+	separator = "_",
+})
+
+bitbuffer.tohex = tobase({
+	characters = BASE64_LOOKUP,
+	paddingCharacters = { "", "==", "=" },
+	prefix = "",
+	separator = "",
+})
 
 return bitbuffer
