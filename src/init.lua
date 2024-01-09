@@ -1,5 +1,7 @@
+--!native
+--!optimize 2
+
 local BASE64_VALUES = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-local BASE64_CODE_SIZE = 6 -- 2^6 == 64
 
 -- These make the `tostring` functions much faster, as it doesn't need to re-create the string forms
 -- of all the numbers again, just reads if from the lookup tables.
@@ -123,13 +125,12 @@ function bitbuffer.write(b: buffer, offset: number, value: number, width: number
 		assert(width <= 48, "`bitbuffer` does not suppoer `width`s greater than 48")
 
 		local position = 0
-		local chunk
-
 		repeat
 			local chunkSize = math.min(width - position, 24) -- When we're on the final read call we can't read a full 3 bytes.
 
 			local mask = bit32.lshift(1, chunkSize) -- 2^chunkSize
-			chunk, value = value % mask, value // mask -- effectively rshift `value` by `chunkSize`
+			local chunk = value % mask -- bit32.band(value, chunkSize - 1)
+			value = value // mask -- bit32.rshift(value, )
 
 			bitbuffer.write(b, offset + position, chunk, chunkSize)
 			position += chunkSize
