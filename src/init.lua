@@ -70,10 +70,6 @@ local function reader(options)
 	return read
 end
 
-local function mutator(options)
-	return reader(options), writer(options)
-end
-
 -- A function that automatically constructs `tobase` functions given the lookup of numbers to their
 -- string forms, along with some other configuration parameters.
 local function tobase(options: {
@@ -114,8 +110,11 @@ local function tobase(options: {
 	end
 end
 
-bitbuffer.read, bitbuffer.write = mutator(Mutators.Logical)
-bitbuffer.fastread, bitbuffer.fastwrite = mutator(Mutators.Fast)
+bitbuffer.read = reader(Mutators.Logical)
+bitbuffer.write = writer(Mutators.Logical)
+
+bitbuffer.fastread = reader(Mutators.Fast)
+bitbuffer.fastwrite = writer(Mutators.Fast)
 
 bitbuffer.tobinary = tobase({
 	characters = Bases.Binary,
