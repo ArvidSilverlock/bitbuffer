@@ -1,7 +1,7 @@
 # bitbuffer
 Bit level manipulation of roblox's byte level buffers. :sunglasses:
 
-Only truly supports `UInts`, and I only plan to support `UInts`, roblox's `bit32` library (one of the two backbones of this whole module) doesn't support anything besides 32 bit unsigned integers.
+Only truly supports `UInts`, and I only plan to support `UInts`, roblox's `bit32` library (one of the backbones of this whole module) doesn't support anything besides 32 bit unsigned integers.
 
 ## API
 
@@ -29,7 +29,7 @@ print(bitbuffer.tobase64(b)) -- 86Y0Wg==
 
 -- You can do this trick to easily copy paste the actual number values for debugging.
 print(bitbuffer.tobinary(b, ", 0b", true)) -- 0b11110011, 0b10100110, 0b00110100, 0b01011010
-print(bitbuffer.tobinary(b, ", 0x", true)) -- 0xf3, 0xa6, 0x34, 0x5a
+print(bitbuffer.tohex(b, ", 0x", true)) -- 0xf3, 0xa6, 0x34, 0x5a
 ```
 
 ## Writing non UInts
@@ -40,7 +40,7 @@ print(string.unpack("<I4", string.pack("<f", math.pi))) -- 1078530011
 ```
 You can easily invert this process by flipping the pack formats around.
 
-Obviously this is relatively slow, but I'm not all too sure if there's an alternative to doing this
+Obviously this is relatively slow, but I'm not all too sure if there's an alternative to doing this, as there's not really another way to read binary data.
 
 ## An few examples
 ```lua
@@ -49,11 +49,11 @@ local b = buffer.create(1)
 bitbuffer.write(b, 0, 1, 1) -- Write 1 bit at the first bit.
 assert(bitbuffer.write(b, 0, 1) == 1)
 
-print(bitbuffer.tobinary(b, " ")) -- 10000000
-print(bitbuffer.tohex(b, " ")) -- 80
+print(bitbuffer.tobinary(b)) -- 10000000
+print(bitbuffer.tohex(b)) -- 80
 ```
 
 ## TODO:
-- `fastread` and `fastwrite` that don't flip endians
 - `frombase` functions
 - `binaryformat`, allows for better formatting like `0000 000000 00000000` (i.e., chunks of information are split into groups by spaces specified by the user, good if you have a static scheme for your data)
+- given the nature of this module, testez is probably a good idea
