@@ -88,7 +88,7 @@ local function tobase(options: {
 		"padding is required for bases that are not byte aligned"
 	)
 
-	return function(b: buffer, separator: string?, addPrefix: boolean?): string
+	return function(b: buffer, separator: string?, prefix: (string | boolean)?): string
 		local byteCount = buffer.len(b)
 		local bitCount = bit32.lshift(byteCount, 3) -- buffer.len(b) * 8
 		local characterCount = math.ceil(bitCount / width)
@@ -103,10 +103,10 @@ local function tobase(options: {
 			table.insert(output, characters[byte])
 		end
 
-		local prefix = if addPrefix then defaultPrefix else ""
-		local suffix = if paddingCharacters then paddingCharacters[byteCount % #paddingCharacters + 1] else ""
+		local prefixString = if typeof(prefix) == "string" then prefix elseif prefix == true then defaultPrefix else ""
+		local suffixString = if paddingCharacters then paddingCharacters[byteCount % #paddingCharacters + 1] else ""
 
-		return string.format("%s%s%s", prefix, table.concat(output, separator or defaultSeparator), suffix)
+		return string.format("%s%s%s", prefixString, table.concat(output, separator or defaultSeparator), suffixString)
 	end
 end
 
