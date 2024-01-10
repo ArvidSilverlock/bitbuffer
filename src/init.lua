@@ -1,16 +1,16 @@
---!native
---!optimize 2
-
 -- Any usage of `bit32.lshift` and `bit32.rshift` where the displacement is `3` emulate integer division
 -- and multiplication by 8 (2^3, hence the 3), this is done because bitshifting is faster than generic
 -- mathmatical operations.
+
+type Reader = (b: buffer, offset: number, width: number) -> number
+type Writer = (b: buffer, offset: number, value: number, width: number) -> ()
 
 local Bases = require(script.BaseLookup)
 local Mutators = require(script.Mutators)
 
 local bitbuffer = {}
 
-local function writer(options)
+local function writer(options): Writer
 	local toBufferSpace, readers, writers = options.toBufferSpace, options.read, options.write
 
 	local function write(b: buffer, offset: number, value: number, width: number)
@@ -41,7 +41,7 @@ local function writer(options)
 	return write
 end
 
-local function reader(options)
+local function reader(options): Reader
 	local toBufferSpace, readers, writers = options.toBufferSpace, options.read, options.write
 
 	local function read(b: buffer, offset: number, width: number)
@@ -72,24 +72,44 @@ end
 
 -- A function that automatically constructs `tobase` functions given the lookup of numbers to their
 -- string forms, along with some other configuration parameters.
-local function tobase(options: {
+local function baseconverter(options: {
 	prefix: string,
 	separator: string,
-	paddingCharacters: { string }?,
+	paddingCharacter: string?,
 	characters: { [number]: string },
-	reader: (b: buffer, offset: number, width: number) -> number,
+	reader: Reader,
+	writer: Writer,
 })
-	local defaultPrefix, defaultSeparator, paddingCharacters, characters, read =
-		options.prefix, options.separator, options.paddingCharacters, options.characters, options.reader
+	local defaultPrefix, defaultSeparator, paddingCharacter, characters =
+		options.prefix, options.separator, options.paddingCharacter, options.characters
+
+	local read, write = options.reader, options.writer
 
 	local width = math.log(#characters + 1, 2) -- Calculates how many bits are represented by the lookup table.
 	assert(width % 1 == 0, "this lookup table does not represent a whole number of bits")
 	assert(
-		not paddingCharacters and width % 8 == 0 or paddingCharacters,
-		"padding is required for bases that are not byte aligned"
+		not paddingCharacter and math.log(width, 2) % 1 == 0 or paddingCharacter,
+		"padding is required for bases whose bit width is not a power of 2"
 	)
 
-	return function(b: buffer, separator: string?, prefix: (string | boolean)?): string
+	local paddingPattern = if paddingCharacter then `{paddingCharacter}*$` else nil
+
+	local decode = {}
+	local codeLength = #characters[0]
+	for code, character in characters do
+		assert(#character == codeLength, "character code length must be consistent")
+		decode[character] = code
+	end
+
+	-- https://www.desmos.com/calculator/hgzcqadocn, don't know if this is a universal formula
+	-- but it looks *about* right, and it works for base64
+	local p = 2 ^ math.ceil(math.log(width, 2)) - width
+	local function getPadding(bytes: number)
+		local count = p - (bytes - 1) % (p + 1)
+		return paddingCharacter:rep(count)
+	end
+
+	local function tobase(b: buffer, separator: string?, prefix: (string | boolean)?): string
 		local byteCount = buffer.len(b)
 		local bitCount = bit32.lshift(byteCount, 3) -- buffer.len(b) * 8
 		local characterCount = math.ceil(bitCount / width)
@@ -99,16 +119,36 @@ local function tobase(options: {
 		-- iterate over each code in the buffer
 		local endOffset = (characterCount - 1) * width
 		for offset = 0, endOffset, width do
-			local byteWidth = math.min(width, bitCount - offset) -- Prevent reading over the end of the buffer.
-			local byte = bit32.lshift(read(b, offset, byteWidth), width - byteWidth) -- `lshift` to account for missing bits if we're at the end.
-			table.insert(output, characters[byte])
+			local codeWidth = math.min(width, bitCount - offset) -- Prevent reading over the end of the buffer.
+			local code = bit32.lshift(read(b, offset, codeWidth), width - codeWidth) -- `lshift` to account for missing bits if we're at the end.
+			table.insert(output, characters[code])
 		end
 
 		local prefixString = if typeof(prefix) == "string" then prefix elseif prefix == true then defaultPrefix else ""
-		local suffixString = if paddingCharacters then paddingCharacters[byteCount % #paddingCharacters + 1] else ""
+		local suffixString = if paddingCharacter then getPadding(byteCount) else ""
 
 		return string.format("%s%s%s", prefixString, table.concat(output, separator or defaultSeparator), suffixString)
 	end
+
+	local function frombase(str: string): buffer
+		local paddingLength = if paddingPattern then #str:match(paddingPattern) / #paddingCharacter else 0
+		local codeCount = #str / codeLength - paddingLength
+
+		local bitCount = (codeCount * width) - (paddingLength * 2)
+		local output = buffer.create(bit32.rshift(bitCount, 3))
+
+		for i = 0, codeCount - 1 do
+			local stringOffset, offset = i * codeLength, i * width
+			local codeWidth = math.min(width, bitCount - offset)
+
+			local code = decode[str:sub(stringOffset + 1, stringOffset + codeLength)]
+			write(output, offset, bit32.rshift(code, width - codeWidth), codeWidth)
+		end
+
+		return output
+	end
+
+	return tobase, frombase
 end
 
 bitbuffer.read = reader(Mutators.Logical)
@@ -117,24 +157,27 @@ bitbuffer.write = writer(Mutators.Logical)
 bitbuffer.fastread = reader(Mutators.Fast)
 bitbuffer.fastwrite = writer(Mutators.Fast)
 
-bitbuffer.tobinary = tobase({
+bitbuffer.tobinary, bitbuffer.frombinary = baseconverter({
 	characters = Bases.Binary,
 	reader = bitbuffer.fastread,
+	writer = bitbuffer.fastwrite,
 	prefix = "0b",
 	separator = "_",
 })
 
-bitbuffer.tohex = tobase({
+bitbuffer.tohex, bitbuffer.fromhex = baseconverter({
 	characters = Bases.Hexadecimal,
 	reader = bitbuffer.fastread,
+	writer = bitbuffer.fastwrite,
 	prefix = "0x",
 	separator = " ",
 })
 
-bitbuffer.tobase64 = tobase({
+bitbuffer.tobase64, bitbuffer.frombase64 = baseconverter({
 	characters = Bases.Base64,
 	reader = bitbuffer.read,
-	paddingCharacters = { "", "==", "=" },
+	writer = bitbuffer.write,
+	paddingCharacter = "=",
 	prefix = "",
 	separator = "",
 })

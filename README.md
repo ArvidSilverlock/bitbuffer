@@ -54,6 +54,5 @@ print(bitbuffer.tohex(b)) -- 80
 ```
 
 ## TODO:
-- `frombase` functions
 - `binaryformat`, allows for better formatting like `0000 000000 00000000` (i.e., chunks of information are split into groups by spaces specified by the user, good if you have a static scheme for your data)
 - given the nature of this module, testez is probably a good idea
