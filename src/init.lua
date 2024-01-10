@@ -10,7 +10,7 @@ local Mutators = require(script.Mutators)
 
 local bitbuffer = {}
 
-local function writer(options): Writer
+local function mutator(options): (Reader, Writer)
 	local toBufferSpace, readers, writers = options.toBufferSpace, options.read, options.write
 
 	local function write(b: buffer, offset: number, value: number, width: number)
@@ -38,12 +38,6 @@ local function writer(options): Writer
 		end
 	end
 
-	return write
-end
-
-local function reader(options): Reader
-	local toBufferSpace, readers, writers = options.toBufferSpace, options.read, options.write
-
 	local function read(b: buffer, offset: number, width: number)
 		local byte, bit, byteWidth = toBufferSpace(offset, width)
 		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
@@ -67,7 +61,7 @@ local function reader(options): Reader
 		end
 	end
 
-	return read
+	return read, write
 end
 
 -- A function that automatically constructs `tobase` functions given the lookup of numbers to their
@@ -77,13 +71,13 @@ local function baseconverter(options: {
 	separator: string,
 	paddingCharacter: string?,
 	characters: { [number]: string },
-	reader: Reader,
-	writer: Writer,
+	read: Reader,
+	write: Writer,
 })
 	local defaultPrefix, defaultSeparator, paddingCharacter, characters =
 		options.prefix, options.separator, options.paddingCharacter, options.characters
 
-	local read, write = options.reader, options.writer
+	local read, write = options.read, options.write
 
 	local width = math.log(#characters + 1, 2) -- Calculates how many bits are represented by the lookup table.
 	assert(width % 1 == 0, "this lookup table does not represent a whole number of bits")
@@ -151,35 +145,32 @@ local function baseconverter(options: {
 	return tobase, frombase
 end
 
-bitbuffer.read = reader(Mutators.Logical)
-bitbuffer.write = writer(Mutators.Logical)
-
-bitbuffer.fastread = reader(Mutators.Fast)
-bitbuffer.fastwrite = writer(Mutators.Fast)
+bitbuffer.read, bitbuffer.write = mutator(Mutators.Logical)
+bitbuffer.fastread, bitbuffer.fastwrite = mutator(Mutators.Fast)
 
 bitbuffer.tobinary, bitbuffer.frombinary = baseconverter({
 	characters = Bases.Binary,
-	reader = bitbuffer.fastread,
-	writer = bitbuffer.fastwrite,
 	prefix = "0b",
 	separator = "_",
+	read = bitbuffer.fastread,
+	write = bitbuffer.fastwrite,
 })
 
 bitbuffer.tohex, bitbuffer.fromhex = baseconverter({
 	characters = Bases.Hexadecimal,
-	reader = bitbuffer.fastread,
-	writer = bitbuffer.fastwrite,
 	prefix = "0x",
 	separator = " ",
+	read = bitbuffer.fastread,
+	write = bitbuffer.fastwrite,
 })
 
 bitbuffer.tobase64, bitbuffer.frombase64 = baseconverter({
 	characters = Bases.Base64,
-	reader = bitbuffer.read,
-	writer = bitbuffer.write,
 	paddingCharacter = "=",
 	prefix = "",
 	separator = "",
+	read = bitbuffer.read,
+	write = bitbuffer.write,
 })
 
 return bitbuffer
