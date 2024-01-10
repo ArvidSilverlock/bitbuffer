@@ -113,7 +113,7 @@ local function base(options: {
 	end
 
 	local tobase
-	if width == 8 then
+	if width == 8 then -- if it's only ever byte aligned, you can use `buffer.tostring` along with `gsub` for speed increases
 		local defaultTransformer = createByteTransformer(characters, defaultSeparator)
 		function tobase(b, separator, prefix)
 			local transformer = if separator then createByteTransformer(characters, separator) else defaultTransformer
@@ -135,7 +135,7 @@ local function base(options: {
 
 		function tobase(b, separator, prefix)
 			local byteCount = buffer.len(b)
-			local bitCount = bit32.lshift(byteCount, 3) -- buffer.len(b) * 8
+			local bitCount = bit32.lshift(byteCount, 3) -- byteCount * 8
 			local characterCount = math.ceil(bitCount / width)
 
 			local output = table.create(characterCount)

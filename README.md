@@ -8,17 +8,21 @@ Only truly supports `UInts`, and I only plan to support `UInts`, roblox's `bit32
 - read(buffer, offset, width)
 - write(buffer, offset, value, width)
 
-There are only two functions pertaining to modification of the buffer, `read` and `write`.
-The offset that each function requires is a 0 indexed *bit* offset, the width is also in bits, the width can range from 1-48.
+- fastread(buffer, offset, width)
+- fastwrite(buffer, offset, value, width)
 
-The reason the `write` function takes the `value` to write before the `width` is to more closely mimic the `bit32` library.
+The offset that each function requires is a 0 indexed *bit* `offset`, the `width` is also in bits, which can range from 1-48, the `value` is an unsigned integer.
+
+In most cases, like creating your own data from scratch, `fastread` and `fastwrite` would work fine, but when importing data generated externally, like for an LZW algorithm, or base64 decoder, `fastread` and `fastwrite` will most likely not read the data properly (due to the endian of `buffer`s being incorrect), only difference between these functions is the endian they use when storing data.
+
+I'm not really too sure how to explain this properly, a more appropriate name for these functions would likely incorporate what endian they uses, like `bigread` and `littleread`, but these feel too verbose..? Again, I'm unsure.
 
 ## Base Conversion API
 
 Currently there are 3 supported bases, binary, hexadecimal, and base64, each of which have `to` and `from` functions.
 
-The functions such as `tobinary` intake a buffer and return a string, whereas the functions like `frombinary` intake a string and return a buffer.
-The `from` functions *do not* support prefixes or separators, this *may* come in the future, we'll have to see.
+Functions that convert *to* a base intake a buffer and return a string, whereas the functions that do the inverse intake a string and return a buffer.
+The `from` functions *do not* support prefixes or separators, this may come in the future, we'll have to see.
 
 Each of the `to` functions take 3 parameters, the first being the buffer to convert, the second being the separator between each code, and the third being a prefix (or a boolean defining whether or not to add the default prefix). Only the first parameter is required, if the others aren't specified it will use defaults that make sense for each base.
 
@@ -71,5 +75,5 @@ print(encoded) -- Zm9vYmFy
 
 ## TODO:
 - support up to 53 bit integers, instead of up 48 bit integers
-- `binaryformat`, allows for better formatting like `0000 000000 00000000` (i.e., chunks of information are split into groups by spaces specified by the user, good if you have a static scheme for your data)
+- some form of function that allows for better formatting like `0000 000000 00000000` (i.e., chunks of information are split into groups specified by the user, good if you have a set scheme for your data)
 - given the nature of this module, testez is probably a good idea
