@@ -66,7 +66,7 @@ end
 
 -- A function that automatically constructs `tobase` functions given the lookup of numbers to their
 -- string forms, along with some other configuration parameters.
-local function baseconverter(options: {
+local function base(options: {
 	prefix: string,
 	separator: string,
 	paddingCharacter: string?,
@@ -148,7 +148,7 @@ end
 bitbuffer.read, bitbuffer.write = mutator(Mutators.Logical)
 bitbuffer.fastread, bitbuffer.fastwrite = mutator(Mutators.Fast)
 
-bitbuffer.tobinary, bitbuffer.frombinary = baseconverter({
+bitbuffer.tobinary, bitbuffer.frombinary = base({
 	characters = Bases.Binary,
 	prefix = "0b",
 	separator = "_",
@@ -156,7 +156,7 @@ bitbuffer.tobinary, bitbuffer.frombinary = baseconverter({
 	write = bitbuffer.fastwrite,
 })
 
-bitbuffer.tohex, bitbuffer.fromhex = baseconverter({
+bitbuffer.tohex, bitbuffer.fromhex = base({
 	characters = Bases.Hexadecimal,
 	prefix = "0x",
 	separator = " ",
@@ -164,7 +164,7 @@ bitbuffer.tohex, bitbuffer.fromhex = baseconverter({
 	write = bitbuffer.fastwrite,
 })
 
-bitbuffer.tobase64, bitbuffer.frombase64 = baseconverter({
+bitbuffer.tobase64, bitbuffer.frombase64 = base({
 	characters = Bases.Base64,
 	paddingCharacter = "=",
 	prefix = "",
