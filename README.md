@@ -73,4 +73,3 @@ print(encoded) -- Zm9vYmFy
 - support up to 53 bit integers, instead of up 48 bit integers
 - `binaryformat`, allows for better formatting like `0000 000000 00000000` (i.e., chunks of information are split into groups by spaces specified by the user, good if you have a static scheme for your data)
 - given the nature of this module, testez is probably a good idea
-- make byte aligned `tobase` functions incorporate `buffer.tostring(b):gsub(".")`, in my tests this gave ~2x speedup for the hex encoding

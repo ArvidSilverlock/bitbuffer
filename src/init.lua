@@ -13,6 +13,17 @@ local Mutators = require(script.Mutators)
 
 local bitbuffer = {}
 
+local function createByteTransformer(characters: { [number]: string }, separator: string): (string) -> string
+	local copy = {}
+	for value, character in characters do
+		copy[string.char(value)] = character .. separator
+	end
+
+	return function(char: string)
+		return copy[char]
+	end
+end
+
 local function mutator(options): (Reader, Writer)
 	local toBufferSpace, readers, writers = options.toBufferSpace, options.read, options.write
 
@@ -98,33 +109,55 @@ local function base(options: {
 		decode[character] = code
 	end
 
-	-- https://www.desmos.com/calculator/hgzcqadocn, don't know if this is a universal formula
-	-- but it looks *about* right, and it works for base64
-	local p = 2 ^ math.ceil(math.log(width, 2)) - width
-	local function getPadding(bytes: number)
-		local count = p - (bytes - 1) % (p + 1)
-		return paddingCharacter:rep(count)
-	end
+	local tobase
+	if width == 8 then
+		local defaultTransformer = createByteTransformer(characters, defaultSeparator)
+		function tobase(b: buffer, separator: string?, prefix: (string | boolean)?): string
+			local transformer = if separator then createByteTransformer(characters, separator) else defaultTransformer
+			local separatorLength = string.len(separator or defaultSeparator)
 
-	local function tobase(b: buffer, separator: string?, prefix: (string | boolean)?): string
-		local byteCount = buffer.len(b)
-		local bitCount = bit32.lshift(byteCount, 3) -- buffer.len(b) * 8
-		local characterCount = math.ceil(bitCount / width)
+			local prefixString = if type(prefix) == "string" then prefix elseif prefix then defaultPrefix else ""
+			local outputBody = buffer.tostring(b):gsub(".", transformer):sub(1, -separatorLength - 1)
 
-		local output = table.create(characterCount)
-
-		-- iterate over each code in the buffer
-		local endOffset = (characterCount - 1) * width
-		for offset = 0, endOffset, width do
-			local codeWidth = math.min(width, bitCount - offset) -- Prevent reading over the end of the buffer.
-			local code = bit32.lshift(read(b, offset, codeWidth), width - codeWidth) -- `lshift` to account for missing bits if we're at the end.
-			table.insert(output, characters[code])
+			return string.format("%s%s", prefixString, outputBody)
+		end
+	else
+		-- https://www.desmos.com/calculator/hgzcqadocn, don't know if this is a universal formula
+		-- but it looks *about* right, and it works for base64
+		local p = 2 ^ math.ceil(math.log(width, 2)) - width
+		local function getPadding(bytes: number)
+			local count = p - (bytes - 1) % (p + 1)
+			return paddingCharacter:rep(count)
 		end
 
-		local prefixString = if typeof(prefix) == "string" then prefix elseif prefix == true then defaultPrefix else ""
-		local suffixString = if paddingCharacter then getPadding(byteCount) else ""
+		function tobase(b: buffer, separator: string?, prefix: (string | boolean)?): string
+			local byteCount = buffer.len(b)
+			local bitCount = bit32.lshift(byteCount, 3) -- buffer.len(b) * 8
+			local characterCount = math.ceil(bitCount / width)
 
-		return string.format("%s%s%s", prefixString, table.concat(output, separator or defaultSeparator), suffixString)
+			local output = table.create(characterCount)
+
+			local endOffset = (characterCount - 1) * width
+			local overhang = bitCount - endOffset
+
+			-- iterate over each code in the buffer that doesn't extend over the end
+			for offset = 0, endOffset - overhang, width do
+				local code = read(b, offset, width)
+				table.insert(output, characters[code])
+			end
+
+			-- if there is a code that extends over the end
+			if overhang > 0 then
+				local code = bit32.lshift(read(b, endOffset, overhang), width - overhang) -- `lshift` to account for missing bits that would be present over the end
+				table.insert(output, characters[code])
+			end
+
+			local prefixString = if type(prefix) == "string" then prefix elseif prefix then defaultPrefix else ""
+			local outputBody = table.concat(output, separator or defaultSeparator)
+			local suffixString = if paddingCharacter then getPadding(byteCount) else ""
+
+			return string.format("%s%s%s", prefixString, outputBody, suffixString)
+		end
 	end
 
 	local function frombase(str: string): buffer
