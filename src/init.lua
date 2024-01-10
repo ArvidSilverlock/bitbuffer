@@ -1,3 +1,6 @@
+--!native
+--!optimize 2
+
 -- Any usage of `bit32.lshift` and `bit32.rshift` where the displacement is `3` emulate integer division
 -- and multiplication by 8 (2^3, hence the 3), this is done because bitshifting is faster than generic
 -- mathmatical operations.
