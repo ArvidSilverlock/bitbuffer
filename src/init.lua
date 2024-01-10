@@ -77,9 +77,10 @@ local function tobase(options: {
 	separator: string,
 	paddingCharacters: { string }?,
 	characters: { [number]: string },
+	reader: (b: buffer, offset: number, width: number) -> number,
 })
-	local defaultPrefix, defaultSeparator, paddingCharacters, characters =
-		options.prefix, options.separator, options.paddingCharacters, options.characters
+	local defaultPrefix, defaultSeparator, paddingCharacters, characters, read =
+		options.prefix, options.separator, options.paddingCharacters, options.characters, options.reader
 
 	local width = math.log(#characters + 1, 2) -- Calculates how many bits are represented by the lookup table.
 	assert(width % 1 == 0, "this lookup table does not represent a whole number of bits")
@@ -99,7 +100,7 @@ local function tobase(options: {
 		local endOffset = (characterCount - 1) * width
 		for offset = 0, endOffset, width do
 			local byteWidth = math.min(width, bitCount - offset) -- Prevent reading over the end of the buffer.
-			local byte = bit32.lshift(bitbuffer.read(b, offset, byteWidth), width - byteWidth) -- `lshift` to account for missing bits if we're at the end.
+			local byte = bit32.lshift(read(b, offset, byteWidth), width - byteWidth) -- `lshift` to account for missing bits if we're at the end.
 			table.insert(output, characters[byte])
 		end
 
@@ -118,18 +119,21 @@ bitbuffer.fastwrite = writer(Mutators.Fast)
 
 bitbuffer.tobinary = tobase({
 	characters = Bases.Binary,
+	reader = bitbuffer.fastread,
 	prefix = "0b",
 	separator = "_",
 })
 
 bitbuffer.tohex = tobase({
 	characters = Bases.Hexadecimal,
+	reader = bitbuffer.fastread,
 	prefix = "0x",
 	separator = " ",
 })
 
 bitbuffer.tobase64 = tobase({
 	characters = Bases.Base64,
+	reader = bitbuffer.read,
 	paddingCharacters = { "", "==", "=" },
 	prefix = "",
 	separator = "",
