@@ -48,8 +48,6 @@ local function mutator(options): (Reader, Writer)
 				write(b, offset + position, chunk, chunkSize)
 				position += chunkSize
 			until position == width
-		elseif bit == 0 and width == byteWidth then -- Fully aligned to bits 8, 16, 24 and 32, allows for normal functions to be used.
-			writers[byteWidth](b, byte, value)
 		else -- Confined within one write call.
 			writers[byteWidth](b, byte, bit32.replace(readers[byteWidth](b, byte), value, bit, width))
 		end
@@ -71,8 +69,6 @@ local function mutator(options): (Reader, Writer)
 			until position == width
 
 			return value
-		elseif bit == 0 and width == byteWidth then -- Fully aligned to bits 8, 16, 24 and 32, allows for normal functions to be used.
-			return readers[byteWidth](b, byte)
 		else -- Confined within one read call.
 			return bit32.extract(readers[byteWidth](b, byte), bit, width)
 		end
