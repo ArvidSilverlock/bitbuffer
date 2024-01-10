@@ -1,7 +1,11 @@
-Average `read` and `write` times in microseconds, calculated by calling the `read`/`write` functions at every possible position in a buffer containing 65,536 bytes.
+> Benchmarks ran on a Late 2013 iMac with a 3.2 GHz Quad-Core Intel Core i5 CPU.
 
-Benchmarks ran on a Late 2013 iMac with a 3.2 GHz Quad-Core Intel Core i5 CPU.
+# Benchmarks
+Average `read` and `write` are calculated by calling the `read`/`write` functions at every possible position in a buffer containing 65,536 bytes.
 
+Past 24 bits it will get slower much faster, as after that point it will often need to edit 5 bytes of data at once, meaning it cannot use the `bit32` library for manipulation.
+
+## Read and Write Time
 |bits|read (μs)|write (μs)|fastread (μs)|fastwrite (μs)|
 |----|---------|---------|---------|---------|
 | 01 | 0.16384 | 0.18428 | 0.13031 | 0.17614 |
@@ -53,6 +57,7 @@ Benchmarks ran on a Late 2013 iMac with a 3.2 GHz Quad-Core Intel Core i5 CPU.
 | 47 | 0.67715 | 0.97891 | 0.41919 | 0.50762 |
 | 48 | 0.67156 | 1.03515 | 0.42664 | 0.51404 |
 
+## Encode Time
 |bytes|binary (μs)|hex (μs)|base64 (μs)|
 |-----|-----------|--------|-----------|
 | 1 | 1.785 | 0.638 | 1.044 |
@@ -72,3 +77,24 @@ Benchmarks ran on a Late 2013 iMac with a 3.2 GHz Quad-Core Intel Core i5 CPU.
 | 16384 | 3294.375 | 3213.721 | 5471.900 |
 | 32768 | 6672.714 | 6332.056 | 10815.169 |
 | 65536 | 13407.707 | 12826.281 | 22881.959 |
+
+## Decode Time
+|bytes|binary (μs)|hex (μs)|base64 (μs)|
+|-----|-----------|--------|-----------|
+| 1 | 1.155 | 0.567 | 1.264 |
+| 2 | 0.950 | 0.847 | 2.523 |
+| 4 | 1.587 | 1.495 | 2.835 |
+| 8 | 2.866 | 2.749 | 4.858 |
+| 16 | 5.505 | 5.331 | 9.282 |
+| 32 | 10.781 | 10.482 | 23.210 |
+| 64 | 24.378 | 35.128 | 40.646 |
+| 128 | 45.744 | 46.418 | 83.619 |
+| 256 | 99.825 | 92.799 | 170.561 |
+| 512 | 180.560 | 180.223 | 279.705 |
+| 1024 | 364.386 | 369.284 | 577.554 |
+| 2048 | 651.664 | 781.802 | 1134.805 |
+| 4096 | 1354.255 | 1368.937 | 2130.068 |
+| 8192 | 3074.604 | 2785.355 | 4642.899 |
+| 16384 | 6395.955 | 5387.265 | 9475.607 |
+| 32768 | 10779.286 | 10303.608 | 18365.001 |
+| 65536 | 22153.167 | 20361.989 | 35468.599 |

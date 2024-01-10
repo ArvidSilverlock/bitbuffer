@@ -15,7 +15,12 @@ The reason the `write` function takes the `value` to write before the `width` is
 
 ## Base Conversion API
 
-There are three functions, `tobinary`, `tohex`, `tobase64`. Each of them take the same parameters, the `buffer` to convert to a string, an optional `separator` string which defines the character(s) to separate each chunk of the buffer by, and whether or not to add a base prefix (defaults to `true`).
+Currently there are 3 supported bases, binary, hexadecimal, and base64, each of which have `to` and `from` functions.
+
+The functions such as `tobinary` intake a buffer and return a string, whereas the functions like `frombinary` intake a string and return a buffer.
+The `from` functions *do not* support prefixes or separators, this *may* come in the future, we'll have to see.
+
+Each of the `to` functions take 3 parameters, the first being the buffer to convert, the second being the separator between each code, and the third being a prefix (or a boolean defining whether or not to add the default prefix). Only the first parameter is required, if the others aren't specified it will use defaults that make sense for each base.
 
 An example of how these format functions could look
 ```lua
@@ -47,12 +52,24 @@ Obviously this is relatively slow, but I'm not all too sure if there's an altern
 local b = buffer.create(1)
 
 bitbuffer.write(b, 0, 1, 1) -- Write 1 bit at the first bit.
-assert(bitbuffer.write(b, 0, 1) == 1)
+assert(bitbuffer.read(b, 0, 1) == 1) -- Validate the write call functioned
 
 print(bitbuffer.tobinary(b)) -- 10000000
 print(bitbuffer.tohex(b)) -- 80
 ```
 
+```lua
+local b = buffer.fromstring("foobar")
+
+local encoded = bitbuffer.tobase64(b, "")
+local decoded = bitbuffer.frombase64(encoded)
+
+assert(bitbuffer.tohex(b) == bitbuffer.tohex(decoded))
+
+print(encoded) -- Zm9vYmFy
+```
+
 ## TODO:
+- support up to 53 bit integers, instead of up 48 bit integers
 - `binaryformat`, allows for better formatting like `0000 000000 00000000` (i.e., chunks of information are split into groups by spaces specified by the user, good if you have a static scheme for your data)
 - given the nature of this module, testez is probably a good idea
