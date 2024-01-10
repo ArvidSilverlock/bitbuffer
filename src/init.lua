@@ -8,6 +8,9 @@
 type Reader = (b: buffer, offset: number, width: number) -> number
 type Writer = (b: buffer, offset: number, value: number, width: number) -> ()
 
+type ToBase = (b: buffer, separator: string?, prefix: (string | boolean)?) -> string
+type FromBase = (str: string) -> buffer
+
 local Bases = require(script.BaseLookup)
 local Mutators = require(script.Mutators)
 
@@ -87,7 +90,7 @@ local function base(options: {
 	characters: { [number]: string },
 	read: Reader,
 	write: Writer,
-})
+}): (ToBase, FromBase)
 	local defaultPrefix, defaultSeparator, paddingCharacter, characters =
 		options.prefix, options.separator, options.paddingCharacter, options.characters
 
@@ -112,7 +115,7 @@ local function base(options: {
 	local tobase
 	if width == 8 then
 		local defaultTransformer = createByteTransformer(characters, defaultSeparator)
-		function tobase(b: buffer, separator: string?, prefix: (string | boolean)?): string
+		function tobase(b, separator, prefix)
 			local transformer = if separator then createByteTransformer(characters, separator) else defaultTransformer
 			local separatorLength = string.len(separator or defaultSeparator)
 
@@ -130,7 +133,7 @@ local function base(options: {
 			return paddingCharacter:rep(count)
 		end
 
-		function tobase(b: buffer, separator: string?, prefix: (string | boolean)?): string
+		function tobase(b, separator, prefix)
 			local byteCount = buffer.len(b)
 			local bitCount = bit32.lshift(byteCount, 3) -- buffer.len(b) * 8
 			local characterCount = math.ceil(bitCount / width)
@@ -160,7 +163,7 @@ local function base(options: {
 		end
 	end
 
-	local function frombase(str: string): buffer
+	local function frombase(str)
 		local paddingLength = if paddingPattern then #str:match(paddingPattern) / #paddingCharacter else 0
 		local codeCount = #str / codeLength - paddingLength
 
