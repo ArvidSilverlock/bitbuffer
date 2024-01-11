@@ -144,7 +144,7 @@ function Writer:CFrame(value: CFrame)
 end
 
 function Writer:BrickColor(value: BrickColor)
-	self:UInt(value.Number, 11)
+	self:UInt(value.Number - 1, 11)
 end
 
 function Writer:Color3(value: Color3)
@@ -155,7 +155,7 @@ end
 
 function Writer:UDim(value: UDim)
 	self:Float32(value.Scale)
-	self:Float32(value.Offset)
+	self:Int32(value.Offset)
 end
 
 function Writer:UDim2(value: UDim2)
@@ -169,16 +169,11 @@ function Writer:NumberRange(value: NumberRange)
 end
 
 function Writer:Enum(value: EnumItem, enumType: Enum?)
-	assert(
-		enumType == nil or value.EnumType == enumType,
-		"there is no relation between the provided `EnumItem` and `Enum`"
-	)
-
 	if not enumType then
-		self:UInt(ENUM_CODES[enumType], ENUM_CODE_WIDTH)
+		self:UInt(ENUM_CODES[value.EnumType], ENUM_CODE_WIDTH)
 	end
 
-	self:UInt(value.Value - 1, ENUM_WIDTHS[value.EnumType])
+	self:UInt(value.Value, ENUM_WIDTHS[value.EnumType])
 end
 
 function Writer:ColorSequence(value: ColorSequence)

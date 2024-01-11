@@ -4,6 +4,7 @@ local CFRAME_SPECIAL_CASES = Constants.CFrameSpecialCases
 
 local ENUMS = Constants.Enums
 local ENUM_WIDTHS = Constants.EnumWidths
+local ENUM_LOOKUP = Constants.EnumLookup
 local ENUM_CODE_WIDTH = Constants.EnumCodeWidth
 
 local function UInt(width: number)
@@ -114,12 +115,12 @@ function Reader:BrickColor(): BrickColor
 	return BrickColor.new(self:UInt(11) + 1)
 end
 
-function Reader:Color3(value: Color3)
+function Reader:Color3()
 	return Color3.fromRGB(self:UInt8(), self:UInt8(), self:UInt8())
 end
 
 function Reader:UDim(): UDim
-	return UDim.new(self:Float32(), self:Float32())
+	return UDim.new(self:Float32(), self:Int32())
 end
 
 function Reader:UDim2(): UDim2
@@ -136,7 +137,7 @@ function Reader:Enum(enumType: Enum?): EnumItem
 	end
 
 	local enumCode = self:UInt(ENUM_WIDTHS[enumType]) + 1
-	return enumType[enumCode]
+	return ENUM_LOOKUP[enumType][enumCode]
 end
 
 function Reader:ColorSequence(): ColorSequence

@@ -31,11 +31,19 @@ local CFRAME_SPECIAL_CASES = {
 
 local ENUM_CODES = {}
 local ENUM_WIDTHS = {}
+local ENUM_LOOKUP = {}
 
 local enums = Enum:GetEnums()
 for index, enum in enums do
+	local enumItems = enum:GetEnumItems()
+	ENUM_LOOKUP[enum] = table.create(#enumItems)
+
 	ENUM_CODES[enum] = index - 1
-	ENUM_WIDTHS[enum] = math.ceil(math.log(#enum:GetEnumItems(), 2))
+	ENUM_WIDTHS[enum] = math.ceil(math.log(#enumItems, 2))
+
+	for _, enumItem in enumItems do
+		ENUM_LOOKUP[enum][enumItem.Value + 1] = enumItem
+	end
 end
 
 local ENUM_CODE_WIDTH = math.ceil(math.log(#enums, 2))
@@ -44,6 +52,7 @@ return {
 	Enums = enums,
 	EnumCodes = ENUM_CODES,
 	EnumWidths = ENUM_WIDTHS,
+	EnumLookup = ENUM_LOOKUP,
 	EnumCodeWidth = ENUM_CODE_WIDTH,
 
 	CFrameSpecialCases = CFRAME_SPECIAL_CASES,
