@@ -8,14 +8,12 @@ Only truly supports `uints`, and, as of right now, I only plan to support `uints
 - read(buffer, offset, width)
 - write(buffer, offset, value, width)
 
-- fastread(buffer, offset, width)
-- fastwrite(buffer, offset, value, width)
+- readlittle(buffer, offset, width)
+- writelittle(buffer, offset, value, width)
 
 The offset that each function requires is a 0 indexed *bit* `offset`, the `width` is also in bits, which can range from 1-48, the `value` is an unsigned integer.
 
-In most cases, like creating your own data from scratch, `fastread` and `fastwrite` would work fine, but when importing data generated externally, like for an LZW algorithm, or base64 decoder, `fastread` and `fastwrite` will most likely not read the data properly (due to the endian of `buffer`s being incorrect), only difference between these functions is the endian they use when storing data.
-
-I'm not really too sure how to explain this properly, a more appropriate name for these functions would likely incorporate what endian they uses, like `bigread` and `littleread`, but these feel too verbose..? Again, I'm unsure.
+`read` and `write` use big endian, whereas `readlittle` and `writelittle` use little endian. `readlittle` and `writelittle` are faster than their big endian counterparts as roblox's `buffer` objects seemingly use little endian on the byte scale, therefore less manipulation of the buffers is required. I'm not all too sure on any of this, as I'm not educated on the subject of endianness.
 
 ## Base Conversion API
 
@@ -25,6 +23,8 @@ Functions that convert *to* a base intake a buffer and return a string, whereas 
 The `from` functions *do not* support prefixes or separators, this may come in the future, we'll have to see.
 
 Each of the `to` functions take 3 parameters, the first being the buffer to convert, the second being the separator between each code, and the third being a prefix (or a boolean defining whether or not to add the default prefix). Only the first parameter is required, if the others aren't specified it will use defaults that make sense for each base.
+
+For byte aligned functions, such as `tobinary` and `tohex`, you are allowed to specify whether or not to flip the endian of the bytes being read, this is useful if you are using the little endian `read` and `write` calls and want to debug.
 
 An example of how these format functions could look
 ```lua
@@ -56,7 +56,7 @@ Obviously this is relatively slow, but I'm not all too sure if there's an altern
 local b = buffer.create(1)
 
 bitbuffer.write(b, 0, 1, 1) -- Write 1 bit at the first bit.
-assert(bitbuffer.read(b, 0, 1) == 1) -- Validate the write call functioned
+assert(bitbuffer.read(b, 0, 1) == 1) -- Validate the write call functioned as expected
 
 print(bitbuffer.tobinary(b)) -- 10000000
 print(bitbuffer.tohex(b)) -- 80
@@ -74,6 +74,5 @@ print(encoded) -- Zm9vYmFy
 ```
 
 ## TODO:
-- support up to 53 bit integers, instead of up 48 bit integers
 - some form of function that allows for better formatting like `0000 000000 00000000` (i.e., chunks of information are split into groups specified by the user, good if you have a set scheme for your data)
 - given the nature of this module, testez is probably a good idea

@@ -8,17 +8,22 @@
 type Reader = (b: buffer, offset: number, width: number) -> number
 type Writer = (b: buffer, offset: number, value: number, width: number) -> ()
 
-type ToBase = (b: buffer, separator: string?, prefix: (string | boolean)?) -> string
+type ToBase = (b: buffer, separator: string?, prefix: (string | boolean)?, useLittleEndian: boolean?) -> string
 type FromBase = (str: string) -> buffer
 
 local Bases = require(script.BaseLookup)
 local Mutators = require(script.Mutators)
 
-local bitbuffer = {}
+local FLIP_ENDIAN = Bases.FlipEndian
 
-local function createByteTransformer(characters: { [number]: string }, separator: string): (string) -> string
+local function createByteTransformer(
+	characters: { [number]: string },
+	separator: string,
+	bigEndian: boolean
+): (string) -> string
 	local copy = {}
 	for value, character in characters do
+		value = if bigEndian then FLIP_ENDIAN[value] else value
 		copy[string.char(value)] = character .. separator
 	end
 
@@ -28,27 +33,26 @@ local function createByteTransformer(characters: { [number]: string }, separator
 end
 
 local function mutator(options): (Reader, Writer)
-	local toBufferSpace, readers, writers = options.toBufferSpace, options.read, options.write
+	local toBufferSpace, bitIterate = options.toBufferSpace, options.bitIterate
+	local readers, writers = options.read, options.write
+	local getShiftValue = options.getShiftValue
 
 	local function write(b: buffer, offset: number, value: number, width: number)
 		local byte, bit, byteWidth = toBufferSpace(offset, width)
 		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
 
 		if byteWidth > 4 then -- outside of `bit32`'s functionality
-			assert(width <= 48, "`bitbuffer` does not suppoer `width`s greater than 48")
+		assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
 
-			local position = 0
-			repeat
-				local chunkSize = math.min(width - position, 24) -- When we're on the final read call we can't read a full 3 bytes.
-
-				local mask = bit32.lshift(1, chunkSize) -- 2^chunkSize
-				local chunk = value % mask -- bit32.band(value, mask - 1)
-				value = value // mask -- bit32.rshift(value, chunkSize)
-
-				write(b, offset + position, chunk, chunkSize)
-				position += chunkSize
-			until position == width
-		else -- Confined within one write call.
+			for position, chunkWidth in bitIterate(width, bit) do
+				local mask = 2^chunkWidth
+				local chunk = value % mask
+				value //= mask
+				
+				write(b, offset + position, chunk, chunkWidth)
+			end
+		else
+			assert(width > 0, "`width` must be greater than or equal to 1")
 			writers[byteWidth](b, byte, bit32.replace(readers[byteWidth](b, byte), value, bit, width))
 		end
 	end
@@ -58,16 +62,13 @@ local function mutator(options): (Reader, Writer)
 		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
 
 		if byteWidth > 4 then -- outside of `bit32`'s functionality
-			assert(width <= 48, "`bitbuffer` does not suppoer `width`s greater than 48")
+			assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
 
-			local value, position = 0, 0
-
-			repeat
-				local chunkSize = math.min(width - position, 24) -- When we're on the final read call we can't read a full 3 bytes.
-				value += read(b, offset + position, chunkSize) * bit32.lshift(1, position) -- * 2^position
-				position += chunkSize
-			until position == width
-
+			local value = 0
+			for position, chunkWidth in bitIterate(width, bit) do
+				local shiftValue = getShiftValue(position, width, chunkWidth)
+				value += read(b, offset + position, chunkWidth) * 2^shiftValue
+			end
 			return value
 		else -- Confined within one read call.
 			return bit32.extract(readers[byteWidth](b, byte), bit, width)
@@ -110,9 +111,15 @@ local function base(options: {
 
 	local tobase
 	if width == 8 then -- if it's only ever byte aligned, you can use `buffer.tostring` along with `gsub` for speed increases
-		local defaultTransformer = createByteTransformer(characters, defaultSeparator)
-		function tobase(b, separator, prefix)
-			local transformer = if separator then createByteTransformer(characters, separator) else defaultTransformer
+		local bigEndianTransformer = createByteTransformer(characters, defaultSeparator, false)
+		local littleEndianTransformer = createByteTransformer(characters, defaultSeparator, true)
+
+		function tobase(b, separator, prefix, useLittleEndian)
+			local transformer = if separator
+				then createByteTransformer(characters, separator, useLittleEndian)
+				elseif useLittleEndian then littleEndianTransformer
+				else bigEndianTransformer
+
 			local separatorLength = string.len(separator or defaultSeparator)
 
 			local prefixString = if type(prefix) == "string" then prefix elseif prefix then defaultPrefix else ""
@@ -180,23 +187,25 @@ local function base(options: {
 	return tobase, frombase
 end
 
-bitbuffer.read, bitbuffer.write = mutator(Mutators.Logical)
-bitbuffer.fastread, bitbuffer.fastwrite = mutator(Mutators.Fast)
+local bitbuffer = {}
+
+bitbuffer.read, bitbuffer.write = mutator(Mutators.BigEndian)
+bitbuffer.readlittle, bitbuffer.writelittle = mutator(Mutators.LittleEndian)
 
 bitbuffer.tobinary, bitbuffer.frombinary = base({
 	characters = Bases.Binary,
 	prefix = "0b",
 	separator = "_",
-	read = bitbuffer.fastread,
-	write = bitbuffer.fastwrite,
+	read = bitbuffer.readlittle,
+	write = bitbuffer.writelittle,
 })
 
 bitbuffer.tohex, bitbuffer.fromhex = base({
 	characters = Bases.Hexadecimal,
 	prefix = "0x",
 	separator = " ",
-	read = bitbuffer.fastread,
-	write = bitbuffer.fastwrite,
+	read = bitbuffer.readlittle,
+	write = bitbuffer.writelittle,
 })
 
 bitbuffer.tobase64, bitbuffer.frombase64 = base({
