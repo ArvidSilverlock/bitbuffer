@@ -1,44 +1,10 @@
-local function case(x, y, z)
-	return CFrame.fromEulerAnglesYXZ(math.rad(x), math.rad(y), math.rad(z))
-end
+local Constants = require(script.Parent.Constants)
 
-local CFRAME_SPECIAL_CASES = {
-	case(0, 0, 0),
-	case(90, 0, 0),
-	case(0, 180, 180),
-	case(-90, 0, 0),
-	case(0, 180, 90),
-	case(0, 90, 90),
-	case(0, 0, 90),
-	case(0, -90, 90),
-	case(-90, -90, 0),
-	case(0, -90, 0),
-	case(90, -90, 0),
-	case(0, 90, 180),
-	case(0, 180, 0),
-	case(-90, -180, 0),
-	case(0, 0, 180),
-	case(90, 180, 0),
-	case(0, 0, -90),
-	case(0, -90, -90),
-	case(0, -180, -90),
-	case(0, 90, -90),
-	case(90, 90, 0),
-	case(0, 90, 0),
-	case(-90, 90, 0),
-	case(0, -90, 180),
-}
+local CFRAME_SPECIAL_CASES = Constants.CFrameSpecialCases
 
-local ENUM_CODES = {}
-local ENUM_WIDTH = {}
-
-local enums = Enum:GetEnums()
-for index, enum in enums do
-	ENUM_CODES[enum] = index - 1
-	ENUM_WIDTH[enum] = math.ceil(math.log(#enum:GetEnumItems(), 2))
-end
-
-local ENUM_CODE_WIDTH = math.ceil(math.log(#enums, 2))
+local ENUM_CODES = Constants.EnumCodes
+local ENUM_WIDTHS = Constants.EnumWidths
+local ENUM_CODE_WIDTH = Constants.EnumCodeWidth
 
 local function getCFrameSpecialCase(cframe)
 	for index, case in CFRAME_SPECIAL_CASES do
@@ -57,7 +23,7 @@ end
 local function Int(width: number)
 	local min = -2 ^ (width - 1)
 	return function(self, value: number)
-		self:UInt(if value < 0 then value - min else value, width)
+		self:UInt(value - min, width)
 	end
 end
 
@@ -131,14 +97,14 @@ function Writer:String(value: string, lengthWidth: number?)
 
 	local stringBuffer = buffer.fromstring(value)
 	for stringOffset = 0, stringLength - 1 do
-		self:UInt(buffer.readu8(stringBuffer, stringOffset), 8)
+		self:UInt8(buffer.readu8(stringBuffer, stringOffset))
 	end
 end
 
 function Writer:NullTerminatedString(value: string)
 	local stringBuffer = buffer.fromstring(value)
 	for stringOffset = 0, #value - 1 do
-		self:UInt(buffer.readu8(stringBuffer, stringOffset), 8)
+		self:UInt8(buffer.readu8(stringBuffer, stringOffset))
 	end
 	self:UInt(0, 8)
 end
@@ -212,7 +178,7 @@ function Writer:Enum(value: EnumItem, enumType: Enum?)
 		self:UInt(ENUM_CODES[enumType], ENUM_CODE_WIDTH)
 	end
 
-	self:UInt(value.Value - 1, ENUM_WIDTH[value.EnumType])
+	self:UInt(value.Value - 1, ENUM_WIDTHS[value.EnumType])
 end
 
 function Writer:ColorSequence(value: ColorSequence)

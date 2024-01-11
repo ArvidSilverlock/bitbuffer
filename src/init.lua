@@ -14,8 +14,7 @@ type FromBase = (str: string) -> buffer
 local Bases = require(script.BaseLookup)
 local Mutators = require(script.Mutators)
 
-local Reader = require(script.Reader)
-local Writer = require(script.Writer)
+local Manipulators = require(script.Manipulators)
 
 local FLIP_ENDIAN = Bases.FlipEndian
 local POWERS_OF_TWO = {}
@@ -241,7 +240,7 @@ function bitbuffer.reader(b: buffer, useLittleEndian: boolean)
 		read = if useLittleEndian
 			then bitbuffer.readlittle
 			else bitbuffer.read
-	}, Reader)
+	}, Manipulators.Reader)
 end
 
 function bitbuffer.writer(b: buffer, useLittleEndian: boolean)
@@ -251,7 +250,7 @@ function bitbuffer.writer(b: buffer, useLittleEndian: boolean)
 		write = if useLittleEndian
 			then bitbuffer.writelittle
 			else bitbuffer.write
-	}, Writer)
+	}, Manipulators.Writer)
 end
 
 return bitbuffer
