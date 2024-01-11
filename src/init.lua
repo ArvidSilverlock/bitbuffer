@@ -27,7 +27,7 @@ local function createByteTransformer(
 	characters: { [number]: string },
 	separator: string,
 	bigEndian: boolean
-): { [string]: string }
+): (string) -> string
 	local copy = {}
 
 	for value, character in characters do
@@ -149,8 +149,7 @@ local function base(options: {
 			local bitCount = bit32.lshift(byteCount, 3) -- byteCount * 8
 			local characterCount = math.ceil(bitCount / width)
 
-			local output = table.create(characterCount)
-			local outputIndex = output
+			local output, outputIndex = table.create(characterCount), 1
 
 			local endOffset = (characterCount - 1) * width
 			local overhang = bitCount - endOffset
