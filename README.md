@@ -40,16 +40,6 @@ print(bitbuffer.tobinary(b, ", 0b", true)) -- 0b11110011, 0b10100110, 0b00110100
 print(bitbuffer.tohex(b, ", 0x", true)) -- 0xf3, 0xa6, 0x34, 0x5a
 ```
 
-## Writing non UInts
-
-If you want to write values other than UInts, you could possibly use `string.pack` to convert non UInts to UInts, for example:
-```lua
-print(string.unpack("<I4", string.pack("<f", math.pi))) -- 1078530011
-```
-You can easily invert this process by flipping the pack formats around.
-
-Obviously this is relatively slow, but I'm not all too sure if there's an alternative to doing this, as there's not really another way to read binary data.
-
 ## An few examples
 ```lua
 local b = buffer.create(1)
