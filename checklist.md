@@ -1,15 +1,15 @@
 ## Luau Primitives
 |value|read|write|
 |-----|----|-----|
-| UInt8 | ❌ | ❌ |
-| UInt16 | ❌ | ❌ |
-| UInt32 | ❌ | ❌ |
-| Int8 | ❌ | ❌ |
-| Int16 | ❌ | ❌ |
-| Int32 | ❌ | ❌ |
-| Float16 | ❌ | ❌ |
-| Float32 | ❌ | ❌ |
-| Float64 | ❌ | ❌ |
+| UInt8 | ❌ | ✅ |
+| UInt16 | ❌ | ✅ |
+| UInt32 | ❌ | ✅ |
+| Int8 | ❌ | ✅ |
+| Int16 | ❌ | ✅ |
+| Int32 | ❌ | ✅ |
+| Float16 | ❌ | ✅ |
+| Float32 | ❌ | ✅ |
+| Float64 | ❌ | ✅ |
 | Boolean | ❌ | ❌ |
 
 ## Luau Strings
