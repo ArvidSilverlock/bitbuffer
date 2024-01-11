@@ -1,8 +1,7 @@
 # bitbuffer
 Bit level manipulation of roblox's byte level buffers. :sunglasses:
-As of right now, only supports `uints`.
 
-## API
+## Basic API
 
 - read(buffer, offset, width)
 - write(buffer, offset, value, width)
