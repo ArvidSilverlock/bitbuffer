@@ -42,7 +42,7 @@ local function mutator(options): (Reader, Writer)
 		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
 
 		if byteWidth > 4 then -- outside of `bit32`'s functionality
-		assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
+			assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
 
 			for position, chunkWidth in bitIterate(width, bit) do
 				local mask = 2^chunkWidth
