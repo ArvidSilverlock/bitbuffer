@@ -1,6 +1,3 @@
-local Writer = {}
-Writer.__index = Writer
-
 local function case(x, y, z)
 	return CFrame.fromEulerAnglesYXZ(math.rad(x), math.rad(y), math.rad(z))
 end
@@ -92,9 +89,12 @@ local function Float(exponentWidth: number, fractionWidth: number)
 	end
 end
 
-function Writer:Variadic<T>(callback: (any, value: T) -> (), ...: T)
+local Writer = {}
+Writer.__index = Writer
+
+function Writer:Variadic<T>(writeCallback: (any, value: T) -> (), ...: T)
 	for i = 1, select("#", ...) do
-		callback(self, select(i, ...))
+		writeCallback(self, select(i, ...))
 	end
 end
 
@@ -144,19 +144,25 @@ function Writer:NullTerminatedString(value: string)
 end
 
 function Writer:Vector3(value: Vector3)
-	self:Variadic(self.Float32, value.X, value.Y, value.Z)
+	self:Float32(value.X)
+	self:Float32(value.Y)
+	self:Float32(value.Z)
 end
 
 function Writer:Vector3int16(value: Vector3int16)
-	self:Variadic(self.Int16, value.X, value.Y, value.Z)
+	self:Int16(value.X)
+	self:Int16(value.Y)
+	self:Int16(value.Z)
 end
 
 function Writer:Vector2(value: Vector2)
-	self:Variadic(self.Float32, value.X, value.Y)
+	self:Float32(value.X)
+	self:Float32(value.Y)
 end
 
 function Writer:Vector2int16(value: Vector2int16)
-	self:Variadic(self.Int16, value.X, value.Y)
+	self:Int16(value.X)
+	self:Int16(value.Y)
 end
 
 function Writer:CFrame(value: CFrame)
@@ -165,7 +171,9 @@ function Writer:CFrame(value: CFrame)
 
 	self:Vector3(value.Position)
 	if specialCase == 0 then
-		self:Variadic(self.Vector3, value.XVector, value.YVector, value.ZVector)
+		self:Vector3(value.XVector)
+		self:Vector3(value.YVector)
+		self:Vector3(value.ZVector)
 	end
 end
 
@@ -180,15 +188,18 @@ function Writer:Color3(value: Color3)
 end
 
 function Writer:UDim(value: UDim)
-	self:Variadic(self.Float32, value.Scale, value.Offset)
+	self:Float32(value.Scale)
+	self:Float32(value.Offset)
 end
 
 function Writer:UDim2(value: UDim2)
-	self:Variadic(self.UDim, value.X, value.Y)
+	self:UDim(value.X)
+	self:UDim(value.Y)
 end
 
 function Writer:NumberRange(value: NumberRange)
-	self:Variadic(self.Float32, value.Min, value.Max)
+	self:Float32(value.Min)
+	self:Float32(value.Max)
 end
 
 function Writer:Enum(value: EnumItem, enumType: Enum?)
