@@ -9,7 +9,7 @@ return {
 	getShiftValue = function(position: number, width: number, chunkWidth: number)
 		return position
 	end,
-	bitIterate = bitIterate.normal,
+	bitIterate = bitIterate.littleEndian,
 	read = {
 		[1] = buffer.readu8,
 		[2] = buffer.readu16,

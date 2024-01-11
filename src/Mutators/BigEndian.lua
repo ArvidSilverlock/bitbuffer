@@ -19,15 +19,6 @@ local function flipu24(value)
 	)
 end
 
-local function flipu32(value)
-	return bit32.bor(
-		bit32.rshift(bit32.band(value, 0xFF000000), 24), -- FF000000 -> 000000FF
-		bit32.rshift(bit32.band(value, 0x00FF0000), 8), -- 00FF0000 -> 0000FF00
-		bit32.lshift(bit32.band(value, 0x0000FF00), 8), -- 0000FF00 -> 00FF0000
-		bit32.lshift(bit32.band(value, 0x000000FF), 24) -- 000000FF -> FF000000
-	)
-end
-
 return {
 	toBufferSpace = function(offset: number, width: number)
 		local byte, bit, byteWidth = toBufferSpace(offset, width)
@@ -37,7 +28,7 @@ return {
 	getShiftValue = function(position: number, width: number, chunkWidth: number)
 		return width - position - chunkWidth
 	end,
-	bitIterate = bitIterate.flipped,
+	bitIterate = bitIterate.bigEndian,
 	read = {
 		[1] = buffer.readu8,
 		[2] = function(b: buffer, offset: number)
@@ -48,7 +39,7 @@ return {
 			return flipu24(buffer.readu32(U24_BUFFER, 0))
 		end,
 		[4] = function(b: buffer, offset: number)
-			return flipu32(buffer.readu32(b, offset))
+			return bit32.byteswap(buffer.readu32(b, offset))
 		end,
 	},
 	write = {
@@ -61,7 +52,7 @@ return {
 			buffer.copy(b, offset, U24_BUFFER, 0, 3)
 		end,
 		[4] = function(b: buffer, offset: number, value: number)
-			buffer.writeu32(b, offset, flipu32(value))
+			buffer.writeu32(b, offset, bit32.byteswap(value))
 		end,
 	},
 }
