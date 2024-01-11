@@ -1,7 +1,6 @@
 # bitbuffer
 Bit level manipulation of roblox's byte level buffers. :sunglasses:
-
-Only truly supports `uints`, and, as of right now, I only plan to support `uints`, roblox's `bit32` library (one of the backbones of this whole module) doesn't support anything besides 32 bit unsigned integers.
+As of right now, only supports `uints`.
 
 ## API
 
