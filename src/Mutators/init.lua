@@ -1,4 +1,4 @@
 return {
-	Fast = require(script.Fast),
-	Logical = require(script.Logical),
+	BigEndian = require(script.BigEndian),
+	LittleEndian = require(script.LittleEndian),
 }
