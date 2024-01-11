@@ -79,6 +79,7 @@ local function mutator(options): (Reader, Writer)
 			end
 			return value
 		else -- Confined within one read call.
+			assert(width > 0, "`width` must be greater than or equal to 1")
 			return bit32.extract(readers[byteWidth](b, byte), bit, width)
 		end
 	end
