@@ -1,3 +1,5 @@
+> DISCLAIMER: As of right now, `Reader` and `Writer` functions provided by `bitbuffer.reader` and `bitbuffer.writer` are untested
+
 # bitbuffer
 Bit level manipulation of roblox's byte level buffers. :sunglasses:
 As of right now, only supports `uints`.
