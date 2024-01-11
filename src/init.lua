@@ -14,20 +14,29 @@ type FromBase = (str: string) -> buffer
 local Bases = require(script.BaseLookup)
 local Mutators = require(script.Mutators)
 
+local Reader = require(script.Reader)
+local Writer = require(script.Writer)
+
 local FLIP_ENDIAN = Bases.FlipEndian
+local POWERS_OF_TWO = {}
+
+for i = 0, 53 do
+	POWERS_OF_TWO[i] = 2^i
+end
 
 local function createByteTransformer(
 	characters: { [number]: string },
 	separator: string,
 	bigEndian: boolean
-): (string) -> string
+): { [string]: string }
 	local copy = {}
+
 	for value, character in characters do
 		value = if bigEndian then FLIP_ENDIAN[value] else value
 		copy[string.char(value)] = character .. separator
 	end
 
-	return function(char: string)
+	return function(char)
 		return copy[char]
 	end
 end
@@ -45,7 +54,7 @@ local function mutator(options): (Reader, Writer)
 			assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
 
 			for position, chunkWidth in bitIterate(width, bit) do
-				local mask = 2^chunkWidth
+				local mask = POWERS_OF_TWO[chunkWidth]
 				local chunk = value % mask
 				value //= mask
 				
@@ -122,10 +131,10 @@ local function base(options: {
 
 			local separatorLength = string.len(separator or defaultSeparator)
 
-			local prefixString = if type(prefix) == "string" then prefix elseif prefix then defaultPrefix else ""
+			local prefixString = if type(prefix) == "string" then prefix elseif prefix == true then defaultPrefix else ""
 			local outputBody = buffer.tostring(b):gsub(".", transformer):sub(1, -separatorLength - 1)
 
-			return string.format("%s%s", prefixString, outputBody)
+			return prefixString .. outputBody
 		end
 	else
 		-- https://www.desmos.com/calculator/hgzcqadocn, don't know if this is a universal formula
@@ -142,6 +151,7 @@ local function base(options: {
 			local characterCount = math.ceil(bitCount / width)
 
 			local output = table.create(characterCount)
+			local outputIndex = output
 
 			local endOffset = (characterCount - 1) * width
 			local overhang = bitCount - endOffset
@@ -149,26 +159,33 @@ local function base(options: {
 			-- iterate over each code in the buffer that doesn't extend over the end
 			for offset = 0, endOffset - overhang, width do
 				local code = read(b, offset, width)
-				table.insert(output, characters[code])
+				output[outputIndex] = characters[code]
+				outputIndex += 1
 			end
 
 			-- if there is a code that extends over the end
 			if overhang > 0 then
 				local code = bit32.lshift(read(b, endOffset, overhang), width - overhang) -- `lshift` to account for missing bits that would be present over the end
-				table.insert(output, characters[code])
+				output[outputIndex] = characters[code]
+				outputIndex += 1
 			end
 
 			local prefixString = if type(prefix) == "string" then prefix elseif prefix then defaultPrefix else ""
 			local outputBody = table.concat(output, separator or defaultSeparator)
 			local suffixString = if paddingCharacter then getPadding(byteCount) else ""
 
-			return string.format("%s%s%s", prefixString, outputBody, suffixString)
+			return prefixString .. outputBody .. suffixString
 		end
 	end
 
 	local function frombase(str)
-		local paddingLength = if paddingPattern then #str:match(paddingPattern) / #paddingCharacter else 0
-		local codeCount = #str / codeLength - paddingLength
+		local paddingLength = 0
+		if paddingPattern then
+			local paddingStart, paddingEnd = str:find(paddingPattern)
+			paddingLength = ( paddingEnd - paddingStart + 1 ) // #paddingCharacter
+		end
+
+		local codeCount = #str // codeLength - paddingLength
 
 		local bitCount = (codeCount * width) - (paddingLength * 2)
 		local output = buffer.create(bit32.rshift(bitCount, 3))
@@ -216,5 +233,25 @@ bitbuffer.tobase64, bitbuffer.frombase64 = base({
 	read = bitbuffer.read,
 	write = bitbuffer.write,
 })
+
+function bitbuffer.reader(b: buffer, useLittleEndian: boolean)
+	return setmetatable({
+		_buffer = b,
+		_offset = 0,
+		read = if useLittleEndian
+			then bitbuffer.readlittle
+			else bitbuffer.read
+	}, Reader)
+end
+
+function bitbuffer.writer(b: buffer, useLittleEndian: boolean)
+	return setmetatable({
+		_buffer = b,
+		_offset = 0,
+		write = if useLittleEndian
+			then bitbuffer.writelittle
+			else bitbuffer.write
+	}, Writer)
+end
 
 return bitbuffer
