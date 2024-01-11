@@ -10,26 +10,28 @@
 | Float16 | ❌ | ✅ |
 | Float32 | ❌ | ✅ |
 | Float64 | ❌ | ✅ |
-| Boolean | ❌ | ❌ |
+| Boolean | ❌ | ✅ |
 
 ## Luau Strings
 |value|read|write|description|
 |-----|----|-----|-----------|
-| String | ❌ | ❌ |string with its length encoded at the start|
+| String | ❌ | ✅ |string with its length encoded at the start|
 | ChunkString | ❌ | ❌ |string split into chunks, similar to gif block values|
-| NullTerminatedString | ❌ | ❌ |string of infinite length until a byte with a value of 0|
+| NullTerminatedString | ❌ | ✅ |string of infinite length until a byte with a value of 0|
 
 ## Roblox Types
 |value|read|write|
 |-----|----|-----|
-| CFrame | ❌ | ❌ |
-| Vector3 | ❌ | ❌ |
-| Vector2 | ❌ | ❌ |
-| BrickColor | ❌ | ❌ |
-| Color3 | ❌ | ❌ |
-| UDim2 | ❌ | ❌ |
-| UDim | ❌ | ❌ |
-| Enum | ❌ | ❌ |
-| NumberRange | ❌ | ❌ |
-| NumberSequence | ❌ | ❌ |
-| ColorSequence | ❌ | ❌ |
+| CFrame | ❌ | ✅ |
+| Vector3 | ❌ | ✅ |
+| Vector3int16 | ❌ | ✅ |
+| Vector2 | ❌ | ✅ |
+| Vector2int16 | ❌ | ✅ |
+| BrickColor | ❌ | ✅ |
+| Color3 | ❌ | ✅ |
+| UDim2 | ❌ | ✅ |
+| UDim | ❌ | ✅ |
+| Enum | ❌ | ✅ |
+| NumberRange | ❌ | ✅ |
+| NumberSequence | ❌ | ✅ |
+| ColorSequence | ❌ | ✅ |
