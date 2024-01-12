@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v2.3.1">
 <title data-rh="true">bitbuffer | bitbuffer</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ArvidSilverlock.github.io/bitbuffer/api/bitbuffer"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docusaurus_tag" content="default"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docsearch:docusaurus_tag" content="default"><meta data-rh="true" property="og:title" content="bitbuffer | bitbuffer"><link data-rh="true" rel="canonical" href="https://ArvidSilverlock.github.io/bitbuffer/api/bitbuffer"><link data-rh="true" rel="alternate" href="https://ArvidSilverlock.github.io/bitbuffer/api/bitbuffer" hreflang="en"><link data-rh="true" rel="alternate" href="https://ArvidSilverlock.github.io/bitbuffer/api/bitbuffer" hreflang="x-default"><link rel="stylesheet" href="/bitbuffer/assets/css/styles.19a5646f.css">
-<link rel="preload" href="/bitbuffer/assets/js/runtime~main.73891cbe.js" as="script">
-<link rel="preload" href="/bitbuffer/assets/js/main.3abc7157.js" as="script">
+<link rel="preload" href="/bitbuffer/assets/js/runtime~main.55bf00dc.js" as="script">
+<link rel="preload" href="/bitbuffer/assets/js/main.331cb867.js" as="script">
 </head>
 <body class="navigation-with-keyboard">
 <script>!function(){function e(e){document.documentElement.setAttribute("data-theme",e)}var t=function(){var e=null;try{e=localStorage.getItem("theme")}catch(e){}return e}();null!==t?e(t):window.matchMedia("(prefers-color-scheme: dark)").matches?e("dark"):(window.matchMedia("(prefers-color-scheme: light)").matches,e("light"))}()</script><div id="__docusaurus">
@@ -85,17 +85,17 @@
 <p>The string to convert into a buffer</p>
 </span></span></div></div><code>) → </code><code class="blue_P4bS">buffer</code></div><div>
 <p>Converts a given base64 string into a buffer.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="reader"><code style="text-decoration:none">reader</code><a href="#reader" class="hash-link" aria-label="Direct link to reader" title="Direct link to reader">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/ArvidSilverlock/bitbuffer/blob/master/src/init.lua#L373"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>bitbuffer<!-- -->.</code><code class="green_DgR4">reader</code><code>(</code><div class="inset_uKQm"><div><code>b<!-- -->: </code><code class="blue_P4bS">buffer</code><code>,</code><span class="inlineDescription_G7Er">-- <span>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="reader"><code style="text-decoration:none">reader</code><a href="#reader" class="hash-link" aria-label="Direct link to reader" title="Direct link to reader">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/ArvidSilverlock/bitbuffer/blob/master/src/init.lua#L374"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>bitbuffer<!-- -->.</code><code class="green_DgR4">reader</code><code>(</code><div class="inset_uKQm"><div><code>b<!-- -->: </code><code class="blue_P4bS">buffer</code><code>,</code><span class="inlineDescription_G7Er">-- <span>
 <p>The buffer to read from</p>
 </span></span></div><div><code>useLittleEndian<!-- -->: </code><code class="blue_P4bS">boolean</code><span class="inlineDescription_G7Er">-- <span>
 <p>Whether to read values in little endian</p>
-</span></span></div></div><code>) → </code><code class="blue_P4bS">buffer</code></div><div>
+</span></span></div></div><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/bitbuffer/api/Reader">Reader</a></code></div><div>
 <p>Creates a <code>Reader</code> object for a buffer.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="writer"><code style="text-decoration:none">writer</code><a href="#writer" class="hash-link" aria-label="Direct link to writer" title="Direct link to writer">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/ArvidSilverlock/bitbuffer/blob/master/src/init.lua#L391"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>bitbuffer<!-- -->.</code><code class="green_DgR4">writer</code><code>(</code><div class="inset_uKQm"><div><code>b<!-- -->: </code><code class="blue_P4bS">buffer</code><code>,</code><span class="inlineDescription_G7Er">-- <span>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="writer"><code style="text-decoration:none">writer</code><a href="#writer" class="hash-link" aria-label="Direct link to writer" title="Direct link to writer">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/ArvidSilverlock/bitbuffer/blob/master/src/init.lua#L393"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>bitbuffer<!-- -->.</code><code class="green_DgR4">writer</code><code>(</code><div class="inset_uKQm"><div><code>b<!-- -->: </code><code class="blue_P4bS">buffer</code><code>,</code><span class="inlineDescription_G7Er">-- <span>
 <p>The buffer to write to</p>
 </span></span></div><div><code>useLittleEndian<!-- -->: </code><code class="blue_P4bS">boolean</code><span class="inlineDescription_G7Er">-- <span>
 <p>Whether to write values in little endian</p>
-</span></span></div></div><code>) → </code><code class="blue_P4bS">buffer</code></div><div>
+</span></span></div></div><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/bitbuffer/api/Writer">Writer</a></code></div><div>
 <p>Creates a <code>Writer</code> object for a buffer.</p>
 </div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
     &quot;functions&quot;: [
@@ -407,12 +407,12 @@
             &quot;returns&quot;: [
                 {
                     &quot;desc&quot;: &quot;&quot;,
-                    &quot;lua_type&quot;: &quot;buffer&quot;
+                    &quot;lua_type&quot;: &quot;Reader&quot;
                 }
             ],
             &quot;function_type&quot;: &quot;static&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 373,
+                &quot;line&quot;: 374,
                 &quot;path&quot;: &quot;src/init.lua&quot;
             }
         },
@@ -434,12 +434,12 @@
             &quot;returns&quot;: [
                 {
                     &quot;desc&quot;: &quot;&quot;,
-                    &quot;lua_type&quot;: &quot;buffer&quot;
+                    &quot;lua_type&quot;: &quot;Writer&quot;
                 }
             ],
             &quot;function_type&quot;: &quot;static&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 391,
+                &quot;line&quot;: 393,
                 &quot;path&quot;: &quot;src/init.lua&quot;
             }
         }
@@ -453,7 +453,7 @@
         &quot;path&quot;: &quot;src/init.lua&quot;
     }
 }</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#types" class="table-of-contents__link toc-highlight">Types</a></li><li><a href="#properties" class="table-of-contents__link toc-highlight">Properties</a></li><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#frombase64" class="table-of-contents__link toc-highlight">.frombase64</a></li><li><a href="#frombinary" class="table-of-contents__link toc-highlight">.frombinary</a></li><li><a href="#fromhex" class="table-of-contents__link toc-highlight">.fromhex</a></li><li><a href="#read" class="table-of-contents__link toc-highlight">.read</a></li><li><a href="#reader" class="table-of-contents__link toc-highlight">.reader</a></li><li><a href="#readlittle" class="table-of-contents__link toc-highlight">.readlittle</a></li><li><a href="#tobase64" class="table-of-contents__link toc-highlight">.tobase64</a></li><li><a href="#tobinary" class="table-of-contents__link toc-highlight">.tobinary</a></li><li><a href="#tohex" class="table-of-contents__link toc-highlight">.tohex</a></li><li><a href="#write" class="table-of-contents__link toc-highlight">.write</a></li><li><a href="#writelittle" class="table-of-contents__link toc-highlight">.writelittle</a></li><li><a href="#writer" class="table-of-contents__link toc-highlight">.writer</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2024 ArvidSilverlock. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
-<script src="/bitbuffer/assets/js/runtime~main.73891cbe.js"></script>
-<script src="/bitbuffer/assets/js/main.3abc7157.js"></script>
+<script src="/bitbuffer/assets/js/runtime~main.55bf00dc.js"></script>
+<script src="/bitbuffer/assets/js/main.331cb867.js"></script>
 </body>
 </html>
