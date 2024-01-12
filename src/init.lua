@@ -368,7 +368,8 @@ bitbuffer.tobase64, bitbuffer.frombase64 = base({
 	
 	@param b buffer -- The buffer to read from
 	@param useLittleEndian boolean -- Whether to read values in little endian
-	@return buffer
+	
+	@return Reader
 ]=]
 function bitbuffer.reader(b: buffer, useLittleEndian: boolean?)
 	return setmetatable({
@@ -386,7 +387,8 @@ end
 	
 	@param b buffer -- The buffer to write to
 	@param useLittleEndian boolean -- Whether to write values in little endian
-	@return buffer
+	
+	@return Writer
 ]=]
 function bitbuffer.writer(b: buffer, useLittleEndian: boolean?)
 	return setmetatable({
