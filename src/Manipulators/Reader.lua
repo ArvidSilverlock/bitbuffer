@@ -43,7 +43,7 @@ Reader.__index = Reader
 	@method Align
 	@within Reader
 
-	Aligns the current offset to the *next* byte, which speeds up `write` calls slightly
+	Aligns the current offset to the *next* byte, which speeds up `read` calls slightly
 ]=]
 function Reader:Align()
 	self._offset = bit32.lshift(bit32.rshift(self._offset + 7, 3), 3) -- math.ceil(self._offset / 8) * 8
@@ -84,7 +84,7 @@ end
 	@method UInt
 	@within Reader
 
-	Reads an unsigned integer of any width from 1-52
+	Reads an unsigned integer of any width from 1-53
 
 	@param width number -- The bit width to read
 
@@ -100,7 +100,7 @@ end
 	@method Int
 	@within Reader
 
-	Reads a signed integer of any width from 1-52, note that one of these bits is used as the sign
+	Reads a signed integer of any width from 1-53, note that one of these bits is used as the sign
 
 	@param width number
 

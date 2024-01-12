@@ -63,7 +63,7 @@ Writer.__index = Writer
 	@method Align
 	@within Writer
 
-	Aligns the current offset to the *next* byte, which speeds up `read` calls slightly
+	Aligns the current offset to the *next* byte, which speeds up `write` calls slightly
 ]=]
 function Writer:Align()
 	self._offset = bit32.lshift(bit32.rshift(self._offset + 7, 3), 3) -- math.ceil(self._offset / 8) * 8
@@ -100,7 +100,7 @@ end
 	@method UInt
 	@within Writer
 
-	Writes an unsigned integer of any width from 1-52
+	Writes an unsigned integer of any width from 1-53
 
 	@param value number -- The uint to write
 	@param width number -- The bit width of the `value`
@@ -114,7 +114,7 @@ end
 	@method Int
 	@within Writer
 
-	Writes a signed integer of any width from 1-52, note that one of these bits is used as the sign
+	Writes a signed integer of any width from 1-53, note that one of these bits is used as the sign
 
 	@param value number
 	@param width number
