@@ -19,7 +19,7 @@ local Manipulators = require(script.Manipulators)
 local FLIP_ENDIAN = Bases.FlipEndian
 local POWERS_OF_TWO = {}
 
-for i = 0, 53 do
+for i = 0, 64 do
 	POWERS_OF_TWO[i] = 2 ^ i
 end
 
@@ -45,20 +45,22 @@ local function writer(options): Writer
 	local readers, writers = options.read, options.write
 
 	local function write(b: buffer, offset: number, value: number, width: number)
-		local byte, bit, byteWidth = toBufferSpace(offset, width)
 		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
+		local byte, bit, byteWidth = toBufferSpace(offset, width)
 
-		if byteWidth > 4 then -- outside of `bit32`'s functionality
-			assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
+		if byteWidth > 4 then -- Outside of `bit32`'s functionality
+			assert(width <= 52, "`bitbuffer` does not support `width`s greater than 52")
 
 			for position, chunkWidth in bitIterate(width, bit) do
 				local mask = POWERS_OF_TWO[chunkWidth]
 				local chunk = value % mask
-				-- value //= mask
+				value //= mask
 
 				write(b, offset + position, chunk, chunkWidth)
 			end
-		else
+		elseif bit == 0 and width == bit32.lshift(byteWidth, 3) then -- Aligned to the bytes
+			writers[byteWidth](b, byte, value)
+		else -- Confined within one write call.
 			assert(width > 0, "`width` must be greater than or equal to 1")
 			writers[byteWidth](b, byte, bit32.replace(readers[byteWidth](b, byte), value, bit, width))
 		end
@@ -77,7 +79,7 @@ local function reader(options): Reader
 		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
 
 		if byteWidth > 4 then -- outside of `bit32`'s functionality
-			assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
+			assert(width <= 52, "`bitbuffer` does not support `width`s greater than 52")
 
 			local value = 0
 			for position, chunkWidth in bitIterate(width, bit) do
@@ -85,6 +87,8 @@ local function reader(options): Reader
 				value += read(b, offset + position, chunkWidth) * 2 ^ shiftValue
 			end
 			return value
+		elseif bit == 0 and width == bit32.lshift(byteWidth, 3) then -- Aligned to the bytes
+			return readers[byteWidth](b, byte)
 		else -- Confined within one read call.
 			assert(width > 0, "`width` must be greater than or equal to 1")
 			return bit32.extract(readers[byteWidth](b, byte), bit, width)
@@ -188,10 +192,10 @@ local function base(options: {
 		local paddingLength = 0
 		if paddingPattern then
 			local paddingStart, paddingEnd = str:find(paddingPattern)
-			-- paddingLength = ( paddingEnd - paddingStart + 1 ) // #paddingCharacter
+			paddingLength = (paddingEnd - paddingStart + 1) // #paddingCharacter
 		end
 
-		-- local codeCount = #str // codeLength - paddingLength
+		local codeCount = #str // codeLength - paddingLength
 
 		local bitCount = (codeCount * width) - (paddingLength * 2)
 		local output = buffer.create(bit32.rshift(bitCount, 3))
