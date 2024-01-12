@@ -40,10 +40,32 @@ local Reader = {}
 Reader.__index = Reader
 
 --[=[
+	@method Align
+	@within Reader
+
+	Aligns the current offset to the *next* byte, which speeds up `write` calls slightly
+]=]
+function Reader:Align()
+	self._offset = bit32.lshift(bit32.rshift(self._offset + 7, 3), 3) -- math.ceil(self._offset / 8) * 8
+end
+
+--[=[
+	@method Skip
+	@within Reader
+
+	Skips the specified number of bits, without altering them
+
+	@param amount number
+]=]
+function Reader:Skip(amount: number)
+	self._offset += amount
+end
+
+--[=[
 	@method Variadic
 	@within Reader
 
-	Reads any amount of values using one write function
+	Reads a specified amount of values of the same type
 
 	@param readCallback <T>(self) -> T
 	@param count number -- The amount of values to read
@@ -62,7 +84,7 @@ end
 	@method UInt
 	@within Reader
 
-	Reads an unsigned integer of any width from 1-53
+	Reads an unsigned integer of any width from 1-52
 
 	@param width number -- The bit width to read
 
@@ -78,7 +100,7 @@ end
 	@method Int
 	@within Reader
 
-	Reads a signed integer of any width from 1-53, note that one of these bits is used as the sign
+	Reads a signed integer of any width from 1-52, note that one of these bits is used as the sign
 
 	@param width number
 
@@ -106,7 +128,7 @@ end
 
 	Reads a string that has its length encoded using a specified number of bits
 
-	@param lengthWidth number? -- Amount of bits to encode the string length with, defaults to 16
+	@param lengthWidth number? -- Amount of bits used to encode the string length with, defaults to 16
 	@return string
 ]=]
 function Reader:String(lengthWidth: number?): string
@@ -180,7 +202,7 @@ end
 	@method Vector2int16
 	@within Reader
 
-	Reads a `Vector2int16` using 2 `Float32`s
+	Reads a `Vector2int16` using 2 `Int16`s
 
 	@return Vector2int16
 ]=]
@@ -313,7 +335,7 @@ end
 
 	Reads a `NumberSequence` using an unsigned 5 bit integer for the length, then a `Float32` for the `Time`, `Value` and `Envelope` of each keypoint
 
-	@param readEnvelope boolean? -- Whether or not to read the value of the `Envelope`
+	@param readEnvelope boolean? -- Whether or not the value of the `Envelope` is stored, and thus should be read out, defaults to `false`
 
 	@return NumberSequence
 ]=]
@@ -325,7 +347,7 @@ function Reader:NumberSequence(readEnvelope: boolean?): NumberSequence
 		local time, value = self:Float32(), self:Float32()
 		local envelope = if readEnvelope then self:Float32() else nil
 
-		local keypoint = ColorSequenceKeypoint.new(time, value, envelope)
+		local keypoint = NumberSequenceKeypoint.new(time, value, envelope)
 		table.insert(keypoints, keypoint)
 	end
 

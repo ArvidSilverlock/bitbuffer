@@ -60,10 +60,32 @@ local Writer = {}
 Writer.__index = Writer
 
 --[=[
+	@method Align
+	@within Writer
+
+	Aligns the current offset to the *next* byte, which speeds up `read` calls slightly
+]=]
+function Writer:Align()
+	self._offset = bit32.lshift(bit32.rshift(self._offset + 7, 3), 3) -- math.ceil(self._offset / 8) * 8
+end
+
+--[=[
+	@method Skip
+	@within Writer
+
+	Skips the specified number of bits, without altering them
+
+	@param amount number
+]=]
+function Writer:Skip(amount: number)
+	self._offset += amount
+end
+
+--[=[
 	@method Variadic
 	@within Writer
 
-	Writes any amount of values using one write function
+	Writes a varying amount of values of the same type
 
 	@param writeCallback <T>(self, value: T) -> ()
 	@param ... T
@@ -78,7 +100,7 @@ end
 	@method UInt
 	@within Writer
 
-	Writes an unsigned integer of any width from 1-53
+	Writes an unsigned integer of any width from 1-52
 
 	@param value number -- The uint to write
 	@param width number -- The bit width of the `value`
@@ -92,7 +114,7 @@ end
 	@method Int
 	@within Writer
 
-	Writes a signed integer of any width from 1-53, note that one of these bits is used as the sign
+	Writes a signed integer of any width from 1-52, note that one of these bits is used as the sign
 
 	@param value number
 	@param width number
@@ -334,7 +356,7 @@ end
 	Encodes a `NumberSequence` using an unsigned 5 bit integer for the length, then a `Float32` for the `Time`, `Value` and `Envelope` of each keypoint
 
 	@param value NumberSequence
-	@param writeEnvelope boolean? -- Whether or not to include the `Envelope` in the output
+	@param writeEnvelope boolean? -- Whether or not to include the `Envelope` in the output, defaults to `false`
 ]=]
 function Writer:NumberSequence(value: NumberSequence, writeEnvelope: boolean?)
 	self:UInt(#value.Keypoints, 5) -- max length of 20, tested
