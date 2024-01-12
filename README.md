@@ -62,5 +62,5 @@ print(encoded) -- Zm9vYmFy
 ```
 
 ## TODO:
-- some form of function that allows for better formatting like `0000 000000 00000000` (i.e., chunks of information are split into groups specified by the user, good if you have a set scheme for your data)
+- maybe merge `Constants` with `BaseLookup`?
 - given the nature of this module, testez is probably a good idea
