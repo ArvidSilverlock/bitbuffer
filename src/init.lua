@@ -49,7 +49,7 @@ local function writer(options): Writer
 		local byte, bit, byteWidth = toBufferSpace(offset, width)
 
 		if byteWidth > 4 then -- Outside of `bit32`'s functionality
-			assert(width <= 52, "`bitbuffer` does not support `width`s greater than 52")
+			assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
 
 			for position, chunkWidth in bitIterate(width, bit) do
 				local mask = POWERS_OF_TWO[chunkWidth]
@@ -79,7 +79,7 @@ local function reader(options): Reader
 		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
 
 		if byteWidth > 4 then -- outside of `bit32`'s functionality
-			assert(width <= 52, "`bitbuffer` does not support `width`s greater than 52")
+			assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
 
 			local value = 0
 			for position, chunkWidth in bitIterate(width, bit) do
