@@ -8,30 +8,28 @@
 type Reader = (b: buffer, offset: number, width: number) -> number
 type Writer = (b: buffer, offset: number, value: number, width: number) -> ()
 
-type ToBase = (b: buffer, separator: string?, prefix: (string | boolean)?, useLittleEndian: boolean?) -> string
+type ToBase = (b: buffer, separator: string?, prefix: (string | boolean)?, useBigEndian: boolean?) -> string
 type FromBase = (str: string) -> buffer
 
-local Bases = require(script.BaseLookup)
-local Mutators = require(script.Mutators)
+local Constants = require(script.Constants)
+local BufferEndians = require(script.BufferEndians)
 
-local Manipulators = require(script.Manipulators)
+local Editors = require(script.Editors)
+local Reader = Editors.Reader
+local Writer = Editors.Writer
 
-local FLIP_ENDIAN = Bases.FlipEndian
-local POWERS_OF_TWO = {}
-
-for i = 0, 64 do
-	POWERS_OF_TWO[i] = 2 ^ i
-end
+local POWERS_OF_TWO = Constants.PowersOfTwo
+local FLIP_ENDIAN = Constants.FlipEndian
 
 local function createByteTransformer(
 	characters: { [number]: string },
 	separator: string,
-	bigEndian: boolean
+	useBigEndian: boolean
 ): (string) -> string
 	local copy = {}
 
 	for value, character in characters do
-		value = if bigEndian then FLIP_ENDIAN[value] else value
+		value = if useBigEndian then value else FLIP_ENDIAN[value]
 		copy[string.char(value)] = character .. separator
 	end
 
@@ -131,14 +129,14 @@ local function base(options: {
 
 	local tobase
 	if width == 8 then -- if it's only ever byte aligned, you can use `buffer.tostring` along with `gsub` for speed increases
-		local bigEndianTransformer = createByteTransformer(characters, defaultSeparator, false)
-		local littleEndianTransformer = createByteTransformer(characters, defaultSeparator, true)
+		local littleEndianTransformer = createByteTransformer(characters, defaultSeparator, false)
+		local bigEndianTransformer = createByteTransformer(characters, defaultSeparator, true)
 
-		function tobase(b, separator, prefix, useLittleEndian)
+		function tobase(b, separator, prefix, useBigEndian)
 			local transformer = if separator
-				then createByteTransformer(characters, separator, useLittleEndian)
-				elseif useLittleEndian then littleEndianTransformer
-				else bigEndianTransformer
+				then createByteTransformer(characters, separator, useBigEndian)
+				elseif useBigEndian then bigEndianTransformer
+				else littleEndianTransformer
 
 			local separatorLength = string.len(separator or defaultSeparator)
 
@@ -221,41 +219,16 @@ local bitbuffer = {}
 	@function read
 	@within bitbuffer
 
-	Reads a `value` from a buffer in big endian format.
-
-	@param b buffer -- The buffer to read from
-	@param offset number -- The offset (in bits) to read from
-	@param width number -- The width (in bits) of the value you're reading
-]=]
-bitbuffer.read = reader(Mutators.BigEndian)
-
---[=[
-	@function write
-	@within bitbuffer
-
-	Writes a `value` into a buffer in big endian format.
-
-	@param b buffer -- The buffer to write to
-	@param offset number -- The offset (in bits) to write at
-	@param value number -- The value you want to write
-	@param width number -- The width (in bits) of the value
-]=]
-bitbuffer.write = writer(Mutators.BigEndian)
-
---[=[
-	@function readlittle
-	@within bitbuffer
-
 	Reads a `value` from a buffer in little endian format.
 
 	@param b buffer -- The buffer to read from
 	@param offset number -- The offset (in bits) to read from
 	@param width number -- The width (in bits) of the value you're reading
 ]=]
-bitbuffer.readlittle = reader(Mutators.LittleEndian)
+bitbuffer.read = reader(BufferEndians.Little)
 
 --[=[
-	@function writelittle
+	@function write
 	@within bitbuffer
 
 	Writes a `value` into a buffer in little endian format.
@@ -265,7 +238,32 @@ bitbuffer.readlittle = reader(Mutators.LittleEndian)
 	@param value number -- The value you want to write
 	@param width number -- The width (in bits) of the value
 ]=]
-bitbuffer.writelittle = writer(Mutators.LittleEndian)
+bitbuffer.write = writer(BufferEndians.Little)
+
+--[=[
+	@function readbig
+	@within bitbuffer
+
+	Reads a `value` from a buffer in big endian format.
+
+	@param b buffer -- The buffer to read from
+	@param offset number -- The offset (in bits) to read from
+	@param width number -- The width (in bits) of the value you're reading
+]=]
+bitbuffer.readbig = reader(BufferEndians.Big)
+
+--[=[
+	@function writebig
+	@within bitbuffer
+
+	Writes a `value` into a buffer in big endian format.
+
+	@param b buffer -- The buffer to write to
+	@param offset number -- The offset (in bits) to write at
+	@param value number -- The value you want to write
+	@param width number -- The width (in bits) of the value
+]=]
+bitbuffer.writebig = writer(BufferEndians.Big)
 
 --[=[
 	@function tobinary
@@ -276,7 +274,8 @@ bitbuffer.writelittle = writer(Mutators.LittleEndian)
 	@param b buffer -- The buffer to convert to a string
 	@param separator string? -- The string to separate each byte with, if not specified, each byte is separated by an underscore.
 	@param prefix (string | boolean)? -- If prefix is `true`, it will be prefixed with `0b`, whereas if it is a `string`, the `string` itself will be used.
-	@param useLittleEndian boolean? -- Whether or not to output it in little endian format.
+	@param useBigEndian boolean? -- Whether or not to output it in big endian rather than little endian.
+
 	@return string
 ]=]
 
@@ -287,15 +286,16 @@ bitbuffer.writelittle = writer(Mutators.LittleEndian)
 	Converts a given binary string into a buffer. No characters besides `1` and `0` may be present.
 	
 	@param str string -- The string to convert into a buffer
+
 	@return buffer
 ]=]
 
 bitbuffer.tobinary, bitbuffer.frombinary = base({
-	characters = Bases.Binary,
+	characters = Constants.Binary,
 	prefix = "0b",
 	separator = "_",
-	read = bitbuffer.readlittle,
-	write = bitbuffer.writelittle,
+	read = bitbuffer.read,
+	write = bitbuffer.write,
 })
 
 --[=[
@@ -307,7 +307,8 @@ bitbuffer.tobinary, bitbuffer.frombinary = base({
 	@param b buffer -- The buffer to convert to a string
 	@param separator string? -- The string to separate each byte with, if not specified, each byte is separated by a space.
 	@param prefix (string | boolean)? -- If prefix is `true`, it will be prefixed with `0x`, whereas if it is a `string`, the `string` itself will be used.
-	@param useLittleEndian boolean? -- Whether or not to output it in little endian format.
+	@param useBigEndian boolean? -- Whether or not to output it in big endian rather than little endian.
+
 	@return string
 ]=]
 
@@ -318,26 +319,28 @@ bitbuffer.tobinary, bitbuffer.frombinary = base({
 	Converts a given hexadecimal string into a buffer. No characters besides hexadecimal characters may be present.
 	
 	@param str string -- The string to convert into a buffer
+
 	@return buffer
 ]=]
 
 bitbuffer.tohex, bitbuffer.fromhex = base({
-	characters = Bases.Hexadecimal,
+	characters = Constants.Hexadecimal,
 	prefix = "0x",
 	separator = " ",
-	read = bitbuffer.readlittle,
-	write = bitbuffer.writelittle,
+	read = bitbuffer.read,
+	write = bitbuffer.write,
 })
 
 --[=[
 	@function tobase64
 	@within bitbuffer
 
-	Converts a given buffer to a binary string.
+	Converts a given buffer to a base64 string.
 	
 	@param b buffer -- The buffer to convert to a string
 	@param separator string? -- The string to separate every 6 bits with, if not specified, no separator will be used.
 	@param prefix string? -- The string to prefix the output with.
+
 	@return string
 ]=]
 
@@ -348,16 +351,17 @@ bitbuffer.tohex, bitbuffer.fromhex = base({
 	Converts a given base64 string into a buffer.
 	
 	@param str string -- The string to convert into a buffer
+
 	@return buffer
 ]=]
 
 bitbuffer.tobase64, bitbuffer.frombase64 = base({
-	characters = Bases.Base64,
+	characters = Constants.Base64,
 	paddingCharacter = "=",
 	prefix = "",
 	separator = "",
-	read = bitbuffer.read,
-	write = bitbuffer.write,
+	read = bitbuffer.readbig,
+	write = bitbuffer.writebig,
 })
 
 --[=[
@@ -367,16 +371,20 @@ bitbuffer.tobase64, bitbuffer.frombase64 = base({
 	Creates a `Reader` object for a buffer.
 	
 	@param b buffer -- The buffer to read from
-	@param useLittleEndian boolean -- Whether to read values in little endian
+	@param useBigEndian boolean -- Whether to read values in big endian (slower)
 	
 	@return Reader
 ]=]
-function bitbuffer.reader(b: buffer, useLittleEndian: boolean?)
+function bitbuffer.reader(b: buffer, useBigEndian: boolean?)
 	return setmetatable({
 		_buffer = b,
 		_offset = 0,
-		read = if useLittleEndian then bitbuffer.readlittle else bitbuffer.read,
-	}, Manipulators.Reader)
+
+		_byte = 0,
+		_isByteAligned = true,
+
+		read = if useBigEndian then bitbuffer.readbig else bitbuffer.read,
+	}, Reader)
 end
 
 --[=[
@@ -386,16 +394,20 @@ end
 	Creates a `Writer` object for a buffer.
 	
 	@param b buffer -- The buffer to write to
-	@param useLittleEndian boolean -- Whether to write values in little endian
+	@param useBigEndian boolean -- Whether to write values in big endian (slower)
 	
 	@return Writer
 ]=]
-function bitbuffer.writer(b: buffer, useLittleEndian: boolean?)
+function bitbuffer.writer(b: buffer, useBigEndian: boolean?)
 	return setmetatable({
 		_buffer = b,
 		_offset = 0,
-		write = if useLittleEndian then bitbuffer.writelittle else bitbuffer.write,
-	}, Manipulators.Writer)
+
+		_byte = 0,
+		_isByteAligned = true,
+
+		write = if useBigEndian then bitbuffer.writebig else bitbuffer.write,
+	}, Writer)
 end
 
 return bitbuffer
