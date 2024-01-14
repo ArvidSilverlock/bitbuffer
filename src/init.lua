@@ -5,8 +5,8 @@
 -- and multiplication by 8 (2^3, hence the 3), this is done because bitshifting is faster than generic
 -- mathmatical operations.
 
-type Reader = (b: buffer, offset: number, width: number) -> number
-type Writer = (b: buffer, offset: number, value: number, width: number) -> ()
+type Read = (b: buffer, offset: number, width: number) -> number
+type Write = (b: buffer, offset: number, value: number, width: number) -> ()
 
 type ToBase = (b: buffer, separator: string?, prefix: (string | boolean)?, useBigEndian: boolean?) -> string
 type FromBase = (str: string) -> buffer
@@ -38,7 +38,7 @@ local function createByteTransformer(
 	end
 end
 
-local function writer(options): Writer
+local function writer(options): Write
 	local toBufferSpace, bitIterate = options.toBufferSpace, options.bitIterate
 	local readers, writers = options.read, options.write
 
@@ -67,7 +67,7 @@ local function writer(options): Writer
 	return write
 end
 
-local function reader(options): Reader
+local function reader(options): Read
 	local toBufferSpace, bitIterate = options.toBufferSpace, options.bitIterate
 	local readers, writers = options.read, options.write
 	local getShiftValue = options.getShiftValue
@@ -103,8 +103,8 @@ local function base(options: {
 	separator: string,
 	paddingCharacter: string?,
 	characters: { [number]: string },
-	read: Reader,
-	write: Writer,
+	read: Read,
+	write: Write,
 }): (ToBase, FromBase)
 	local defaultPrefix, defaultSeparator, paddingCharacter, characters =
 		options.prefix, options.separator, options.paddingCharacter, options.characters
