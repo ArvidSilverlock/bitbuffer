@@ -1,15 +1,39 @@
-local bitbuffer = script.Parent.Parent
-local toBufferSpace = require(bitbuffer.ToBufferSpace)
-local bitIterate = require(bitbuffer.BitIterate)
+--!native
+--!optimize 2
 
 local U24_BUFFER = buffer.create(4)
+local U32_BITS = 32
+
+local function toBufferSpace(offset: number, width: number)
+	local byte, bit = bit32.rshift(offset, 3), bit32.band(offset, 0b111) -- offset * 8, offset % 8
+	local byteWidth = bit32.rshift(bit + width + 7, 3) -- math.ceil(( bit + width ) / 8)
+	return byte, bit, byteWidth
+end
+
+local function getShiftValue(position: number, width: number, chunkWidth: number)
+	return position
+end
+
+local function bitIterate(width: number, bit: number)
+	local chunkWidth = if bit % 8 == 0 then U32_BITS else 8 - bit
+	local position = 0
+
+	return function()
+		if chunkWidth > 0 then
+			local previousPosition, previousChunkWidth = position, chunkWidth
+
+			position += chunkWidth
+			chunkWidth = math.min(width - position, U32_BITS)
+
+			return previousPosition, previousChunkWidth
+		end
+	end
+end
 
 return {
 	toBufferSpace = toBufferSpace,
-	getShiftValue = function(position: number, width: number, chunkWidth: number)
-		return position
-	end,
-	bitIterate = bitIterate.littleEndian,
+	getShiftValue = getShiftValue,
+	bitIterate = bitIterate,
 	read = {
 		[1] = buffer.readu8,
 		[2] = buffer.readu16,
