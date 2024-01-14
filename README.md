@@ -1,21 +1,23 @@
 # bitbuffer
-Bit level manipulation of roblox's byte level buffers. :sunglasses:
+Bit level manipulation of byte level buffers. :sunglasses:
 
 ## Basic API
 
 - read(buffer, offset, width)
 - write(buffer, offset, value, width)
 
-- readlittle(buffer, offset, width)
-- writelittle(buffer, offset, value, width)
+- readbig(buffer, offset, width)
+- writebig(buffer, offset, value, width)
 
 The offset that each function requires is a 0 indexed *bit* `offset`, the `width` is also in bits, which can range from 1-48, the `value` is an unsigned integer.
 
-`read` and `write` use big endian, whereas `readlittle` and `writelittle` use little endian. `readlittle` and `writelittle` are faster than their big endian counterparts as roblox's `buffer` objects seemingly use little endian on the byte scale, therefore less manipulation of the buffers is required. I'm not all too sure on any of this, as I'm not educated on the subject of endianness.
+`read` and `write` use little endian, whereas `readbig` and `writebig` use big endian. `read` and `write` are faster than their big endian counterparts as roblox's `buffer` objects seemingly use little endian (at least on the byte scale), therefore less manipulation of the buffers is required. At least, this is my observation.
 
 ## Base Conversion API
 
 Currently there are 3 supported bases, binary, hexadecimal, and base64, each of which have `to` and `from` functions.
+
+Binary and hexadecimal are more useful for debugging, whereas base64 is good for serialisation for datastore storage.
 
 Functions that convert *to* a base intake a buffer and return a string, whereas the functions that do the inverse intake a string and return a buffer.
 The `from` functions *do not* support prefixes or separators, this may come in the future, we'll have to see.
@@ -41,6 +43,27 @@ print(bitbuffer.tohex(b, ", 0x", true)) -- 0xf3, 0xa6, 0x34, 0x5a
 
 ## An few examples
 ```lua
+local b = buffer.create(8 * 4)
+
+local writer = bitbuffer.writer(b)
+
+writer:Float64(312.249)
+writer:Float64(math.pi)
+writer:Float64(0/0)
+writer:Float64(math.huge)
+
+local reader = bitbuffer.reader(b)
+
+assert(reader:Float64() == 312.249, "312.249 failed to write")
+assert(reader:Float64() == math.pi, "pi failed to write")
+
+local c = reader:Float64()
+assert(c ~= c, "nan failed to write")
+
+assert(reader:Float64() == math.huge, "math.huge failed to write")
+```
+
+```lua
 local b = buffer.create(1)
 
 bitbuffer.write(b, 0, 1, 1) -- Write 1 bit at the first bit.
@@ -56,11 +79,10 @@ local b = buffer.fromstring("foobar")
 local encoded = bitbuffer.tobase64(b, "")
 local decoded = bitbuffer.frombase64(encoded)
 
-assert(bitbuffer.tohex(b) == bitbuffer.tohex(decoded))
+assert(bitbuffer.tohex(b) == bitbuffer.tohex(decoded)) -- Confirm they are the same
 
 print(encoded) -- Zm9vYmFy
 ```
 
 ## TODO:
-- maybe merge `Constants` with `BaseLookup`?
 - given the nature of this module, testez is probably a good idea
