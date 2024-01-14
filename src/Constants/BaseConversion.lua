@@ -1,6 +1,3 @@
--- These make the `tostring` functions much faster, as it doesn't need to re-create the string forms
--- of all the numbers again, just reads if from the lookup tables.
-
 local BASE64_VALUES = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 local BINARY_LOOKUP = {}
