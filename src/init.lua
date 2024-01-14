@@ -1,16 +1,12 @@
 --!native
 --!optimize 2
+--!strict
 
 -- Any usage of `bit32.lshift` and `bit32.rshift` where the displacement is `3` emulate integer division
 -- and multiplication by 8 (2^3, hence the 3), this is done because bitshifting is faster than generic
 -- mathmatical operations.
 
-type Read = (b: buffer, offset: number, width: number) -> number
-type Write = (b: buffer, offset: number, value: number, width: number) -> ()
-
-type ToBase = (b: buffer, separator: string?, prefix: (string | boolean)?, useBigEndian: boolean?) -> string
-type FromBase = (str: string) -> buffer
-
+local Types = require(script.Types)
 local Constants = require(script.Constants)
 local BufferEndians = require(script.BufferEndians)
 
@@ -38,7 +34,7 @@ local function createByteTransformer(
 	end
 end
 
-local function writer(options): Write
+local function writer(options): Types.Write
 	local toBufferSpace, bitIterate = options.toBufferSpace, options.bitIterate
 	local readers, writers = options.read, options.write
 
@@ -67,7 +63,7 @@ local function writer(options): Write
 	return write
 end
 
-local function reader(options): Read
+local function reader(options): Types.Read
 	local toBufferSpace, bitIterate = options.toBufferSpace, options.bitIterate
 	local readers, writers = options.read, options.write
 	local getShiftValue = options.getShiftValue
@@ -82,7 +78,7 @@ local function reader(options): Read
 			local value = 0
 			for position, chunkWidth in bitIterate(width, bit) do
 				local shiftValue = getShiftValue(position, width, chunkWidth)
-				value += read(b, offset + position, chunkWidth) * 2 ^ shiftValue
+				value += (read(b, offset + position, chunkWidth) :: number) * 2 ^ shiftValue
 			end
 			return value
 		elseif bit == 0 and width == bit32.lshift(byteWidth, 3) then -- Aligned to the bytes
@@ -103,9 +99,9 @@ local function base(options: {
 	separator: string,
 	paddingCharacter: string?,
 	characters: { [number]: string },
-	read: Read,
-	write: Write,
-}): (ToBase, FromBase)
+	read: Types.Read,
+	write: Types.Write,
+}): (Types.ToBase, Types.FromBase)
 	local defaultPrefix, defaultSeparator, paddingCharacter, characters =
 		options.prefix, options.separator, options.paddingCharacter, options.characters
 
@@ -151,7 +147,7 @@ local function base(options: {
 		local p = 2 ^ math.ceil(math.log(width, 2)) - width
 		local function getPadding(bytes: number)
 			local count = p - (bytes - 1) % (p + 1)
-			return paddingCharacter:rep(count)
+			return string.rep(paddingCharacter :: string, count)
 		end
 
 		function tobase(b, separator, prefix)
@@ -189,8 +185,8 @@ local function base(options: {
 	local function frombase(str)
 		local paddingLength = 0
 		if paddingPattern then
-			local paddingStart, paddingEnd = str:find(paddingPattern)
-			paddingLength = (paddingEnd - paddingStart + 1) // #paddingCharacter
+			local paddingStart: number, paddingEnd: number = str:find(paddingPattern)
+			paddingLength = (paddingEnd - paddingStart + 1) // #(paddingCharacter :: string)
 		end
 
 		local codeCount = #str // codeLength - paddingLength
@@ -209,7 +205,7 @@ local function base(options: {
 		return output
 	end
 
-	return tobase, frombase
+	return tobase :: any, frombase :: any
 end
 
 --- @class bitbuffer
@@ -375,7 +371,7 @@ bitbuffer.tobase64, bitbuffer.frombase64 = base({
 	
 	@return Reader
 ]=]
-function bitbuffer.reader(b: buffer, useBigEndian: boolean?)
+function bitbuffer.reader(b: buffer, useBigEndian: boolean?): Types.Reader
 	return setmetatable({
 		_buffer = b,
 		_offset = 0,
@@ -384,7 +380,7 @@ function bitbuffer.reader(b: buffer, useBigEndian: boolean?)
 		_isByteAligned = true,
 
 		read = if useBigEndian then bitbuffer.readbig else bitbuffer.read,
-	}, Reader)
+	}, Reader) :: any
 end
 
 --[=[
@@ -398,7 +394,7 @@ end
 	
 	@return Writer
 ]=]
-function bitbuffer.writer(b: buffer, useBigEndian: boolean?)
+function bitbuffer.writer(b: buffer, useBigEndian: boolean?): Types.Writer
 	return setmetatable({
 		_buffer = b,
 		_offset = 0,
@@ -407,7 +403,7 @@ function bitbuffer.writer(b: buffer, useBigEndian: boolean?)
 		_isByteAligned = true,
 
 		write = if useBigEndian then bitbuffer.writebig else bitbuffer.write,
-	}, Writer)
+	}, Writer) :: any
 end
 
 return bitbuffer

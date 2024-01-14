@@ -1,10 +1,9 @@
 --!native
 --!optimize 2
-
-type BufferWrite<T> = (b: buffer, offset: number, value: T) -> ()
-type BitBufferWrite<T> = (self: any, value: T) -> ()
+--!strict
 
 local bitbuffer = script.Parent.Parent
+local Types = require(bitbuffer.Types)
 local Constants = require(bitbuffer.Constants)
 local EditorBase = require(bitbuffer.EditorBase)
 
@@ -25,18 +24,20 @@ local function getCFrameSpecialCase(cframe: CFrame): number
 			return index
 		end
 	end
+
+	return 0
 end
 
 local function handleByteAlignment<T>(
-	aligned: BufferWrite<T>?, -- The write function to use when the `offset` is byte aligned
-	unaligned: BitBufferWrite<T>, -- The write function to use when the `offset` isn't byte aligned
+	aligned: Types.BufferWrite<T>?, -- The write function to use when the `offset` is byte aligned
+	unaligned: Types.BitBufferWrite<T>, -- The write function to use when the `offset` isn't byte aligned
 	totalWidth: number -- The amount of bits modified by the `aligned` function
-): BitBufferWrite<T>
+): Types.BitBufferWrite<T>
 	if not aligned then
 		return unaligned
 	end
 
-	return function(self, value: T)
+	return function(self: Types.Writer, value: T)
 		if self._isByteAligned then
 			aligned(self._buffer, self._byte, value)
 			self:Skip(totalWidth)
@@ -46,7 +47,7 @@ local function handleByteAlignment<T>(
 	end
 end
 
-local function UInt(width: number, alignedCallback: BufferWrite<number>?)
+local function UInt(width: number, alignedCallback: Types.BufferWrite<number>?)
 	local function unalignedCallback(self, value: number)
 		self:UInt(value, width)
 	end
@@ -54,7 +55,7 @@ local function UInt(width: number, alignedCallback: BufferWrite<number>?)
 	return handleByteAlignment(alignedCallback, unalignedCallback, width)
 end
 
-local function Int(width: number, alignedCallback: BufferWrite<number>?)
+local function Int(width: number, alignedCallback: Types.BufferWrite<number>?)
 	local valueWidth = width - 1
 
 	local function unalignedCallback(self, value: number)
@@ -65,7 +66,7 @@ local function Int(width: number, alignedCallback: BufferWrite<number>?)
 	return handleByteAlignment(alignedCallback, unalignedCallback, width)
 end
 
-local function Float(exponentWidth: number, mantissaWidth: number, alignedCallback: BufferWrite<number>?)
+local function Float(exponentWidth: number, mantissaWidth: number, alignedCallback: Types.BufferWrite<number>?)
 	local totalWidth = exponentWidth + mantissaWidth + 1
 
 	local normalToMantissa = 2 ^ (mantissaWidth + 1)
@@ -85,11 +86,11 @@ local function Float(exponentWidth: number, mantissaWidth: number, alignedCallba
 		elseif value ~= value then
 			self:UInt(1, mantissaWidth, false)
 			self:UInt(exponentMax, exponentWidth, false)
-			self:UInt(1, 1)
+			self:UInt(1, 1, true)
 		elseif value == 0 then
 			self:UInt(0, mantissaWidth, false)
 			self:UInt(0, exponentWidth, false)
-			self:UInt(0, 1)
+			self:UInt(0, 1, true)
 		else
 			local mantissa, exponent = math.frexp(value)
 			mantissa = math.abs(mantissa)
@@ -211,7 +212,7 @@ end
 ]=]
 function Writer:NullTerminatedString(value: string)
 	writeString(self, value)
-	self:UInt(0, 8)
+	self:UInt(0, 8, true)
 end
 
 --[=[

@@ -1,14 +1,14 @@
 --!native
 --!optimize 2
-
-type BufferRead<T> = (b: buffer, offset: number) -> T
-type BitBufferRead<T> = (self: any) -> T
+--!strict
 
 local bitbuffer = script.Parent.Parent
+local Types = require(bitbuffer.Types)
 local Constants = require(bitbuffer.Constants)
 local EditorBase = require(bitbuffer.EditorBase)
 
 local CFRAME_SPECIAL_CASES = Constants.CFrameSpecialCases
+local POWERS_OF_TWO = Constants.PowersOfTwo
 local ENUM_TO_VALUE = Constants.EnumToValue
 local VALUE_TO_ENUM = Constants.ValueToEnum
 
@@ -21,15 +21,15 @@ local Reader = setmetatable({}, EditorBase)
 Reader.__index = Reader
 
 local function handleByteAlignment<T>(
-	aligned: BufferRead<T>?, -- The write function to use when the `offset` is byte aligned
-	unaligned: BitBufferRead<T>, -- The write function to use when the `offset` isn't byte aligned
+	aligned: Types.BufferRead<T>?, -- The write function to use when the `offset` is byte aligned
+	unaligned: Types.BitBufferRead<T>, -- The write function to use when the `offset` isn't byte aligned
 	totalWidth: number -- The amount of bits modified by the `aligned` function
-): BitBufferRead<T>
+): Types.BitBufferRead<T>
 	if not aligned then
 		return unaligned
 	end
 
-	return function(self)
+	return function(self: Types.Reader)
 		if self._isByteAligned then
 			local value = aligned(self._buffer, self._byte)
 			self:Skip(totalWidth)
@@ -40,7 +40,7 @@ local function handleByteAlignment<T>(
 	end
 end
 
-local function UInt(width: number, alignedCallback: BufferRead<number>?): BitBufferRead<number>
+local function UInt(width: number, alignedCallback: Types.BufferRead<number>?): Types.BitBufferRead<number>
 	local function unalignedCallback(self): number
 		return self:UInt(width)
 	end
@@ -48,7 +48,7 @@ local function UInt(width: number, alignedCallback: BufferRead<number>?): BitBuf
 	return handleByteAlignment(alignedCallback, unalignedCallback, width)
 end
 
-local function Int(width: number, alignedCallback: BufferRead<number>?): BitBufferRead<number>
+local function Int(width: number, alignedCallback: Types.BufferRead<number>?): Types.BitBufferRead<number>
 	local valueWidth = width - 1
 
 	local function unalignedCallback(self): number
@@ -63,8 +63,8 @@ end
 local function Float(
 	exponentWidth: number,
 	mantissaWidth: number,
-	alignedCallback: BufferRead<number>?
-): BitBufferRead<number>
+	alignedCallback: Types.BufferRead<number>?
+): Types.BitBufferRead<number>
 	local totalWidth = mantissaWidth + exponentWidth + 1
 
 	local normalToMantissa = 2 ^ (mantissaWidth + 1)
@@ -74,9 +74,9 @@ local function Float(
 	local exponentBias = 2 ^ (exponentWidth - 1) - 2
 
 	local function unalignedCallback(self): number
-		local mantissa = self:UInt(mantissaWidth)
-		local exponent = self:UInt(exponentWidth)
-		local sign = self:UInt(1) == 1
+		local mantissa: number = self:UInt(mantissaWidth)
+		local exponent: number = self:UInt(exponentWidth)
+		local sign: boolean = self:UInt(1) == 1
 
 		if mantissa == 0 and exponent == exponentMax then
 			return if sign then -math.huge else math.huge
@@ -161,7 +161,8 @@ end
 	@return number
 ]=]
 function Reader:Int(width: number): number
-	return self:UInt(width) - math.ldexp(1, width - 1)
+	local value: number = self:UInt(width)
+	return value - POWERS_OF_TWO[width - 1]
 end
 
 --[=[
@@ -288,7 +289,7 @@ end
 	@return BrickColor
 ]=]
 function Reader:BrickColor(): BrickColor
-	return BrickColor.new(self:UInt(11) + 1)
+	return BrickColor.new(self:UInt(11))
 end
 
 --[=[
