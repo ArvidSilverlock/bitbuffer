@@ -1,12 +1,22 @@
-local Constants = require(script.Parent.Constants)
+type BufferWrite<T> = (b: buffer, offset: number, value: T) -> ()
+type BitBufferWrite<T> = (self: any, value: T) -> ()
+
+local bitbuffer = script.Parent.Parent
+local Constants = require(bitbuffer.Constants)
+local EditorBase = require(bitbuffer.EditorBase)
 
 local CFRAME_SPECIAL_CASES = Constants.CFrameSpecialCases
+local ENUM_TO_VALUE = Constants.EnumToValue
 
-local ENUM_CODES = Constants.EnumCodes
-local ENUM_WIDTHS = Constants.EnumWidths
-local ENUM_CODE_WIDTH = Constants.EnumCodeWidth
+--[=[
+	@class Writer
 
-local function getCFrameSpecialCase(cframe)
+	Writes values to a buffer, the offset will increment automatically.
+]=]
+local Writer = setmetatable({}, EditorBase)
+Writer.__index = Writer
+
+local function getCFrameSpecialCase(cframe: CFrame): number
 	for index, case in CFRAME_SPECIAL_CASES do
 		if cframe.Rotation == case then
 			return index
@@ -14,71 +24,105 @@ local function getCFrameSpecialCase(cframe)
 	end
 end
 
-local function UInt(width: number)
-	return function(self, value: number)
-		self:UInt(value, width)
+local function handleByteAlignment<T>(
+	aligned: BufferWrite<T>?, -- The write function to use when the `offset` is byte aligned
+	unaligned: BitBufferWrite<T>, -- The write function to use when the `offset` isn't byte aligned
+	totalWidth: number -- The amount of bits modified by the `aligned` function
+): BitBufferWrite<T>
+	if not aligned then
+		return unaligned
 	end
-end
 
-local function Int(width: number)
-	local min = -2 ^ (width - 1)
-	return function(self, value: number)
-		self:UInt(value - min, width)
-	end
-end
-
-local function Float(exponentWidth: number, fractionWidth: number)
-	local combinedWidth = exponentWidth + fractionWidth
-	local totalWidth = combinedWidth + 1
-
-	local exponentMax = 2 ^ exponentWidth - 1
-	local fractionMax = 2 ^ fractionWidth - 1
-	local fractionToUInt = 2 ^ fractionWidth
-
-	return function(self, value: number)
-		if value == math.huge then
-			self:UInt(if value < 0 then 1 else 0, 1)
-			self:UInt(exponentMax, exponentWidth)
-			self:UInt(0, fractionWidth)
-		elseif value ~= value then
-			self:UInt(0, 1)
-			self:UInt(exponentMax, exponentWidth)
-			self:UInt(fractionMax, fractionWidth)
-		elseif value == 0 then
-			self:UInt(0, totalWidth)
+	return function(self, value: T)
+		if self._isByteAligned then
+			aligned(self._buffer, self._byte, value)
+			self:Skip(totalWidth)
 		else
-			local fraction, exponent = math.frexp(value)
-			self:UInt(if value < 0 then 1 else 0, 1)
-			self:UInt(exponent, exponentWidth)
-			self:UInt(math.ceil(math.abs(fraction) * fractionToUInt), fractionWidth)
+			unaligned(self, value)
 		end
 	end
 end
 
---- @class Writer
-local Writer = {}
-Writer.__index = Writer
+local function UInt(width: number, alignedCallback: BufferWrite<number>?)
+	local function unalignedCallback(self, value: number)
+		self:UInt(value, width)
+	end
 
---[=[
-	@method Align
-	@within Writer
-
-	Aligns the current offset to the *next* byte, which speeds up `write` calls slightly
-]=]
-function Writer:Align()
-	self._offset = bit32.lshift(bit32.rshift(self._offset + 7, 3), 3) -- math.ceil(self._offset / 8) * 8
+	return handleByteAlignment(alignedCallback, unalignedCallback, width)
 end
 
---[=[
-	@method Skip
-	@within Writer
+local function Int(width: number, alignedCallback: BufferWrite<number>?)
+	local valueWidth = width - 1
 
-	Skips the specified number of bits, without altering them
+	local function unalignedCallback(self, value: number)
+		self:UInt(value, valueWidth)
+		self:Boolean(value < 0)
+	end
 
-	@param amount number
-]=]
-function Writer:Skip(amount: number)
-	self._offset += amount
+	return handleByteAlignment(alignedCallback, unalignedCallback, width)
+end
+
+local function Float(exponentWidth: number, mantissaWidth: number, alignedCallback: BufferWrite<number>?)
+	local totalWidth = exponentWidth + mantissaWidth + 1
+
+	local normalToMantissa = 2 ^ (mantissaWidth + 1)
+	local denormalToMantissa = 2 ^ mantissaWidth
+
+	local exponentMax = 2 ^ exponentWidth - 1
+	local exponentBias = 2 ^ (exponentWidth - 1) - 2
+
+	-- https://en.wikipedia.org/wiki/Single-precision_floating-point_format#:~:text=(2%20%E2%88%92%202%E2%88%9223)%20%C3%97%202127%20%E2%89%88%203.4028235%20%C3%97%201038
+	local valueMax = math.ldexp((2 - 2 ^ -mantissaWidth), (2 ^ (exponentWidth - 1) - 1))
+
+	local function unalignedCallback(self, value: number)
+		if math.abs(value) > valueMax then
+			self:UInt(0, mantissaWidth, false)
+			self:UInt(exponentMax, exponentWidth, false)
+			self:Boolean(value < 0)
+		elseif value ~= value then
+			self:UInt(1, mantissaWidth, false)
+			self:UInt(exponentMax, exponentWidth, false)
+			self:UInt(1, 1)
+		elseif value == 0 then
+			self:UInt(0, mantissaWidth, false)
+			self:UInt(0, exponentWidth, false)
+			self:UInt(0, 1)
+		else
+			local mantissa, exponent = math.frexp(value)
+			mantissa = math.abs(mantissa)
+			exponent += exponentBias
+
+			if exponent <= 0 then -- Calculate the "denormal" mantissa
+				local biasShift = math.ldexp(1, math.abs(exponent)) -- 2 ^ exponent
+				mantissa = mantissa * denormalToMantissa / biasShift
+			else -- Calculate the normal mantissa
+				mantissa *= normalToMantissa
+			end
+
+			self:UInt(math.round(mantissa), mantissaWidth, false)
+			self:UInt(math.max(exponent, 0), exponentWidth, false)
+			self:Boolean(value < 0)
+		end
+	end
+
+	return handleByteAlignment(alignedCallback, unalignedCallback, totalWidth)
+end
+
+local function writeString(self, value: string)
+	if self._isByteAligned then
+		buffer.writestring(self._buffer, self._byte, value)
+		self:Skip(#value)
+	else
+		local stringBuffer = buffer.fromstring(value)
+		local stringLength = #value
+
+		for stringOffset = 0, stringLength - 1 do
+			local byte = buffer.readu8(stringBuffer, stringOffset)
+			self:UInt(byte, 8, false)
+		end
+
+		self:UpdateByteOffset()
+	end
 end
 
 --[=[
@@ -104,10 +148,11 @@ end
 
 	@param value number -- The uint to write
 	@param width number -- The bit width of the `value`
+	@param updateByteOffset boolean -- Whether or not to update information on the current byte, used internally to reduce unnecessary calculations.
 ]=]
-function Writer:UInt(value: number, width: number)
+function Writer:UInt(value: number, width: number, updateByteOffset: boolean?)
 	self.write(self._buffer, self._offset, value, width)
-	self._offset += width
+	self:Skip(width, updateByteOffset)
 end
 
 --[=[
@@ -120,7 +165,7 @@ end
 	@param width number
 ]=]
 function Writer:Int(value: number, width: number)
-	self:UInt(if value < 0 then value + 2 ^ (width - 1) else value, width)
+	self:UInt(value + math.ldexp(1, width - 1), width)
 end
 
 --[=[
@@ -134,7 +179,6 @@ end
 function Writer:Boolean(value: boolean)
 	self:UInt(if value then 1 else 0, 1)
 end
-
 --[=[
 	@method String
 	@within Writer
@@ -148,30 +192,22 @@ function Writer:String(value: string, lengthWidth: number?)
 	local stringLength = #value
 	self:UInt(stringLength, lengthWidth or 16)
 
-	local stringBuffer = buffer.fromstring(value)
-	for stringOffset = 0, stringLength - 1 do
-		self:UInt8(buffer.readu8(stringBuffer, stringOffset))
-	end
+	writeString(self, value)
 end
 
 --[=[
 	@method NullTerminatedString
 	@within Writer
 
-	Writes a string until it finds a character with the value of 0, if one is not found, it will write one on the end
-
+	Writes a string then a byte with the value 0 after the string, but doesn't encode the length.
+	The `Reader` will read all bytes until a 0 is found.
+	
+	Note that this assumes there is no character with a value of `0` already present in the string.
+	
 	@param value string
 ]=]
 function Writer:NullTerminatedString(value: string)
-	local stringBuffer = buffer.fromstring(value)
-	for stringOffset = 0, #value - 1 do
-		local character = buffer.readu8(stringBuffer, stringOffset)
-		if character == 0 then
-			break
-		end
-
-		self:UInt8(character)
-	end
+	writeString(self, value)
 	self:UInt(0, 8)
 end
 
@@ -317,20 +353,18 @@ end
 --[=[
 	@method Enum
 	@within Writer
-
-	If no `enumType` is specified, it will encode the `EnumItem.Type`, then encode the `EnumItem` using unsigned integers whose widths depend on the amount of possible values.
 	
-	This is good for short term usage, such as sending over the network, but, bad for long term storage (i.e., storing in a datastore), this is because a roblox update might add aditional `Enum`s or `EnumItems`, altering the required value widths
+	Writes an `EnumItem` using two `UInt12`s, will only use 1 if an `enumType` is already specified.
 
 	@param value EnumItem
 	@param enumType Enum? -- If specified, it will skip the encoding of the `EnumType`
 ]=]
 function Writer:Enum(value: EnumItem, enumType: Enum?)
 	if not enumType then
-		self:UInt(ENUM_CODES[value.EnumType], ENUM_CODE_WIDTH)
+		self:UInt(ENUM_TO_VALUE[value.EnumType], 12)
 	end
 
-	self:UInt(value.Value, ENUM_WIDTHS[value.EnumType])
+	self:UInt(value.Value, 12)
 end
 
 --[=[
@@ -377,7 +411,7 @@ end
 
 	@param value number
 ]=]
-Writer.UInt8 = UInt(8)
+Writer.UInt8 = UInt(8, buffer.writeu8)
 
 --[=[
 	@method UInt16
@@ -387,7 +421,7 @@ Writer.UInt8 = UInt(8)
 
 	@param value number
 ]=]
-Writer.UInt16 = UInt(16)
+Writer.UInt16 = UInt(16, buffer.writeu16)
 
 --[=[
 	@method UInt24
@@ -407,7 +441,7 @@ Writer.UInt24 = UInt(24)
 
 	@param value number
 ]=]
-Writer.UInt32 = UInt(32)
+Writer.UInt32 = UInt(32, buffer.writeu32)
 
 --[=[
 	@method Int8
@@ -417,7 +451,7 @@ Writer.UInt32 = UInt(32)
 
 	@param value number
 ]=]
-Writer.Int8 = Int(8)
+Writer.Int8 = Int(8, buffer.writei8)
 
 --[=[
 	@method Int16
@@ -427,7 +461,7 @@ Writer.Int8 = Int(8)
 
 	@param value number
 ]=]
-Writer.Int16 = Int(16)
+Writer.Int16 = Int(16, buffer.writei16)
 
 --[=[
 	@method Int24
@@ -447,7 +481,7 @@ Writer.Int24 = Int(24)
 
 	@param value number
 ]=]
-Writer.Int32 = Int(32)
+Writer.Int32 = Int(32, buffer.writei32)
 
 --[=[
 	@method Float16
@@ -467,7 +501,7 @@ Writer.Float16 = Float(5, 10)
 
 	@param value number
 ]=]
-Writer.Float32 = Float(8, 23)
+Writer.Float32 = Float(8, 23, buffer.writef32)
 
 --[=[
 	@method Float64
@@ -477,6 +511,6 @@ Writer.Float32 = Float(8, 23)
 
 	@param value number
 ]=]
-Writer.Float64 = Float(11, 52)
+Writer.Float64 = Float(11, 52, buffer.writef64)
 
 return Writer

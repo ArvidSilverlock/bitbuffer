@@ -1,64 +1,114 @@
-local Constants = require(script.Parent.Constants)
+type BufferRead<T> = (b: buffer, offset: number) -> T
+type BitBufferRead<T> = (self: any) -> T
+
+local bitbuffer = script.Parent.Parent
+local Constants = require(bitbuffer.Constants)
+local EditorBase = require(bitbuffer.EditorBase)
 
 local CFRAME_SPECIAL_CASES = Constants.CFrameSpecialCases
+local ENUM_TO_VALUE = Constants.EnumToValue
+local VALUE_TO_ENUM = Constants.ValueToEnum
 
-local ENUMS = Constants.Enums
-local ENUM_WIDTHS = Constants.EnumWidths
-local ENUM_LOOKUP = Constants.EnumLookup
-local ENUM_CODE_WIDTH = Constants.EnumCodeWidth
+--[=[
+	@class Reader
 
-local function UInt(width: number)
-	return function(self): number
-		return self:UInt(width)
+	Reads values to a buffer, the offset will increment automatically.
+]=]
+local Reader = setmetatable({}, EditorBase)
+Reader.__index = Reader
+
+local function handleByteAlignment<T>(
+	aligned: BufferRead<T>?, -- The write function to use when the `offset` is byte aligned
+	unaligned: BitBufferRead<T>, -- The write function to use when the `offset` isn't byte aligned
+	totalWidth: number -- The amount of bits modified by the `aligned` function
+): BitBufferRead<T>
+	if not aligned then
+		return unaligned
 	end
-end
 
-local function Int(width: number)
-	local min = -2 ^ (width - 1)
-	return function(self): number
-		return self:UInt(width) + min
-	end
-end
-
-local function Float(exponentWidth: number, fractionWidth: number)
-	local exponentMax = 2 ^ exponentWidth - 1
-	local uintToFraction = 2 ^ fractionWidth
-
-	return function(self): number
-		local sign, exponent, fraction = self:UInt(1) * -2 + 1, self:UInt(exponentWidth), self:UInt(fractionWidth)
-
-		if exponent == exponentMax then
-			return if fraction == 0 then math.huge * sign else 0 / 0
+	return function(self)
+		if self._isByteAligned then
+			local value = aligned(self._buffer, self._byte)
+			self:Skip(totalWidth)
+			return value
 		else
-			return math.ldexp(fraction / uintToFraction, exponent) * sign
+			return unaligned(self)
 		end
 	end
 end
 
---- @class Reader
-local Reader = {}
-Reader.__index = Reader
+local function UInt(width: number, alignedCallback: BufferRead<number>?): BitBufferRead<number>
+	local function unalignedCallback(self): number
+		return self:UInt(width)
+	end
 
---[=[
-	@method Align
-	@within Reader
-
-	Aligns the current offset to the *next* byte, which speeds up `read` calls slightly
-]=]
-function Reader:Align()
-	self._offset = bit32.lshift(bit32.rshift(self._offset + 7, 3), 3) -- math.ceil(self._offset / 8) * 8
+	return handleByteAlignment(alignedCallback, unalignedCallback, width)
 end
 
---[=[
-	@method Skip
-	@within Reader
+local function Int(width: number, alignedCallback: BufferRead<number>?): BitBufferRead<number>
+	local valueWidth = width - 1
 
-	Skips the specified number of bits, without altering them
+	local function unalignedCallback(self): number
+		local value = self:UInt(valueWidth)
+		local sign = self:UInt(1) == 1
+		return if sign then -value else value
+	end
 
-	@param amount number
-]=]
-function Reader:Skip(amount: number)
-	self._offset += amount
+	return handleByteAlignment(alignedCallback, unalignedCallback, width)
+end
+
+local function Float(
+	exponentWidth: number,
+	mantissaWidth: number,
+	alignedCallback: BufferRead<number>?
+): BitBufferRead<number>
+	local totalWidth = mantissaWidth + exponentWidth + 1
+
+	local normalToMantissa = 2 ^ (mantissaWidth + 1)
+	local denormalToMantissa = 2 ^ mantissaWidth
+
+	local exponentMax = 2 ^ exponentWidth - 1
+	local exponentBias = 2 ^ (exponentWidth - 1) - 2
+
+	local function unalignedCallback(self): number
+		local mantissa = self:UInt(mantissaWidth)
+		local exponent = self:UInt(exponentWidth)
+		local sign = self:UInt(1) == 1
+
+		if mantissa == 0 and exponent == exponentMax then
+			return if sign then -math.huge else math.huge
+		elseif mantissa == 1 and exponent == exponentMax then
+			return 0 / 0
+		elseif mantissa == 0 and exponent == 0 then
+			return 0
+		else
+			if exponent == 0 then -- Calculate the "denormal" mantissa
+				mantissa /= denormalToMantissa
+			else -- Calculate the normal mantissa
+				mantissa = mantissa / normalToMantissa + 0.5
+			end
+
+			local value = math.ldexp(mantissa, exponent - exponentBias)
+			return if sign then -value else value
+		end
+	end
+
+	return handleByteAlignment(alignedCallback, unalignedCallback, totalWidth)
+end
+
+local function readString(self, length: number): string
+	if bit32.band(self._offset, 0b111) == 0 then -- If the `offset` is byte aligned
+		local output = buffer.readstring(self._buffer, self._offset, length)
+		self._offset += length
+		return output
+	else
+		local stringBuffer = buffer.create(length)
+		for stringOffset = 0, length - 1 do
+			buffer.writeu8(stringBuffer, stringOffset, self:UInt8())
+		end
+
+		return buffer.tostring(stringBuffer)
+	end
 end
 
 --[=[
@@ -87,12 +137,13 @@ end
 	Reads an unsigned integer of any width from 1-53
 
 	@param width number -- The bit width to read
+	@param updateByteOffset boolean? -- Whether or not to update information on the current byte, used internally to reduce unnecessary calculations.
 
 	@return number
 ]=]
-function Reader:UInt(width: number): number
+function Reader:UInt(width: number, updateByteOffset: boolean?): number
 	local value = self.read(self._buffer, self._offset, width)
-	self._offset += width
+	self:Skip(width, updateByteOffset)
 	return value
 end
 
@@ -107,7 +158,7 @@ end
 	@return number
 ]=]
 function Reader:Int(width: number): number
-	return self:UInt(width) - 2 ^ (width - 1)
+	return self:UInt(width) - math.ldexp(1, width - 1)
 end
 
 --[=[
@@ -133,19 +184,14 @@ end
 ]=]
 function Reader:String(lengthWidth: number?): string
 	local stringLength = self:UInt(lengthWidth or 16)
-
-	local stringBuffer = buffer.create(stringLength)
-	for stringOffset = 0, stringLength - 1 do
-		buffer.writeu8(stringBuffer, stringOffset, self:UInt8())
-	end
-	return buffer.tostring(stringBuffer)
+	return readString(self, stringLength)
 end
 
 --[=[
 	@method NullTerminatedString
 	@within Reader
 
-	Reads characters of a string until it encounters a byte with a value of 0
+	Reads infinitely many characters of a string until it encounters a byte with a value of 0
 
 	@return string
 ]=]
@@ -293,20 +339,21 @@ end
 --[=[
 	@method Enum
 	@within Reader
-
-	If no `enumType` is specified, it will read the `EnumItem.Type`, then read the `EnumItem` using unsigned integers whose widths depend on the amount of possible values.
 	
-	@param enumType Enum? -- The `EnumItem.Type` that the read value should have
+	Reads an `EnumItem` using two `UInt12`s, will only use 1 if an `enumType` is already specified.
+
+	@param enumType Enum? -- If specified, it will skip the encoding of the `EnumType`
 
 	@return EnumItem
 ]=]
-function Reader:Enum(enumType: Enum?): EnumItem
-	if not enumType then
-		enumType = ENUMS[self:UInt(ENUM_CODE_WIDTH) + 1]
-	end
+function Reader:Enum(enumType: Enum?)
+	local enumValue = if enumType then ENUM_TO_VALUE[enumType] else self:UInt(12)
+	local enumCode = self:UInt(12)
 
-	local enumCode = self:UInt(ENUM_WIDTHS[enumType]) + 1
-	return ENUM_LOOKUP[enumType][enumCode]
+	print(enumValue, enumCode)
+	print(VALUE_TO_ENUM[enumValue], VALUE_TO_ENUM[enumValue][enumCode])
+
+	return VALUE_TO_ENUM[enumValue][enumCode]
 end
 
 --[=[
@@ -362,7 +409,7 @@ end
 
 	@return number
 ]=]
-Reader.UInt8 = UInt(8)
+Reader.UInt8 = UInt(8, buffer.readu8)
 
 --[=[
 	@method UInt16
@@ -372,7 +419,7 @@ Reader.UInt8 = UInt(8)
 
 	@return number
 ]=]
-Reader.UInt16 = UInt(16)
+Reader.UInt16 = UInt(16, buffer.readu16)
 
 --[=[
 	@method UInt24
@@ -392,7 +439,7 @@ Reader.UInt24 = UInt(24)
 
 	@return number
 ]=]
-Reader.UInt32 = UInt(32)
+Reader.UInt32 = UInt(32, buffer.readu32)
 
 --[=[
 	@method UInt8
@@ -402,7 +449,7 @@ Reader.UInt32 = UInt(32)
 
 	@return number
 ]=]
-Reader.Int8 = Int(8)
+Reader.Int8 = Int(8, buffer.readi8)
 
 --[=[
 	@method UInt16
@@ -412,7 +459,7 @@ Reader.Int8 = Int(8)
 
 	@return number
 ]=]
-Reader.Int16 = Int(16)
+Reader.Int16 = Int(16, buffer.readi16)
 
 --[=[
 	@method Int8
@@ -432,7 +479,7 @@ Reader.Int24 = Int(24)
 
 	@return number
 ]=]
-Reader.Int32 = Int(32)
+Reader.Int32 = Int(32, buffer.readi32)
 
 --[=[
 	@method Float16
@@ -452,7 +499,7 @@ Reader.Float16 = Float(5, 10)
 
 	@return number
 ]=]
-Reader.Float32 = Float(8, 23)
+Reader.Float32 = Float(8, 23, buffer.readf32)
 
 --[=[
 	@method Float64
@@ -462,6 +509,6 @@ Reader.Float32 = Float(8, 23)
 
 	@return number
 ]=]
-Reader.Float64 = Float(11, 52)
+Reader.Float64 = Float(11, 52, buffer.readf64)
 
 return Reader
