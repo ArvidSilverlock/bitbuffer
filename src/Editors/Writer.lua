@@ -1,3 +1,6 @@
+--!native
+--!optimize 2
+
 type BufferWrite<T> = (b: buffer, offset: number, value: T) -> ()
 type BitBufferWrite<T> = (self: any, value: T) -> ()
 

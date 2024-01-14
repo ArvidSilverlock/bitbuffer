@@ -1,3 +1,6 @@
+--!native
+--!optimize 2
+
 type BufferRead<T> = (b: buffer, offset: number) -> T
 type BitBufferRead<T> = (self: any) -> T
 

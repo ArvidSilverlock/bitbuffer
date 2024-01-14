@@ -1,3 +1,6 @@
+--!native
+--!optimize 2
+
 --- @class Editor
 local Editor = {}
 Editor.__index = Editor
