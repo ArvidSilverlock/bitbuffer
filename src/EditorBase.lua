@@ -48,7 +48,11 @@ end
 	Aligns the current offset to the *next* byte, useful for a slight speed gain in some cases.
 ]=]
 function Editor:Align()
-	self:SetOffset(bit32.lshift(bit32.rshift(self._offset + 7, 3), 3)) -- math.ceil(self._offset / 8) * 8
+	local byte = bit32.rshift(self._offset + 7, 3) -- math.ceil(self._offset / 8)
+	self._offset = bit32.lshift(byte, 3) -- byte * 8
+
+	self._byte = byte
+	self._isByteAligned = true
 end
 
 return Editor
