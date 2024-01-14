@@ -7,7 +7,7 @@ for index, enum in enums do
 	local code = index - 1
 
 	ENUM_TO_VALUE[enum] = code
-	VALUE_TO_ENUM[index] = table.create(#enumItems)
+	VALUE_TO_ENUM[code] = table.create(#enumItems)
 
 	for _, enumItem in enumItems do
 		VALUE_TO_ENUM[code][enumItem.Value] = enumItem
