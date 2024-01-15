@@ -39,11 +39,13 @@ local function writer(options): Types.Write
 	local readers, writers = options.read, options.write
 
 	local function write(b: buffer, offset: number, value: number, width: number)
-		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
+		assert(offset < 0 or offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
+		assert(width > 0, "`width` must be greater than or equal to 1")
+
 		local byte, bit, byteWidth = toBufferSpace(offset, width)
 
 		if byteWidth > 4 then -- Outside of `bit32`'s functionality
-			assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
+			assert(width <= 53, "`width` must be less than or equal to 53")
 
 			for position, chunkWidth in bitIterate(width, bit) do
 				local mask = POWERS_OF_TWO[chunkWidth]
@@ -52,10 +54,9 @@ local function writer(options): Types.Write
 
 				write(b, offset + position, chunk, chunkWidth)
 			end
-		elseif bit == 0 and width == bit32.lshift(byteWidth, 3) then -- Aligned to the bytes
+		elseif bit == 0 and width == bit32.lshift(byteWidth, 3) then -- Aligned to the bytes.
 			writers[byteWidth](b, byte, value)
 		else -- Confined within one write call.
-			assert(width > 0, "`width` must be greater than or equal to 1")
 			writers[byteWidth](b, byte, bit32.replace(readers[byteWidth](b, byte), value, bit, width))
 		end
 	end
@@ -69,11 +70,13 @@ local function reader(options): Types.Read
 	local getShiftValue = options.getShiftValue
 
 	local function read(b: buffer, offset: number, width: number)
+		assert(offset < 0 or offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
+		assert(width > 0, "`width` must be greater than or equal to 1")
+		
 		local byte, bit, byteWidth = toBufferSpace(offset, width)
-		assert(offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
 
 		if byteWidth > 4 then -- outside of `bit32`'s functionality
-			assert(width <= 53, "`bitbuffer` does not support `width`s greater than 53")
+			assert(width <= 53, "`width` must be less than or equal to 53")
 
 			local value = 0
 			for position, chunkWidth in bitIterate(width, bit) do
@@ -81,10 +84,9 @@ local function reader(options): Types.Read
 				value += (read(b, offset + position, chunkWidth) :: number) * 2 ^ shiftValue
 			end
 			return value
-		elseif bit == 0 and width == bit32.lshift(byteWidth, 3) then -- Aligned to the bytes
+		elseif bit == 0 and width == bit32.lshift(byteWidth, 3) then -- Aligned to the bytes.
 			return readers[byteWidth](b, byte)
 		else -- Confined within one read call.
-			assert(width > 0, "`width` must be greater than or equal to 1")
 			return bit32.extract(readers[byteWidth](b, byte), bit, width)
 		end
 	end
