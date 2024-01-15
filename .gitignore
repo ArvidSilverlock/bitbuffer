@@ -1,6 +1,11 @@
 # Project place file
 /bitbuffer.rbxlx
 
+# Packages
+/Packages
+/DevPackages
+
+# Moonwave
 /build
 
 # Roblox Studio lock files
