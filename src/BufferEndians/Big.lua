@@ -26,8 +26,8 @@ end
 
 local function flipu16(value)
 	return bit32.bor(
-		bit32.lshift(value, 8), -- FF00 -> 00FF
-		bit32.rshift(value, 8) -- 00FF -> FF00
+		bit32.rshift(value, 8), -- FF00 -> 00FF
+		bit32.lshift(bit32.band(0x00FF, value), 8) -- 00FF -> FF00
 	)
 end
 
