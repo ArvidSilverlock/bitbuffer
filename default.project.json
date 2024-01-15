@@ -7,6 +7,12 @@
 			"bitbuffer": {
 				"$path": "src"
 			}
+		},
+
+		"ServerStorage": {
+			"tests": {
+				"$path": "tests"
+			}
 		}
 	}
 }
