@@ -6,7 +6,7 @@ Average `read` and `write` are calculated by calling the `read`/`write` function
 Past 24 bits it will get slower much faster, as after that point it will often need to edit 5 bytes of data at once, meaning it cannot use the `bit32` library for manipulation.
 
 ## Read and Write Time
-|bits|read (μs)|write (μs)|fastread (μs)|fastwrite (μs)|
+|bits|read (μs)|write (μs)|readbig (μs)|writebig (μs)|
 |----|---------|---------|---------|---------|
 | 01 | 0.10818 | 0.14264 | 0.10461 | 0.13492 |
 | 02 | 0.10254 | 0.14280 | 0.11000 | 0.13702 |
