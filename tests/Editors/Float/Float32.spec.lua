@@ -21,7 +21,7 @@ return function()
 	end)
 
 	it("should be capable of writing 'denormal' numbers", function()
-		local value = math.pi * 2 ^ -118
+		local value = math.pi * 2 ^ -128
 		writer:Float32(value)
 
 		expect(reader:Float32()).to.be.near(value)
