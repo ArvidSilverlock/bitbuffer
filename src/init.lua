@@ -8,7 +8,7 @@
 
 local Types = require(script.Types)
 local Constants = require(script.Constants)
-local BufferEndians = require(script.BufferEndians)
+local Endians = require(script.Endians)
 
 local Editors = require(script.Editors)
 local Reader = Editors.Reader
@@ -223,7 +223,7 @@ local bitbuffer = {}
 	@param offset number -- The offset (in bits) to read from
 	@param width number -- The width (in bits) of the value you're reading
 ]=]
-bitbuffer.read = reader(BufferEndians.Little)
+bitbuffer.read = reader(Endians.Little)
 
 --[=[
 	@function write
@@ -236,7 +236,7 @@ bitbuffer.read = reader(BufferEndians.Little)
 	@param value number -- The value you want to write
 	@param width number -- The width (in bits) of the value
 ]=]
-bitbuffer.write = writer(BufferEndians.Little)
+bitbuffer.write = writer(Endians.Little)
 
 --[=[
 	@function readbig
@@ -248,7 +248,7 @@ bitbuffer.write = writer(BufferEndians.Little)
 	@param offset number -- The offset (in bits) to read from
 	@param width number -- The width (in bits) of the value you're reading
 ]=]
-bitbuffer.readbig = reader(BufferEndians.Big)
+bitbuffer.readbig = reader(Endians.Big)
 
 --[=[
 	@function writebig
@@ -261,7 +261,7 @@ bitbuffer.readbig = reader(BufferEndians.Big)
 	@param value number -- The value you want to write
 	@param width number -- The width (in bits) of the value
 ]=]
-bitbuffer.writebig = writer(BufferEndians.Big)
+bitbuffer.writebig = writer(Endians.Big)
 
 --[=[
 	@function tobinary
