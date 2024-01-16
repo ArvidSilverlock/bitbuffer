@@ -1,9 +1,9 @@
-local function cull<K, V>(input: { [K]: V }, predicate: (value: V, key: K) -> boolean?): { [K]: V }
-	local output = table.clone(input)
+local function cull<T>(input: { T }, predicate: (value: T) -> boolean?): { T }
+	local output = {}
 
-	for key, value in input do
-		if not predicate(value, key) then
-			output[key] = nil
+	for _, value in input do
+		if predicate(value) then
+			table.insert(output, value)
 		end
 	end
 
