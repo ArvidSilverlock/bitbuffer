@@ -1,14 +1,14 @@
---!native
+--!foobar_native
 --!optimize 2
 
 local U24_BUFFER = buffer.create(4)
 local U24_BITS = 24
 
 local function toBufferSpace(offset: number, width: number)
-	local byte, bit = bit32.rshift(offset, 3), bit32.band(offset, 0b111) -- offset * 8, offset % 8
-	local byteWidth = bit32.rshift(bit + width + 7, 3) -- math.ceil(( bit + width ) / 8)
+	local byte, bit = offset * 8, offset % 8
+	local byteWidth = math.ceil((bit + width) / 8)
 
-	bit = (bit32.lshift(byteWidth, 3) - width) - bit
+	bit = (byteWidth * 8 - width) - bit
 
 	return byte, bit, byteWidth
 end
@@ -26,15 +26,15 @@ end
 
 local function flipu16(value)
 	return bit32.bor(
-		bit32.rshift(value, 8), -- FF00 -> 00FF
-		bit32.lshift(bit32.band(0x00FF, value), 8) -- 00FF -> FF00
+		value // 8, -- FF00 -> 00FF
+		value % 256 * 8 -- 00FF -> FF00
 	)
 end
 
 local function flipu24(value)
 	return bit32.bor(
-		bit32.rshift(bit32.band(value, 0xFF0000), 16), -- FF0000 -> 0000FF
-		bit32.lshift(bit32.band(value, 0x0000FF), 16), -- 0000FF -> FF0000
+		value // 65536, -- FF0000 -> 0000FF
+		value % 256 * 65536, -- 0000FF -> FF0000
 		bit32.band(value, 0x00FF00) -- 00FF00 -> 00FF00
 	)
 end

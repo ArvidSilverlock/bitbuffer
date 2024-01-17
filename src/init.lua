@@ -1,10 +1,6 @@
---!native
+--!foobar_native
 --!optimize 2
 --!strict
-
--- Any usage of `bit32.lshift` and `bit32.rshift` where the displacement is `3` emulate integer division
--- and multiplication by 8 (2^3, hence the 3), this is done because bitshifting is faster than generic
--- mathmatical operations.
 
 local Types = require(script.Types)
 local Constants = require(script.Constants)
@@ -39,7 +35,7 @@ local function writer(options): Types.Write
 	local readers, writers = options.read, options.write
 
 	local function write(b: buffer, offset: number, value: number, width: number)
-		assert(offset < 0 or offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
+		assert(offset < 0 or offset + width <= buffer.len(b) * 8, "buffer access out of bounds") -- prevent crashes in native mode
 		assert(width > 0, "`width` must be greater than or equal to 1")
 
 		local byte, bit, byteWidth = toBufferSpace(offset, width)
@@ -54,7 +50,7 @@ local function writer(options): Types.Write
 
 				write(b, offset + position, chunk, chunkWidth)
 			end
-		elseif bit == 0 and width == bit32.lshift(byteWidth, 3) then -- Aligned to the bytes.
+		elseif bit == 0 and width == byteWidth * 8 then -- Aligned to the bytes.
 			writers[byteWidth](b, byte, value)
 		else -- Confined within one write call.
 			writers[byteWidth](b, byte, bit32.replace(readers[byteWidth](b, byte), value, bit, width))
@@ -70,7 +66,7 @@ local function reader(options): Types.Read
 	local getShiftValue = options.getShiftValue
 
 	local function read(b: buffer, offset: number, width: number)
-		assert(offset < 0 or offset + width <= bit32.lshift(buffer.len(b), 3), "buffer access out of bounds") -- prevent crashes in native mode
+		assert(offset < 0 or offset + width <= buffer.len(b) * 8, "buffer access out of bounds") -- prevent crashes in native mode
 		assert(width > 0, "`width` must be greater than or equal to 1")
 		
 		local byte, bit, byteWidth = toBufferSpace(offset, width)
@@ -84,7 +80,7 @@ local function reader(options): Types.Read
 				value += (read(b, offset + position, chunkWidth) :: number) * 2 ^ shiftValue
 			end
 			return value
-		elseif bit == 0 and width == bit32.lshift(byteWidth, 3) then -- Aligned to the bytes.
+		elseif bit == 0 and width == byteWidth * 8 then -- Aligned to the bytes.
 			return readers[byteWidth](b, byte)
 		else -- Confined within one read call.
 			return bit32.extract(readers[byteWidth](b, byte), bit, width)
@@ -154,7 +150,7 @@ local function base(options: {
 
 		function tobase(b, separator, prefix)
 			local byteCount = buffer.len(b)
-			local bitCount = bit32.lshift(byteCount, 3) -- byteCount * 8
+			local bitCount = byteCount * 8 -- byteCount * 8
 			local characterCount = math.ceil(bitCount / width)
 
 			local output, outputIndex = table.create(characterCount), 1
@@ -171,7 +167,7 @@ local function base(options: {
 
 			-- if there is a code that extends over the end
 			if overhang > 0 then
-				local code = bit32.lshift(read(b, endOffset, overhang), width - overhang) -- `lshift` to account for missing bits that would be present over the end
+				local code = read(b, endOffset, overhang) * (width - overhang) -- account for missing bits
 				output[outputIndex] = characters[code]
 				outputIndex += 1
 			end
@@ -194,14 +190,14 @@ local function base(options: {
 		local codeCount = #str // codeLength - paddingLength
 
 		local bitCount = (codeCount * width) - (paddingLength * 2)
-		local output = buffer.create(bit32.rshift(bitCount, 3))
+		local output = buffer.create(bitCount // 8)
 
 		for i = 0, codeCount - 1 do
 			local stringOffset, offset = i * codeLength, i * width
 			local codeWidth = math.min(width, bitCount - offset)
 
 			local code = decode[str:sub(stringOffset + 1, stringOffset + codeLength)]
-			write(output, offset, bit32.rshift(code, width - codeWidth), codeWidth)
+			write(output, offset, code // (width - codeWidth), codeWidth)
 		end
 
 		return output

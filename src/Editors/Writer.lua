@@ -1,4 +1,4 @@
---!native
+--!foobar_native
 --!optimize 2
 --!strict
 
@@ -115,7 +115,7 @@ end
 local function writeString(self, value: string)
 	if self._isByteAligned then
 		buffer.writestring(self._buffer, self._byte, value)
-		self:Skip(#value)
+		self:Skip(#value * 8)
 	else
 		local stringBuffer = buffer.fromstring(value)
 		local stringLength = #value

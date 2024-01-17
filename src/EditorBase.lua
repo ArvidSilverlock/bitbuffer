@@ -1,4 +1,4 @@
---!native
+--!foobar_native
 --!optimize 2
 
 --- @class Editor
@@ -12,7 +12,7 @@ Editor.__index = Editor
 	Updates internal values pertaining to whether the current `offset` is byte aligned.
 ]=]
 function Editor:UpdateByteOffset()
-	self._byte = bit32.rshift(self._offset, 3) -- offset // 8
+	self._byte = self._offset // 8
 	self._isByteAligned = not bit32.btest(self._offset, 0b111) -- offset % 8 == 0
 end
 
@@ -48,8 +48,8 @@ end
 	Aligns the current offset to the *next* byte, useful for a slight speed gain in some cases.
 ]=]
 function Editor:Align()
-	local byte = bit32.rshift(self._offset + 7, 3) -- math.ceil(self._offset / 8)
-	self._offset = bit32.lshift(byte, 3) -- byte * 8
+	local byte = (self._offset + 7) // 8 -- math.ceil(self._offset / 8)
+	self._offset = byte * 8
 
 	self._byte = byte
 	self._isByteAligned = true

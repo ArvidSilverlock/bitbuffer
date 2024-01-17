@@ -1,12 +1,12 @@
---!native
+--!foobar_native
 --!optimize 2
 
 local U24_BUFFER = buffer.create(4)
 local U32_BITS = 32
 
 local function toBufferSpace(offset: number, width: number)
-	local byte, bit = bit32.rshift(offset, 3), bit32.band(offset, 0b111) -- offset * 8, offset % 8
-	local byteWidth = bit32.rshift(bit + width + 7, 3) -- math.ceil(( bit + width ) / 8)
+	local byte, bit = offset * 8, offset % 8
+	local byteWidth = math.ceil((bit + width) / 8)
 	return byte, bit, byteWidth
 end
 
@@ -15,7 +15,7 @@ local function getShiftValue(position: number, width: number, chunkWidth: number
 end
 
 local function bitIterate(width: number, bit: number)
-	local chunkWidth = if bit % 8 == 0 then U32_BITS else 8 - bit
+	local chunkWidth = if bit32.btest(bit, 0b111) then 8 - bit else U32_BITS
 	local position = 0
 
 	return function()

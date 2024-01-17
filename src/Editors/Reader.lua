@@ -1,4 +1,4 @@
---!native
+--!foobar_native
 --!optimize 2
 --!strict
 
@@ -100,16 +100,18 @@ local function Float(
 end
 
 local function readString(self, length: number): string
-	if bit32.band(self._offset, 0b111) == 0 then -- If the `offset` is byte aligned
+	if self._isByteAligned then
 		local output = buffer.readstring(self._buffer, self._offset, length)
-		self._offset += length
+		self:Skip(length)
 		return output
 	else
 		local stringBuffer = buffer.create(length)
 		for stringOffset = 0, length - 1 do
-			buffer.writeu8(stringBuffer, stringOffset, self:UInt8())
+			local byte = self:UInt(8, false)
+			buffer.writeu8(stringBuffer, stringOffset, byte)
 		end
 
+		self:UpdateByteOffset()
 		return buffer.tostring(stringBuffer)
 	end
 end
@@ -201,14 +203,19 @@ end
 ]=]
 function Reader:NullTerminatedString(): string
 	local output = {}
+
 	while true do
-		local value = self:UInt8()
+		local value = self:UInt(8, false)
+		print(value)
 		if value == 0 then
 			break
 		end
 
 		table.insert(output, string.char(value))
 	end
+
+	self:UpdateByteOffset()
+
 	return table.concat(output)
 end
 
