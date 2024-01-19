@@ -1,4 +1,4 @@
---!foobar_native
+--!native
 --!optimize 2
 --!strict
 
