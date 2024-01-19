@@ -82,15 +82,15 @@ local function Float(exponentWidth: number, mantissaWidth: number, alignedCallba
 		if math.abs(value) > valueMax then
 			self:UInt(0, mantissaWidth, false)
 			self:UInt(exponentMax, exponentWidth, false)
-			self:Boolean(value < 0)
+			self:UInt(if value < 0 then 1 else 0, 1)
 		elseif value ~= value then
 			self:UInt(1, mantissaWidth, false)
 			self:UInt(exponentMax, exponentWidth, false)
-			self:UInt(1, 1, true)
+			self:UInt(1, 1)
 		elseif value == 0 then
 			self:UInt(0, mantissaWidth, false)
 			self:UInt(0, exponentWidth, false)
-			self:UInt(0, 1, true)
+			self:UInt(0, 1)
 		else
 			local mantissa, exponent = math.frexp(value)
 			mantissa = math.abs(mantissa)
@@ -105,7 +105,7 @@ local function Float(exponentWidth: number, mantissaWidth: number, alignedCallba
 
 			self:UInt(math.round(mantissa), mantissaWidth, false)
 			self:UInt(math.max(exponent, 0), exponentWidth, false)
-			self:Boolean(value < 0)
+			self:UInt(if value < 0 then 1 else 0, 1)
 		end
 	end
 
@@ -113,12 +113,12 @@ local function Float(exponentWidth: number, mantissaWidth: number, alignedCallba
 end
 
 local function writeString(self, value: string)
+	local stringLength = #value
 	if self._isByteAligned then
 		buffer.writestring(self._buffer, self._byte, value)
-		self:Skip(#value * 8)
+		self:Skip(stringLength * 8)
 	else
 		local stringBuffer = buffer.fromstring(value)
-		local stringLength = #value
 
 		for stringOffset = 0, stringLength - 1 do
 			local byte = buffer.readu8(stringBuffer, stringOffset)
@@ -193,9 +193,7 @@ end
 	@param lengthWidth number? -- Amount of bits to encode the string length with, defaults to 16
 ]=]
 function Writer:String(value: string, lengthWidth: number?)
-	local stringLength = #value
-	self:UInt(stringLength, lengthWidth or 16)
-
+	self:UInt(#value, lengthWidth or 16)
 	writeString(self, value)
 end
 
@@ -212,7 +210,7 @@ end
 ]=]
 function Writer:NullTerminatedString(value: string)
 	writeString(self, value)
-	self:UInt(0, 8, true)
+	self:UInt8(0)
 end
 
 --[=[
@@ -298,7 +296,7 @@ end
 	@param value BrickColor
 ]=]
 function Writer:BrickColor(value: BrickColor)
-	self:UInt(value.Number - 1, 11)
+	self:UInt(value.Number, 11)
 end
 
 --[=[

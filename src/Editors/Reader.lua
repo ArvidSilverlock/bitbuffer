@@ -101,8 +101,8 @@ end
 
 local function readString(self, length: number): string
 	if self._isByteAligned then
-		local output = buffer.readstring(self._buffer, self._offset, length)
-		self:Skip(length)
+		local output = buffer.readstring(self._buffer, self._byte, length)
+		self:Skip(length * 8)
 		return output
 	else
 		local stringBuffer = buffer.create(length)
@@ -206,7 +206,6 @@ function Reader:NullTerminatedString(): string
 
 	while true do
 		local value = self:UInt(8, false)
-		print(value)
 		if value == 0 then
 			break
 		end
@@ -360,9 +359,6 @@ end
 function Reader:Enum(enumType: Enum?)
 	local enumValue = if enumType then ENUM_TO_VALUE[enumType] else self:UInt(12)
 	local enumCode = self:UInt(12)
-
-	print(enumValue, enumCode)
-	print(VALUE_TO_ENUM[enumValue], VALUE_TO_ENUM[enumValue][enumCode])
 
 	return VALUE_TO_ENUM[enumValue][enumCode]
 end
