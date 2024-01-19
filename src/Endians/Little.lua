@@ -5,9 +5,10 @@ local U24_BUFFER = buffer.create(4)
 local U32_BITS = 32
 
 local function toBufferSpace(offset: number, width: number)
-	local byte, bit = offset * 8, offset % 8
+	local byte, bit = offset // 8, offset % 8
 	local byteWidth = math.ceil((bit + width) / 8)
-	return byte, bit, byteWidth
+	local bitWidth = byteWidth * 8
+	return byte, bit, byteWidth, bitWidth
 end
 
 local function getShiftValue(position: number, width: number, chunkWidth: number)
