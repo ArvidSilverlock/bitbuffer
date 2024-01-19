@@ -49,12 +49,12 @@ local function UInt(width: number, alignedCallback: Types.BufferRead<number>?): 
 end
 
 local function Int(width: number, alignedCallback: Types.BufferRead<number>?): Types.BitBufferRead<number>
-	local valueWidth = width - 1
+	local valueOffset = 2 ^ (width - 1)
 
 	local function unalignedCallback(self): number
-		local value = self:UInt(valueWidth)
-		local sign = self:UInt(1) == 1
-		return if sign then -value else value
+		-- Flip the sign bit using `bxor` before offsetting it, this could be done differently, but this method
+		-- keeps it consistent with how `buffer`s write values `Int`s.
+		return bit32.bxor(self:UInt(width), valueOffset) - valueOffset
 	end
 
 	return handleByteAlignment(alignedCallback, unalignedCallback, width)
@@ -68,7 +68,7 @@ local function Float(
 	local totalWidth = mantissaWidth + exponentWidth + 1
 
 	local normalToMantissa = 2 ^ (mantissaWidth + 1)
-	local denormalToMantissa = 2 ^ mantissaWidth
+	local subnormalToMantissa = 2 ^ mantissaWidth
 
 	local exponentMax = 2 ^ exponentWidth - 1
 	local exponentBias = 2 ^ (exponentWidth - 1) - 2
@@ -85,8 +85,8 @@ local function Float(
 		elseif mantissa == 0 and exponent == 0 then
 			return 0
 		else
-			if exponent == 0 then -- Calculate the "denormal" mantissa
-				mantissa /= denormalToMantissa
+			if exponent == 0 then -- Calculate the subnormal mantissa
+				mantissa /= subnormalToMantissa
 			else -- Calculate the normal mantissa
 				mantissa = mantissa / normalToMantissa + 0.5
 			end

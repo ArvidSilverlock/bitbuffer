@@ -20,7 +20,7 @@ return function()
 		expect(value).never.to.be.equal(value)
 	end)
 
-	it("should be capable of writing 'denormal' numbers", function()
+	it("should be capable of writing 'subnormal' numbers", function()
 		local value = math.pi * 2 ^ -1064
 		writer:Float64(value)
 

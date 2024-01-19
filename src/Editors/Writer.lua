@@ -70,7 +70,7 @@ local function Float(exponentWidth: number, mantissaWidth: number, alignedCallba
 	local totalWidth = exponentWidth + mantissaWidth + 1
 
 	local normalToMantissa = 2 ^ (mantissaWidth + 1)
-	local denormalToMantissa = 2 ^ mantissaWidth
+	local subnormalToMantissa = 2 ^ mantissaWidth
 
 	local exponentMax = 2 ^ exponentWidth - 1
 	local exponentBias = 2 ^ (exponentWidth - 1) - 2
@@ -96,9 +96,9 @@ local function Float(exponentWidth: number, mantissaWidth: number, alignedCallba
 			mantissa = math.abs(mantissa)
 			exponent += exponentBias
 
-			if exponent <= 0 then -- Calculate the "denormal" mantissa
+			if exponent <= 0 then -- Calculate the subnormal mantissa
 				local biasShift = math.ldexp(1, math.abs(exponent)) -- 2 ^ exponent
-				mantissa = mantissa * denormalToMantissa / biasShift
+				mantissa = mantissa * subnormalToMantissa / biasShift
 			else -- Calculate the normal mantissa
 				mantissa *= normalToMantissa
 			end
