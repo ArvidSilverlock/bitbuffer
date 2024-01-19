@@ -5,12 +5,13 @@ local U24_BUFFER = buffer.create(4)
 local U24_BITS = 24
 
 local function toBufferSpace(offset: number, width: number)
-	local byte, bit = offset * 8, offset % 8
+	local byte, bit = offset // 8, offset % 8
 	local byteWidth = math.ceil((bit + width) / 8)
+	local bitWidth = byteWidth * 8
 
-	bit = (byteWidth * 8 - width) - bit
+	bit = (bitWidth - width) - bit
 
-	return byte, bit, byteWidth
+	return byte, bit, byteWidth, bitWidth
 end
 
 local function bitIterate(width: number, bit: number)
@@ -26,8 +27,8 @@ end
 
 local function flipu16(value)
 	return bit32.bor(
-		value // 8, -- FF00 -> 00FF
-		value % 256 * 8 -- 00FF -> FF00
+		value // 256, -- FF00 -> 00FF
+		value % 256 * 256 -- 00FF -> FF00
 	)
 end
 
