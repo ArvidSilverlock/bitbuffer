@@ -38,7 +38,7 @@ local function writer(options): Types.Write
 		assert(offset < 0 or offset + width <= buffer.len(b) * 8, "buffer access out of bounds") -- prevent crashes in native mode
 		assert(width > 0, "`width` must be greater than or equal to 1")
 
-		local byte, bit, byteWidth = toBufferSpace(offset, width)
+		local byte, bit, byteWidth, bitWidth = toBufferSpace(offset, width)
 
 		if byteWidth > 4 then -- Outside of `bit32`'s functionality
 			assert(width <= 53, "`width` must be less than or equal to 53")
@@ -50,7 +50,7 @@ local function writer(options): Types.Write
 
 				write(b, offset + position, chunk, chunkWidth)
 			end
-		elseif bit == 0 and width == byteWidth * 8 then -- Aligned to the bytes.
+		elseif bit == 0 and width == bitWidth then -- Aligned to the bytes.
 			writers[byteWidth](b, byte, value)
 		else -- Confined within one write call.
 			writers[byteWidth](b, byte, bit32.replace(readers[byteWidth](b, byte), value, bit, width))
@@ -65,7 +65,7 @@ local function reader(options): Types.Read
 	local readers, writers = options.read, options.write
 	local getShiftValue = options.getShiftValue
 
-	local function read(b: buffer, offset: number, width: number)
+	local function read(b: buffer, offset: number, width: number): number
 		assert(offset < 0 or offset + width <= buffer.len(b) * 8, "buffer access out of bounds") -- prevent crashes in native mode
 		assert(width > 0, "`width` must be greater than or equal to 1")
 		
@@ -77,7 +77,7 @@ local function reader(options): Types.Read
 			local value = 0
 			for position, chunkWidth in bitIterate(width, bit) do
 				local shiftValue = getShiftValue(position, width, chunkWidth)
-				value += (read(b, offset + position, chunkWidth) :: number) * 2 ^ shiftValue
+				value += read(b, offset + position, chunkWidth) * 2 ^ shiftValue
 			end
 			return value
 		elseif bit == 0 and width == byteWidth * 8 then -- Aligned to the bytes.
@@ -167,9 +167,8 @@ local function base(options: {
 
 			-- if there is a code that extends over the end
 			if overhang > 0 then
-				local code = read(b, endOffset, overhang) * (width - overhang) -- account for missing bits
+				local code = bit32.lshift(read(b, endOffset, overhang), width - overhang) -- account for missing bits
 				output[outputIndex] = characters[code]
-				outputIndex += 1
 			end
 
 			local prefixString = if type(prefix) == "string" then prefix elseif prefix then defaultPrefix else ""
@@ -197,7 +196,7 @@ local function base(options: {
 			local codeWidth = math.min(width, bitCount - offset)
 
 			local code = decode[str:sub(stringOffset + 1, stringOffset + codeLength)]
-			write(output, offset, code // (width - codeWidth), codeWidth)
+			write(output, offset, bit32.rshift(code, width - codeWidth), codeWidth)
 		end
 
 		return output
