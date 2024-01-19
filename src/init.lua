@@ -41,7 +41,7 @@ local function writer(options): Types.Write
 		local byte, bit, byteWidth, bitWidth = toBufferSpace(offset, width)
 
 		if byteWidth > 4 then -- Outside of `bit32`'s functionality
-			assert(width <= 53, "`width` must be less than or equal to 53")
+			assert(width <= 52, "`width` must be less than or equal to 52")
 
 			for position, chunkWidth in bitIterate(width, bit) do
 				local mask = POWERS_OF_TWO[chunkWidth]
@@ -72,7 +72,7 @@ local function reader(options): Types.Read
 		local byte, bit, byteWidth = toBufferSpace(offset, width)
 
 		if byteWidth > 4 then -- outside of `bit32`'s functionality
-			assert(width <= 53, "`width` must be less than or equal to 53")
+			assert(width <= 52, "`width` must be less than or equal to 52")
 
 			local value = 0
 			for position, chunkWidth in bitIterate(width, bit) do

@@ -148,7 +148,7 @@ end
 	@method UInt
 	@within Writer
 
-	Writes an unsigned integer of any width from 1-53
+	Writes an unsigned integer of any width from 1-52
 
 	@param value number -- The uint to write
 	@param width number -- The bit width of the `value`
@@ -163,7 +163,7 @@ end
 	@method Int
 	@within Writer
 
-	Writes a signed integer of any width from 1-53, note that one of these bits is used as the sign
+	Writes a signed integer of any width from 1-52, note that one of these bits is used as the sign
 
 	@param value number
 	@param width number

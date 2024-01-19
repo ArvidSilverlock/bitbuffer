@@ -137,7 +137,7 @@ end
 	@method UInt
 	@within Reader
 
-	Reads an unsigned integer of any width from 1-53
+	Reads an unsigned integer of any width from 1-52
 
 	@param width number -- The bit width to read
 	@param updateByteOffset boolean? -- Whether or not to update information on the current byte, used internally to reduce unnecessary calculations.
@@ -154,7 +154,7 @@ end
 	@method Int
 	@within Reader
 
-	Reads a signed integer of any width from 1-53, note that one of these bits is used as the sign
+	Reads a signed integer of any width from 1-52, note that one of these bits is used as the sign
 
 	@param width number
 

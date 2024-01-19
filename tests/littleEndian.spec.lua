@@ -12,7 +12,7 @@ return function()
 			end
 		end
 
-		for width = 1, 53 do
+		for width = 1, 52 do
 			it(`should read byte aligned {width} bit numbers`, TestWidth(width, 0))
 			it(`should read {width} bit numbers`, TestWidth(width, 4))
 		end
@@ -26,7 +26,7 @@ return function()
 
 			expect(function()
 				bitbuffer.read(b, 0, 54)
-			end).to.throw("`width` must be less than or equal to 53")
+			end).to.throw("`width` must be less than or equal to 52")
 		end)
 
 		it("should error when reading before the beginning of the buffer", function()
@@ -61,7 +61,7 @@ return function()
 			end
 		end
 
-		for width = 1, 53 do
+		for width = 1, 52 do
 			it(`should write byte aligned {width} bit numbers`, TestWidth(width, 0))
 			it(`should write {width} bit numbers`, TestWidth(width, 4))
 		end
@@ -75,7 +75,7 @@ return function()
 
 			expect(function()
 				bitbuffer.write(b, 0, 0, 54)
-			end).to.throw("`width` must be less than or equal to 53")
+			end).to.throw("`width` must be less than or equal to 52")
 		end)
 
 		it("should error when writing before the beginning of the buffer", function()

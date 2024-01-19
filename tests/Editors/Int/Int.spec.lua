@@ -29,7 +29,7 @@ return function()
 		end
 	end
 
-	for width = 1, 53 do
+	for width = 1, 52 do
 		it(`should write byte aligned {width} bit numbers`, TestWidth(width, true))
 		it(`should write {width} bit numbers`, TestWidth(width, false))
 	end
