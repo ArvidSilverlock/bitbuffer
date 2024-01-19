@@ -8,6 +8,7 @@ local Constants = require(bitbuffer.Constants)
 local EditorBase = require(bitbuffer.EditorBase)
 
 local CFRAME_SPECIAL_CASES = Constants.CFrameSpecialCases
+local POWERS_OF_TWO = Constants.PowersOfTwo
 local ENUM_TO_VALUE = Constants.EnumToValue
 
 --[=[
@@ -56,11 +57,10 @@ local function UInt(width: number, alignedCallback: Types.BufferWrite<number>?)
 end
 
 local function Int(width: number, alignedCallback: Types.BufferWrite<number>?)
-	local valueWidth = width - 1
+	local valueCount = 2 ^ width
 
 	local function unalignedCallback(self, value: number)
-		self:UInt(value, valueWidth)
-		self:Boolean(value < 0)
+		self:UInt((value + valueCount) % valueCount, width)
 	end
 
 	return handleByteAlignment(alignedCallback, unalignedCallback, width)
@@ -169,7 +169,8 @@ end
 	@param width number
 ]=]
 function Writer:Int(value: number, width: number)
-	self:UInt(value + math.ldexp(1, width - 1), width)
+	local valueCount = POWERS_OF_TWO[width]
+	self:UInt((value + valueCount) % valueCount, width)
 end
 
 --[=[

@@ -49,12 +49,10 @@ local function UInt(width: number, alignedCallback: Types.BufferRead<number>?): 
 end
 
 local function Int(width: number, alignedCallback: Types.BufferRead<number>?): Types.BitBufferRead<number>
-	local valueOffset = 2 ^ (width - 1)
+	local valueCount, minimum = 2 ^ width, 2 ^ (width - 1)
 
 	local function unalignedCallback(self): number
-		-- Flip the sign bit using `bxor` before offsetting it, this could be done differently, but this method
-		-- keeps it consistent with how `buffer`s write values `Int`s.
-		return bit32.bxor(self:UInt(width), valueOffset) - valueOffset
+		return (self:UInt(width) + minimum) % valueCount - minimum
 	end
 
 	return handleByteAlignment(alignedCallback, unalignedCallback, width)
@@ -163,8 +161,8 @@ end
 	@return number
 ]=]
 function Reader:Int(width: number): number
-	local value: number = self:UInt(width)
-	return value - POWERS_OF_TWO[width - 1]
+	local valueCount, minimum = POWERS_OF_TWO[width], POWERS_OF_TWO[width - 1]
+	return (self:UInt(width) + minimum) % valueCount - minimum
 end
 
 --[=[
