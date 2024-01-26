@@ -16,6 +16,321 @@ local function writeu24(b: buffer, offset: number, value: number)
 	buffer.copy(b, offset, U24_BUFFER, 0, 3)
 end
 
+function bitbuffer.readu1(b: buffer, byte: number, bit: number): number
+	return bit32.extract(buffer.readu8(b, byte), bit, 1)
+end
+
+function bitbuffer.readu2(b: buffer, byte: number, bit: number): number
+	return if bit >= 7
+		then bit32.extract(buffer.readu16(b, byte), bit, 2)
+		else bit32.extract(buffer.readu8(b, byte), bit, 2)
+end
+
+function bitbuffer.readu3(b: buffer, byte: number, bit: number): number
+	return if bit >= 6
+		then bit32.extract(buffer.readu16(b, byte), bit, 3)
+		else bit32.extract(buffer.readu8(b, byte), bit, 3)
+end
+
+function bitbuffer.readu4(b: buffer, byte: number, bit: number): number
+	return if bit >= 5
+		then bit32.extract(buffer.readu16(b, byte), bit, 4)
+		else bit32.extract(buffer.readu8(b, byte), bit, 4)
+end
+
+function bitbuffer.readu5(b: buffer, byte: number, bit: number): number
+	return if bit >= 4
+		then bit32.extract(buffer.readu16(b, byte), bit, 5)
+		else bit32.extract(buffer.readu8(b, byte), bit, 5)
+end
+
+function bitbuffer.readu6(b: buffer, byte: number, bit: number): number
+	return if bit >= 3
+		then bit32.extract(buffer.readu16(b, byte), bit, 6)
+		else bit32.extract(buffer.readu8(b, byte), bit, 6)
+end
+
+function bitbuffer.readu7(b: buffer, byte: number, bit: number): number
+	return if bit >= 2
+		then bit32.extract(buffer.readu16(b, byte), bit, 7)
+		else bit32.extract(buffer.readu8(b, byte), bit, 7)
+end
+
+function bitbuffer.readu8(b: buffer, byte: number, bit: number): number
+	return if bit >= 1
+		then bit32.extract(buffer.readu16(b, byte), bit, 8)
+		else bit32.extract(buffer.readu8(b, byte), bit, 8)
+end
+
+function bitbuffer.readu9(b: buffer, byte: number, bit: number): number
+	return bit32.extract(buffer.readu16(b, byte), bit, 9)
+end
+
+function bitbuffer.readu10(b: buffer, byte: number, bit: number): number
+	return if bit >= 7
+		then bit32.extract(readu24(b, byte), bit, 10)
+		else bit32.extract(buffer.readu16(b, byte), bit, 10)
+end
+
+function bitbuffer.readu11(b: buffer, byte: number, bit: number): number
+	return if bit >= 6
+		then bit32.extract(readu24(b, byte), bit, 11)
+		else bit32.extract(buffer.readu16(b, byte), bit, 11)
+end
+
+function bitbuffer.readu12(b: buffer, byte: number, bit: number): number
+	return if bit >= 5
+		then bit32.extract(readu24(b, byte), bit, 12)
+		else bit32.extract(buffer.readu16(b, byte), bit, 12)
+end
+
+function bitbuffer.readu13(b: buffer, byte: number, bit: number): number
+	return if bit >= 4
+		then bit32.extract(readu24(b, byte), bit, 13)
+		else bit32.extract(buffer.readu16(b, byte), bit, 13)
+end
+
+function bitbuffer.readu14(b: buffer, byte: number, bit: number): number
+	return if bit >= 3
+		then bit32.extract(readu24(b, byte), bit, 14)
+		else bit32.extract(buffer.readu16(b, byte), bit, 14)
+end
+
+function bitbuffer.readu15(b: buffer, byte: number, bit: number): number
+	return if bit >= 2
+		then bit32.extract(readu24(b, byte), bit, 15)
+		else bit32.extract(buffer.readu16(b, byte), bit, 15)
+end
+
+function bitbuffer.readu16(b: buffer, byte: number, bit: number): number
+	return if bit >= 1
+		then bit32.extract(readu24(b, byte), bit, 16)
+		else bit32.extract(buffer.readu16(b, byte), bit, 16)
+end
+
+function bitbuffer.readu17(b: buffer, byte: number, bit: number): number
+	return bit32.extract(readu24(b, byte), bit, 17)
+end
+
+function bitbuffer.readu18(b: buffer, byte: number, bit: number): number
+	return if bit >= 7
+		then bit32.extract(buffer.readu32(b, byte), bit, 18)
+		else bit32.extract(readu24(b, byte), bit, 18)
+end
+
+function bitbuffer.readu19(b: buffer, byte: number, bit: number): number
+	return if bit >= 6
+		then bit32.extract(buffer.readu32(b, byte), bit, 19)
+		else bit32.extract(readu24(b, byte), bit, 19)
+end
+
+function bitbuffer.readu20(b: buffer, byte: number, bit: number): number
+	return if bit >= 5
+		then bit32.extract(buffer.readu32(b, byte), bit, 20)
+		else bit32.extract(readu24(b, byte), bit, 20)
+end
+
+function bitbuffer.readu21(b: buffer, byte: number, bit: number): number
+	return if bit >= 4
+		then bit32.extract(buffer.readu32(b, byte), bit, 21)
+		else bit32.extract(readu24(b, byte), bit, 21)
+end
+
+function bitbuffer.readu22(b: buffer, byte: number, bit: number): number
+	return if bit >= 3
+		then bit32.extract(buffer.readu32(b, byte), bit, 22)
+		else bit32.extract(readu24(b, byte), bit, 22)
+end
+
+function bitbuffer.readu23(b: buffer, byte: number, bit: number): number
+	return if bit >= 2
+		then bit32.extract(buffer.readu32(b, byte), bit, 23)
+		else bit32.extract(readu24(b, byte), bit, 23)
+end
+
+function bitbuffer.readu24(b: buffer, byte: number, bit: number): number
+	return if bit >= 1
+		then bit32.extract(buffer.readu32(b, byte), bit, 24)
+		else bit32.extract(readu24(b, byte), bit, 24)
+end
+
+function bitbuffer.readu25(b: buffer, byte: number, bit: number): number
+	return bit32.extract(buffer.readu32(b, byte), bit, 25)
+end
+
+function bitbuffer.readu26(b: buffer, byte: number, bit: number): number
+	if bit >= 7 then
+		local finalBit = bit + 25
+		return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu1(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+	else
+		return bit32.extract(buffer.readu32(b, byte), bit, 26)
+	end
+end
+
+function bitbuffer.readu27(b: buffer, byte: number, bit: number): number
+	if bit >= 6 then
+		local finalBit = bit + 25
+		return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu2(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+	else
+		return bit32.extract(buffer.readu32(b, byte), bit, 27)
+	end
+end
+
+function bitbuffer.readu28(b: buffer, byte: number, bit: number): number
+	if bit >= 5 then
+		local finalBit = bit + 25
+		return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu3(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+	else
+		return bit32.extract(buffer.readu32(b, byte), bit, 28)
+	end
+end
+
+function bitbuffer.readu29(b: buffer, byte: number, bit: number): number
+	if bit >= 4 then
+		local finalBit = bit + 25
+		return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu4(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+	else
+		return bit32.extract(buffer.readu32(b, byte), bit, 29)
+	end
+end
+
+function bitbuffer.readu30(b: buffer, byte: number, bit: number): number
+	if bit >= 3 then
+		local finalBit = bit + 25
+		return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu5(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+	else
+		return bit32.extract(buffer.readu32(b, byte), bit, 30)
+	end
+end
+
+function bitbuffer.readu31(b: buffer, byte: number, bit: number): number
+	if bit >= 2 then
+		local finalBit = bit + 25
+		return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu6(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+	else
+		return bit32.extract(buffer.readu32(b, byte), bit, 31)
+	end
+end
+
+function bitbuffer.readu32(b: buffer, byte: number, bit: number): number
+	if bit >= 1 then
+		local finalBit = bit + 25
+		return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu7(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+	else
+		return bit32.extract(buffer.readu32(b, byte), bit, 32)
+	end
+end
+
+function bitbuffer.readu33(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu8(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu34(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu9(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu35(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu10(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu36(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu11(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu37(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu12(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu38(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu13(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu39(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu14(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu40(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu15(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu41(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu16(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu42(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu17(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu43(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu18(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu44(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu19(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu45(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu20(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu46(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu21(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu47(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu22(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu48(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu23(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu49(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 25
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu24(b, byte + finalBit // 8, finalBit % 8) * 0x2000000
+end
+
+function bitbuffer.readu50(b: buffer, byte: number, bit: number): number
+	return bitbuffer.readu25(b, byte, bit) + bitbuffer.readu25(b, byte + 3, bit) * 0x2000000
+end
+
+function bitbuffer.readu51(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 50
+	return bitbuffer.readu25(b, byte, bit)
+		+ bitbuffer.readu25(b, byte + 3, bit) * 0x2000000
+		+ bitbuffer.readu1(b, byte + finalBit // 8, finalBit % 8) * 0x4000000000000
+end
+
+function bitbuffer.readu52(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 50
+	return bitbuffer.readu25(b, byte, bit)
+		+ bitbuffer.readu25(b, byte + 3, bit) * 0x2000000
+		+ bitbuffer.readu2(b, byte + finalBit // 8, finalBit % 8) * 0x4000000000000
+end
+
+function bitbuffer.readu53(b: buffer, byte: number, bit: number): number
+	local finalBit = bit + 50
+	return bitbuffer.readu25(b, byte, bit)
+		+ bitbuffer.readu25(b, byte + 3, bit) * 0x2000000
+		+ bitbuffer.readu3(b, byte + finalBit // 8, finalBit % 8) * 0x4000000000000
+end
+
 function bitbuffer.writeu1(b: buffer, byte: number, bit: number, value: number)
 	buffer.writeu8(b, byte, bit32.replace(buffer.readu8(b, byte), value, bit, 1))
 end
@@ -202,8 +517,10 @@ end
 
 function bitbuffer.writeu26(b: buffer, byte: number, bit: number, value: number)
 	if bit >= 7 then
-		bitbuffer.writeu24(b, byte, bit, value)
-		bitbuffer.writeu1(b, byte + 3, bit, value // 576)
+		bitbuffer.writeu25(b, byte, bit, value)
+
+		local newBit = bit + 25
+		bitbuffer.writeu1(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 	else
 		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 26))
 	end
@@ -211,8 +528,10 @@ end
 
 function bitbuffer.writeu27(b: buffer, byte: number, bit: number, value: number)
 	if bit >= 6 then
-		bitbuffer.writeu24(b, byte, bit, value)
-		bitbuffer.writeu2(b, byte + 3, bit, value // 576)
+		bitbuffer.writeu25(b, byte, bit, value)
+
+		local newBit = bit + 25
+		bitbuffer.writeu2(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 	else
 		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 27))
 	end
@@ -220,8 +539,10 @@ end
 
 function bitbuffer.writeu28(b: buffer, byte: number, bit: number, value: number)
 	if bit >= 5 then
-		bitbuffer.writeu24(b, byte, bit, value)
-		bitbuffer.writeu3(b, byte + 3, bit, value // 576)
+		bitbuffer.writeu25(b, byte, bit, value)
+
+		local newBit = bit + 25
+		bitbuffer.writeu3(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 	else
 		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 28))
 	end
@@ -229,8 +550,10 @@ end
 
 function bitbuffer.writeu29(b: buffer, byte: number, bit: number, value: number)
 	if bit >= 4 then
-		bitbuffer.writeu24(b, byte, bit, value)
-		bitbuffer.writeu4(b, byte + 3, bit, value // 576)
+		bitbuffer.writeu25(b, byte, bit, value)
+
+		local newBit = bit + 25
+		bitbuffer.writeu4(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 	else
 		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 29))
 	end
@@ -238,8 +561,10 @@ end
 
 function bitbuffer.writeu30(b: buffer, byte: number, bit: number, value: number)
 	if bit >= 3 then
-		bitbuffer.writeu24(b, byte, bit, value)
-		bitbuffer.writeu5(b, byte + 3, bit, value // 576)
+		bitbuffer.writeu25(b, byte, bit, value)
+
+		local newBit = bit + 25
+		bitbuffer.writeu5(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 	else
 		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 30))
 	end
@@ -247,8 +572,10 @@ end
 
 function bitbuffer.writeu31(b: buffer, byte: number, bit: number, value: number)
 	if bit >= 2 then
-		bitbuffer.writeu24(b, byte, bit, value)
-		bitbuffer.writeu6(b, byte + 3, bit, value // 576)
+		bitbuffer.writeu25(b, byte, bit, value)
+
+		local newBit = bit + 25
+		bitbuffer.writeu6(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 	else
 		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 31))
 	end
@@ -256,8 +583,10 @@ end
 
 function bitbuffer.writeu32(b: buffer, byte: number, bit: number, value: number)
 	if bit >= 1 then
-		bitbuffer.writeu24(b, byte, bit, value)
-		bitbuffer.writeu7(b, byte + 3, bit, value // 576)
+		bitbuffer.writeu25(b, byte, bit, value)
+
+		local newBit = bit + 25
+		bitbuffer.writeu7(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 	else
 		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 32))
 	end
@@ -267,148 +596,148 @@ function bitbuffer.writeu33(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu8(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu8(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu34(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu9(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu9(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu35(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu10(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu10(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu36(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu11(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu11(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu37(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu12(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu12(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu38(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu13(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu13(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu39(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu14(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu14(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu40(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu15(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu15(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu41(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu16(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu16(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu42(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu17(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu17(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu43(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu18(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu18(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu44(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu19(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu19(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu45(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu20(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu20(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu46(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu21(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu21(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu47(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu22(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu22(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu48(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu23(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu23(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu49(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
 
 	local newBit = bit + 25
-	bitbuffer.writeu24(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+	bitbuffer.writeu24(b, byte + newBit // 8, newBit % 8, value // 0x2000000)
 end
 
 function bitbuffer.writeu50(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
-	bitbuffer.writeu25(b, byte + 3, bit, value // 33554432)
+	bitbuffer.writeu25(b, byte + 3, bit, value // 0x2000000)
 end
 
 function bitbuffer.writeu51(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
-	bitbuffer.writeu25(b, byte + 3, bit, value // 33554432)
+	bitbuffer.writeu25(b, byte + 3, bit, value // 0x2000000)
 
 	local newBit = bit + 50
-	bitbuffer.writeu1(b, byte + (newBit // 8), newBit % 8, value // 1125899906842624)
+	bitbuffer.writeu1(b, byte + newBit // 8, newBit % 8, value // 0x4000000000000)
 end
 
 function bitbuffer.writeu52(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
-	bitbuffer.writeu25(b, byte + 3, bit, value // 33554432)
+	bitbuffer.writeu25(b, byte + 3, bit, value // 0x2000000)
 
 	local newBit = bit + 50
-	bitbuffer.writeu2(b, byte + (newBit // 8), newBit % 8, value // 1125899906842624)
+	bitbuffer.writeu2(b, byte + newBit // 8, newBit % 8, value // 0x4000000000000)
 end
 
 function bitbuffer.writeu53(b: buffer, byte: number, bit: number, value: number)
 	bitbuffer.writeu25(b, byte, bit, value)
-	bitbuffer.writeu25(b, byte + 3, bit, value // 33554432)
+	bitbuffer.writeu25(b, byte + 3, bit, value // 0x2000000)
 
 	local newBit = bit + 50
-	bitbuffer.writeu3(b, byte + (newBit // 8), newBit % 8, value // 1125899906842624)
+	bitbuffer.writeu3(b, byte + newBit // 8, newBit % 8, value // 0x4000000000000)
 end
 
 local writeFunctions = {
@@ -466,9 +795,68 @@ local writeFunctions = {
 	bitbuffer.writeu52,
 	bitbuffer.writeu53,
 }
+local readFunctions = {
+	bitbuffer.readu1,
+	bitbuffer.readu2,
+	bitbuffer.readu3,
+	bitbuffer.readu4,
+	bitbuffer.readu5,
+	bitbuffer.readu6,
+	bitbuffer.readu7,
+	bitbuffer.readu8,
+	bitbuffer.readu9,
+	bitbuffer.readu10,
+	bitbuffer.readu11,
+	bitbuffer.readu12,
+	bitbuffer.readu13,
+	bitbuffer.readu14,
+	bitbuffer.readu15,
+	bitbuffer.readu16,
+	bitbuffer.readu17,
+	bitbuffer.readu18,
+	bitbuffer.readu19,
+	bitbuffer.readu20,
+	bitbuffer.readu21,
+	bitbuffer.readu22,
+	bitbuffer.readu23,
+	bitbuffer.readu24,
+	bitbuffer.readu25,
+	bitbuffer.readu26,
+	bitbuffer.readu27,
+	bitbuffer.readu28,
+	bitbuffer.readu29,
+	bitbuffer.readu30,
+	bitbuffer.readu31,
+	bitbuffer.readu32,
+	bitbuffer.readu33,
+	bitbuffer.readu34,
+	bitbuffer.readu35,
+	bitbuffer.readu36,
+	bitbuffer.readu37,
+	bitbuffer.readu38,
+	bitbuffer.readu39,
+	bitbuffer.readu40,
+	bitbuffer.readu41,
+	bitbuffer.readu42,
+	bitbuffer.readu43,
+	bitbuffer.readu44,
+	bitbuffer.readu45,
+	bitbuffer.readu46,
+	bitbuffer.readu47,
+	bitbuffer.readu48,
+	bitbuffer.readu49,
+	bitbuffer.readu50,
+	bitbuffer.readu51,
+	bitbuffer.readu52,
+	bitbuffer.readu53,
+}
 
 function bitbuffer.write(b: buffer, offset: number, width: number, value: number)
 	writeFunctions[width](b, offset // 8, offset % 8, value)
+end
+
+function bitbuffer.read(b: buffer, offset: number, width: number): number
+	return readFunctions[width](b, offset // 8, offset % 8)
 end
 
 return bitbuffer
