@@ -2,405 +2,473 @@
 --!optimize 2
 --!strict
 
-local Types = require(script.Types)
-local Constants = require(script.Constants)
-local Endians = require(script.Endians)
-
-local Editors = require(script.Editors)
-local Reader = Editors.Reader
-local Writer = Editors.Writer
-
-local POWERS_OF_TWO = Constants.PowersOfTwo
-local FLIP_ENDIAN = Constants.FlipEndian
-
-local function createByteTransformer(
-	characters: { [number]: string },
-	separator: string,
-	useBigEndian: boolean
-): (string) -> string
-	local copy = {}
-
-	for value, character in characters do
-		value = if useBigEndian then value else FLIP_ENDIAN[value]
-		copy[string.char(value)] = character .. separator
-	end
-
-	return function(char)
-		return copy[char]
-	end
-end
-
-local function writer(options): Types.Write
-	local toBufferSpace, bitIterate = options.toBufferSpace, options.bitIterate
-	local readers, writers = options.read, options.write
-
-	local function write(b: buffer, offset: number, value: number, width: number)
-		assert(offset < 0 or offset + width <= buffer.len(b) * 8, "buffer access out of bounds") -- prevent crashes in native mode
-		assert(width > 0, "`width` must be greater than or equal to 1")
-
-		local byte, bit, byteWidth, bitWidth = toBufferSpace(offset, width)
-
-		if byteWidth > 4 then -- Outside of `bit32`'s functionality
-			assert(width <= 52, "`width` must be less than or equal to 52")
-
-			for position, chunkWidth in bitIterate(width, bit) do
-				local mask = POWERS_OF_TWO[chunkWidth]
-				local chunk = value % mask
-				value //= mask
-
-				write(b, offset + position, chunk, chunkWidth)
-			end
-		elseif bit == 0 and width == bitWidth then -- Aligned to the bytes.
-			writers[byteWidth](b, byte, value)
-		else -- Confined within one write call.
-			writers[byteWidth](b, byte, bit32.replace(readers[byteWidth](b, byte), value, bit, width))
-		end
-	end
-
-	return write
-end
-
-local function reader(options): Types.Read
-	local toBufferSpace, bitIterate = options.toBufferSpace, options.bitIterate
-	local readers, writers = options.read, options.write
-	local getShiftValue = options.getShiftValue
-
-	local function read(b: buffer, offset: number, width: number): number
-		assert(offset < 0 or offset + width <= buffer.len(b) * 8, "buffer access out of bounds") -- prevent crashes in native mode
-		assert(width > 0, "`width` must be greater than or equal to 1")
-		
-		local byte, bit, byteWidth = toBufferSpace(offset, width)
-
-		if byteWidth > 4 then -- outside of `bit32`'s functionality
-			assert(width <= 52, "`width` must be less than or equal to 52")
-
-			local value = 0
-			for position, chunkWidth in bitIterate(width, bit) do
-				local shiftValue = getShiftValue(position, width, chunkWidth)
-				value += read(b, offset + position, chunkWidth) * 2 ^ shiftValue
-			end
-			return value
-		elseif bit == 0 and width == byteWidth * 8 then -- Aligned to the bytes.
-			return readers[byteWidth](b, byte)
-		else -- Confined within one read call.
-			return bit32.extract(readers[byteWidth](b, byte), bit, width)
-		end
-	end
-
-	return read
-end
-
--- A function that automatically constructs `tobase` functions given the lookup of numbers to their
--- string forms, along with some other configuration parameters.
-local function base(options: {
-	prefix: string,
-	separator: string,
-	paddingCharacter: string?,
-	characters: { [number]: string },
-	read: Types.Read,
-	write: Types.Write,
-}): (Types.ToBase, Types.FromBase)
-	local defaultPrefix, defaultSeparator, paddingCharacter, characters =
-		options.prefix, options.separator, options.paddingCharacter, options.characters
-
-	local read, write = options.read, options.write
-
-	local width = math.log(#characters + 1, 2) -- Calculates how many bits are represented by the lookup table.
-	assert(width % 1 == 0, "this lookup table does not represent a whole number of bits")
-	assert(
-		not paddingCharacter and math.log(width, 2) % 1 == 0 or paddingCharacter,
-		"padding is required for bases whose bit width is not a power of 2"
-	)
-
-	local paddingPattern = if paddingCharacter then `{paddingCharacter}*$` else nil
-
-	local decode = {}
-	local codeLength = #characters[0]
-	for code, character in characters do
-		assert(#character == codeLength, "character code length must be consistent")
-		decode[character] = code
-	end
-
-	local tobase
-	if width == 8 then -- if it's only ever byte aligned, you can use `buffer.tostring` along with `gsub` for speed increases
-		local littleEndianTransformer = createByteTransformer(characters, defaultSeparator, false)
-		local bigEndianTransformer = createByteTransformer(characters, defaultSeparator, true)
-
-		function tobase(b, separator, prefix, useBigEndian)
-			local transformer = if separator
-				then createByteTransformer(characters, separator, useBigEndian)
-				elseif useBigEndian then bigEndianTransformer
-				else littleEndianTransformer
-
-			local separatorLength = string.len(separator or defaultSeparator)
-
-			local prefixString = if type(prefix) == "string" then prefix elseif prefix == true then defaultPrefix else ""
-			local outputBody = buffer.tostring(b):gsub(".", transformer):sub(1, -separatorLength - 1)
-
-			return prefixString .. outputBody
-		end
-	else
-		-- https://www.desmos.com/calculator/hgzcqadocn, don't know if this is a universal formula
-		-- but it looks *about* right, and it works for base64
-		local p = 2 ^ math.ceil(math.log(width, 2)) - width
-		local function getPadding(bytes: number)
-			local count = p - (bytes - 1) % (p + 1)
-			return string.rep(paddingCharacter :: string, count)
-		end
-
-		function tobase(b, separator, prefix)
-			local byteCount = buffer.len(b)
-			local bitCount = byteCount * 8 -- byteCount * 8
-			local characterCount = math.ceil(bitCount / width)
-
-			local output, outputIndex = table.create(characterCount), 1
-
-			local endOffset = (characterCount - 1) * width
-			local overhang = bitCount - endOffset
-
-			-- iterate over each code in the buffer that doesn't extend over the end
-			for offset = 0, endOffset - overhang, width do
-				local code = read(b, offset, width)
-				output[outputIndex] = characters[code]
-				outputIndex += 1
-			end
-
-			-- if there is a code that extends over the end
-			if overhang > 0 then
-				local code = bit32.lshift(read(b, endOffset, overhang), width - overhang) -- account for missing bits
-				output[outputIndex] = characters[code]
-			end
-
-			local prefixString = if type(prefix) == "string" then prefix elseif prefix then defaultPrefix else ""
-			local outputBody = table.concat(output, separator or defaultSeparator)
-			local suffixString = if paddingCharacter then getPadding(byteCount) else ""
-
-			return prefixString .. outputBody .. suffixString
-		end
-	end
-
-	local function frombase(str)
-		local paddingLength = 0
-		if paddingPattern then
-			local paddingStart: number, paddingEnd: number = str:find(paddingPattern)
-			paddingLength = (paddingEnd - paddingStart + 1) // #(paddingCharacter :: string)
-		end
-
-		local codeCount = #str // codeLength - paddingLength
-
-		local bitCount = (codeCount * width) - (paddingLength * 2)
-		local output = buffer.create(bitCount // 8)
-
-		for i = 0, codeCount - 1 do
-			local stringOffset, offset = i * codeLength, i * width
-			local codeWidth = math.min(width, bitCount - offset)
-
-			local code = decode[str:sub(stringOffset + 1, stringOffset + codeLength)]
-			write(output, offset, bit32.rshift(code, width - codeWidth), codeWidth)
-		end
-
-		return output
-	end
-
-	return tobase :: any, frombase :: any
-end
-
---- @class bitbuffer
 local bitbuffer = {}
 
---[=[
-	@function read
-	@within bitbuffer
+local U24_BUFFER = buffer.create(4)
 
-	Reads a `value` from a buffer in little endian format.
-
-	@param b buffer -- The buffer to read from
-	@param offset number -- The offset (in bits) to read from
-	@param width number -- The width (in bits) of the value you're reading
-]=]
-bitbuffer.read = reader(Endians.Little)
-
---[=[
-	@function write
-	@within bitbuffer
-
-	Writes a `value` into a buffer in little endian format.
-
-	@param b buffer -- The buffer to write to
-	@param offset number -- The offset (in bits) to write at
-	@param value number -- The value you want to write
-	@param width number -- The width (in bits) of the value
-]=]
-bitbuffer.write = writer(Endians.Little)
-
---[=[
-	@function readbig
-	@within bitbuffer
-
-	Reads a `value` from a buffer in big endian format.
-
-	@param b buffer -- The buffer to read from
-	@param offset number -- The offset (in bits) to read from
-	@param width number -- The width (in bits) of the value you're reading
-]=]
-bitbuffer.readbig = reader(Endians.Big)
-
---[=[
-	@function writebig
-	@within bitbuffer
-
-	Writes a `value` into a buffer in big endian format.
-
-	@param b buffer -- The buffer to write to
-	@param offset number -- The offset (in bits) to write at
-	@param value number -- The value you want to write
-	@param width number -- The width (in bits) of the value
-]=]
-bitbuffer.writebig = writer(Endians.Big)
-
---[=[
-	@function tobinary
-	@within bitbuffer
-
-	Converts a given buffer to a binary string.
-	
-	@param b buffer -- The buffer to convert to a string
-	@param separator string? -- The string to separate each byte with, if not specified, each byte is separated by an underscore.
-	@param prefix (string | boolean)? -- If prefix is `true`, it will be prefixed with `0b`, whereas if it is a `string`, the `string` itself will be used.
-	@param useBigEndian boolean? -- Whether or not to output it in big endian rather than little endian.
-
-	@return string
-]=]
-
---[=[
-	@function frombinary
-	@within bitbuffer
-
-	Converts a given binary string into a buffer. No characters besides `1` and `0` may be present.
-	
-	@param str string -- The string to convert into a buffer
-
-	@return buffer
-]=]
-
-bitbuffer.tobinary, bitbuffer.frombinary = base({
-	characters = Constants.Binary,
-	prefix = "0b",
-	separator = "_",
-	read = bitbuffer.read,
-	write = bitbuffer.write,
-})
-
---[=[
-	@function tohex
-	@within bitbuffer
-
-	Converts a given buffer to a hexadecimal string.
-	
-	@param b buffer -- The buffer to convert to a string
-	@param separator string? -- The string to separate each byte with, if not specified, each byte is separated by a space.
-	@param prefix (string | boolean)? -- If prefix is `true`, it will be prefixed with `0x`, whereas if it is a `string`, the `string` itself will be used.
-	@param useBigEndian boolean? -- Whether or not to output it in big endian rather than little endian.
-
-	@return string
-]=]
-
---[=[
-	@function fromhex
-	@within bitbuffer
-
-	Converts a given hexadecimal string into a buffer. No characters besides hexadecimal characters may be present.
-	
-	@param str string -- The string to convert into a buffer
-
-	@return buffer
-]=]
-
-bitbuffer.tohex, bitbuffer.fromhex = base({
-	characters = Constants.Hexadecimal,
-	prefix = "0x",
-	separator = " ",
-	read = bitbuffer.read,
-	write = bitbuffer.write,
-})
-
---[=[
-	@function tobase64
-	@within bitbuffer
-
-	Converts a given buffer to a base64 string.
-	
-	@param b buffer -- The buffer to convert to a string
-	@param separator string? -- The string to separate every 6 bits with, if not specified, no separator will be used.
-	@param prefix string? -- The string to prefix the output with.
-
-	@return string
-]=]
-
---[=[
-	@function frombase64
-	@within bitbuffer
-
-	Converts a given base64 string into a buffer.
-	
-	@param str string -- The string to convert into a buffer
-
-	@return buffer
-]=]
-
-bitbuffer.tobase64, bitbuffer.frombase64 = base({
-	characters = Constants.Base64,
-	paddingCharacter = "=",
-	prefix = "",
-	separator = "",
-	read = bitbuffer.readbig,
-	write = bitbuffer.writebig,
-})
-
---[=[
-	@function reader
-	@within bitbuffer
-
-	Creates a `Reader` object for a buffer.
-	
-	@param b buffer -- The buffer to read from
-	@param useBigEndian boolean -- Whether to read values in big endian (slower)
-	
-	@return Reader
-]=]
-function bitbuffer.reader(b: buffer, useBigEndian: boolean?): Types.Reader
-	return setmetatable({
-		_buffer = b,
-		_offset = 0,
-
-		_byte = 0,
-		_isByteAligned = true,
-
-		read = if useBigEndian then bitbuffer.readbig else bitbuffer.read,
-	}, Reader) :: any
+local function readu24(b: buffer, offset: number)
+	buffer.copy(U24_BUFFER, 0, b, offset, 3)
+	return buffer.readu32(U24_BUFFER, 0)
 end
 
---[=[
-	@function writer
-	@within bitbuffer
+local function writeu24(b: buffer, offset: number, value: number)
+	buffer.writeu32(U24_BUFFER, 0, value)
+	buffer.copy(b, offset, U24_BUFFER, 0, 3)
+end
 
-	Creates a `Writer` object for a buffer.
-	
-	@param b buffer -- The buffer to write to
-	@param useBigEndian boolean -- Whether to write values in big endian (slower)
-	
-	@return Writer
-]=]
-function bitbuffer.writer(b: buffer, useBigEndian: boolean?): Types.Writer
-	return setmetatable({
-		_buffer = b,
-		_offset = 0,
+function bitbuffer.writeu1(b: buffer, byte: number, bit: number, value: number)
+	buffer.writeu8(b, byte, bit32.replace(buffer.readu8(b, byte), value, bit, 1))
+end
 
-		_byte = 0,
-		_isByteAligned = true,
+function bitbuffer.writeu2(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 7 then
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 2))
+	else
+		buffer.writeu8(b, byte, bit32.replace(buffer.readu8(b, byte), value, bit, 2))
+	end
+end
 
-		write = if useBigEndian then bitbuffer.writebig else bitbuffer.write,
-	}, Writer) :: any
+function bitbuffer.writeu3(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 6 then
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 3))
+	else
+		buffer.writeu8(b, byte, bit32.replace(buffer.readu8(b, byte), value, bit, 3))
+	end
+end
+
+function bitbuffer.writeu4(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 5 then
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 4))
+	else
+		buffer.writeu8(b, byte, bit32.replace(buffer.readu8(b, byte), value, bit, 4))
+	end
+end
+
+function bitbuffer.writeu5(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 4 then
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 5))
+	else
+		buffer.writeu8(b, byte, bit32.replace(buffer.readu8(b, byte), value, bit, 5))
+	end
+end
+
+function bitbuffer.writeu6(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 3 then
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 6))
+	else
+		buffer.writeu8(b, byte, bit32.replace(buffer.readu8(b, byte), value, bit, 6))
+	end
+end
+
+function bitbuffer.writeu7(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 2 then
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 7))
+	else
+		buffer.writeu8(b, byte, bit32.replace(buffer.readu8(b, byte), value, bit, 7))
+	end
+end
+
+function bitbuffer.writeu8(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 1 then
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 8))
+	else
+		buffer.writeu8(b, byte, bit32.replace(buffer.readu8(b, byte), value, bit, 8))
+	end
+end
+
+function bitbuffer.writeu9(b: buffer, byte: number, bit: number, value: number)
+	buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 9))
+end
+
+function bitbuffer.writeu10(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 7 then
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 10))
+	else
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 10))
+	end
+end
+
+function bitbuffer.writeu11(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 6 then
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 11))
+	else
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 11))
+	end
+end
+
+function bitbuffer.writeu12(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 5 then
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 12))
+	else
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 12))
+	end
+end
+
+function bitbuffer.writeu13(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 4 then
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 13))
+	else
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 13))
+	end
+end
+
+function bitbuffer.writeu14(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 3 then
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 14))
+	else
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 14))
+	end
+end
+
+function bitbuffer.writeu15(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 2 then
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 15))
+	else
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 15))
+	end
+end
+
+function bitbuffer.writeu16(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 1 then
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 16))
+	else
+		buffer.writeu16(b, byte, bit32.replace(buffer.readu16(b, byte), value, bit, 16))
+	end
+end
+
+function bitbuffer.writeu17(b: buffer, byte: number, bit: number, value: number)
+	writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 17))
+end
+
+function bitbuffer.writeu18(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 7 then
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 18))
+	else
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 18))
+	end
+end
+
+function bitbuffer.writeu19(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 6 then
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 19))
+	else
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 19))
+	end
+end
+
+function bitbuffer.writeu20(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 5 then
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 20))
+	else
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 20))
+	end
+end
+
+function bitbuffer.writeu21(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 4 then
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 21))
+	else
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 21))
+	end
+end
+
+function bitbuffer.writeu22(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 3 then
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 22))
+	else
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 22))
+	end
+end
+
+function bitbuffer.writeu23(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 2 then
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 23))
+	else
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 23))
+	end
+end
+
+function bitbuffer.writeu24(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 1 then
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 24))
+	else
+		writeu24(b, byte, bit32.replace(readu24(b, byte), value, bit, 24))
+	end
+end
+
+function bitbuffer.writeu25(b: buffer, byte: number, bit: number, value: number)
+	buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 25))
+end
+
+function bitbuffer.writeu26(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 7 then
+		bitbuffer.writeu24(b, byte, bit, value)
+		bitbuffer.writeu1(b, byte + 3, bit, value // 576)
+	else
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 26))
+	end
+end
+
+function bitbuffer.writeu27(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 6 then
+		bitbuffer.writeu24(b, byte, bit, value)
+		bitbuffer.writeu2(b, byte + 3, bit, value // 576)
+	else
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 27))
+	end
+end
+
+function bitbuffer.writeu28(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 5 then
+		bitbuffer.writeu24(b, byte, bit, value)
+		bitbuffer.writeu3(b, byte + 3, bit, value // 576)
+	else
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 28))
+	end
+end
+
+function bitbuffer.writeu29(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 4 then
+		bitbuffer.writeu24(b, byte, bit, value)
+		bitbuffer.writeu4(b, byte + 3, bit, value // 576)
+	else
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 29))
+	end
+end
+
+function bitbuffer.writeu30(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 3 then
+		bitbuffer.writeu24(b, byte, bit, value)
+		bitbuffer.writeu5(b, byte + 3, bit, value // 576)
+	else
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 30))
+	end
+end
+
+function bitbuffer.writeu31(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 2 then
+		bitbuffer.writeu24(b, byte, bit, value)
+		bitbuffer.writeu6(b, byte + 3, bit, value // 576)
+	else
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 31))
+	end
+end
+
+function bitbuffer.writeu32(b: buffer, byte: number, bit: number, value: number)
+	if bit >= 1 then
+		bitbuffer.writeu24(b, byte, bit, value)
+		bitbuffer.writeu7(b, byte + 3, bit, value // 576)
+	else
+		buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 32))
+	end
+end
+
+function bitbuffer.writeu33(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu8(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu34(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu9(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu35(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu10(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu36(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu11(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu37(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu12(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu38(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu13(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu39(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu14(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu40(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu15(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu41(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu16(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu42(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu17(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu43(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu18(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu44(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu19(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu45(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu20(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu46(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu21(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu47(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu22(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu48(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu23(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu49(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+
+	local newBit = bit + 25
+	bitbuffer.writeu24(b, byte + (newBit // 8), newBit % 8, value // 33554432)
+end
+
+function bitbuffer.writeu50(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+	bitbuffer.writeu25(b, byte + 3, bit, value // 33554432)
+end
+
+function bitbuffer.writeu51(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+	bitbuffer.writeu25(b, byte + 3, bit, value // 33554432)
+
+	local newBit = bit + 50
+	bitbuffer.writeu1(b, byte + (newBit // 8), newBit % 8, value // 1125899906842624)
+end
+
+function bitbuffer.writeu52(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+	bitbuffer.writeu25(b, byte + 3, bit, value // 33554432)
+
+	local newBit = bit + 50
+	bitbuffer.writeu2(b, byte + (newBit // 8), newBit % 8, value // 1125899906842624)
+end
+
+function bitbuffer.writeu53(b: buffer, byte: number, bit: number, value: number)
+	bitbuffer.writeu25(b, byte, bit, value)
+	bitbuffer.writeu25(b, byte + 3, bit, value // 33554432)
+
+	local newBit = bit + 50
+	bitbuffer.writeu3(b, byte + (newBit // 8), newBit % 8, value // 1125899906842624)
+end
+
+local writeFunctions = {
+	bitbuffer.writeu1,
+	bitbuffer.writeu2,
+	bitbuffer.writeu3,
+	bitbuffer.writeu4,
+	bitbuffer.writeu5,
+	bitbuffer.writeu6,
+	bitbuffer.writeu7,
+	bitbuffer.writeu8,
+	bitbuffer.writeu9,
+	bitbuffer.writeu10,
+	bitbuffer.writeu11,
+	bitbuffer.writeu12,
+	bitbuffer.writeu13,
+	bitbuffer.writeu14,
+	bitbuffer.writeu15,
+	bitbuffer.writeu16,
+	bitbuffer.writeu17,
+	bitbuffer.writeu18,
+	bitbuffer.writeu19,
+	bitbuffer.writeu20,
+	bitbuffer.writeu21,
+	bitbuffer.writeu22,
+	bitbuffer.writeu23,
+	bitbuffer.writeu24,
+	bitbuffer.writeu25,
+	bitbuffer.writeu26,
+	bitbuffer.writeu27,
+	bitbuffer.writeu28,
+	bitbuffer.writeu29,
+	bitbuffer.writeu30,
+	bitbuffer.writeu31,
+	bitbuffer.writeu32,
+	bitbuffer.writeu33,
+	bitbuffer.writeu34,
+	bitbuffer.writeu35,
+	bitbuffer.writeu36,
+	bitbuffer.writeu37,
+	bitbuffer.writeu38,
+	bitbuffer.writeu39,
+	bitbuffer.writeu40,
+	bitbuffer.writeu41,
+	bitbuffer.writeu42,
+	bitbuffer.writeu43,
+	bitbuffer.writeu44,
+	bitbuffer.writeu45,
+	bitbuffer.writeu46,
+	bitbuffer.writeu47,
+	bitbuffer.writeu48,
+	bitbuffer.writeu49,
+	bitbuffer.writeu50,
+	bitbuffer.writeu51,
+	bitbuffer.writeu52,
+	bitbuffer.writeu53,
+}
+
+function bitbuffer.write(b: buffer, offset: number, width: number, value: number)
+	writeFunctions[width](b, offset // 8, offset % 8, value)
 end
 
 return bitbuffer
