@@ -11,3 +11,6 @@
 # Roblox Studio lock files
 /*.rbxlx.lock
 /*.rbxl.lock
+
+# generate.luau output file
+/lune/output.luau
