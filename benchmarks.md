@@ -3,7 +3,7 @@
 # Benchmarks
 Average `read` and `write` are calculated by calling the `read`/`write` functions at every possible position in a buffer containing 65,536 bytes.
 
-## Read and Write Time (μs)
+## Integer Read and Write Time (μs)
 |bits|readu|writeu|readi|writei|
 |----|---------|---------|---------|---------|
 | 01 | 0.06934 | 0.06315 | N/A | N/A |
@@ -60,6 +60,7 @@ Average `read` and `write` are calculated by calling the `read`/`write` function
 | 52 | 0.17312 | 0.16293 | 0.17569 | 0.17842 |
 | 53 | 0.14905 | 0.16031 | N/A | N/A |
 
+# Float Read and Write Time (μs)
 |bits|read|write|
 |----|----|-----|
 | 32 | 0.12358 | 0.21513 |
