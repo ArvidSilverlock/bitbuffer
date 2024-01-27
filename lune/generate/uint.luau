@@ -243,7 +243,6 @@ local function finalise(output)
 
 	local body = {}
 
-	table.insert(body, `-- stylua: ignore`)
 	table.insert(body, `local unsignedRead, unsignedWrite =`)
 	table.insert(body, `\t\{ {table.concat(readLookup, ", ")} \},`)
 	table.insert(body, `\t\{ {table.concat(writeLookup, ", ")} \}`)

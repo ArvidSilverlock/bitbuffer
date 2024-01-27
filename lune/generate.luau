@@ -13,6 +13,7 @@ end
 append([[--!native
 --!optimize 2
 --!strict
+-- stylua: ignore start
 
 local bitbuffer = {}
 
@@ -41,5 +42,5 @@ int.finalise(output)
 
 append("return bitbuffer")
 
-local outputString = table.concat(output, "\n\n")
+local outputString = table.concat(output, "\n\n"):gsub("\n\t+\n", "\n\n")
 fs.writeFile("lune/output.luau", outputString)

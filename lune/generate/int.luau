@@ -33,7 +33,7 @@ local function generateRead(output)
 		if alignedCallback then
 			table.insert(body, "\treturn if bit > 0")
 			table.insert(body, `\t\tthen {unalignedCallback}`)
-			table.insert(body, `\t\telse {alignedCallback}(b, byte, bit)`)
+			table.insert(body, `\t\telse {alignedCallback}(b, byte)`)
 		else
 			table.insert(body, `\treturn {unalignedCallback}`)
 		end
@@ -56,7 +56,7 @@ local function generateWrite(output)
 			table.insert(body, "\tif bit > 0 then")
 			table.insert(body, `\t\t{unalignedCallback}`)
 			table.insert(body, "\telse")
-			table.insert(body, `\t\t{alignedCallback}(b, byte, bit)`)
+			table.insert(body, `\t\t{alignedCallback}(b, byte, value)`)
 			table.insert(body, "\tend")
 		else
 			table.insert(body, `\treturn {unalignedCallback}`)
@@ -69,17 +69,16 @@ end
 
 local function finalise(output)
 	local readLookup, writeLookup = {}, {}
-	for width = 1, 53 do
+	for width = 2, 52 do
 		table.insert(readLookup, `bitbuffer.readi{width}`)
 		table.insert(writeLookup, `bitbuffer.writei{width}`)
 	end
 
 	local body = {}
 
-	table.insert(body, `-- stylua: ignore`)
 	table.insert(body, `local signedRead, signedWrite =`)
-	table.insert(body, `\t\{ {table.concat(readLookup, ", ")} \},`)
-	table.insert(body, `\t\{ {table.concat(writeLookup, ", ")} \}`)
+	table.insert(body, `\t\{ nil :: any, {table.concat(readLookup, ", ")} \},`)
+	table.insert(body, `\t\{ nil :: any, {table.concat(writeLookup, ", ")} \}`)
 	table.insert(body, "")
 	table.insert(body, GENERALISED_READ_WRITE)
 
