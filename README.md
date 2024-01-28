@@ -1,88 +1,9 @@
 # bitbuffer
-Bit level manipulation of byte level buffers. :sunglasses:
+Bit level manipulation of byte level buffers :sunglasses:
 
-## Basic API
+Capable of writing both signed and unsigned integers along with float32s and float64s.
 
-- read(buffer, offset, width)
-- write(buffer, offset, value, width)
+`writeu` allows for widths ranging from 1 to 53, whereas `writei` only alows widths 2 to 52.
+The reason for the different upper limit is when calculating the unsigned variant of the signed integer, if writing 53 bits, it will go outside of lua number's (float64) precision.
 
-- readbig(buffer, offset, width)
-- writebig(buffer, offset, value, width)
-
-The offset that each function requires is a 0 indexed *bit* `offset`, the `width` is also in bits, which can range from 1-48, the `value` is an unsigned integer.
-
-`read` and `write` use little endian, whereas `readbig` and `writebig` use big endian. `read` and `write` are faster than their big endian counterparts as roblox's `buffer` objects seemingly use little endian (at least on the byte scale), therefore less manipulation of the buffers is required. At least, this is my observation.
-
-## Base Conversion API
-
-Currently there are 3 supported bases, binary, hexadecimal, and base64, each of which have `to` and `from` functions.
-
-Binary and hexadecimal are more useful for debugging, whereas base64 is good for serialisation for datastore storage.
-
-Functions that convert *to* a base intake a buffer and return a string, whereas the functions that do the inverse intake a string and return a buffer.
-The `from` functions *do not* support prefixes or separators, this may come in the future, we'll have to see.
-
-Each of the `to` functions take 3 parameters, the first being the buffer to convert, the second being the separator between each code, and the third being a prefix (or a boolean defining whether or not to add the default prefix). Only the first parameter is required, if the others aren't specified it will use defaults that make sense for each base.
-
-For byte aligned functions, such as `tobinary` and `tohex`, you are allowed to specify whether or not to flip the endian of the bytes being read, this is useful if you are using the little endian `read` and `write` calls and want to debug.
-
-An example of how these format functions could look
-```lua
-print(bitbuffer.tobinary(b)) -- 11110011_10100110_00110100_01011010
-print(bitbuffer.tobinary(b, " ")) -- 11110011 10100110 00110100 01011010
-
-print(bitbuffer.tohex(b)) -- f3 a6 34 5a
-print(bitbuffer.tohex(b, "")) -- f3a6345a
-
-print(bitbuffer.tobase64(b)) -- 86Y0Wg==
-
--- You can do this trick to easily copy paste the actual number values for debugging.
-print(bitbuffer.tobinary(b, ", 0b", true)) -- 0b11110011, 0b10100110, 0b00110100, 0b01011010
-print(bitbuffer.tohex(b, ", 0x", true)) -- 0xf3, 0xa6, 0x34, 0x5a
-```
-
-## An few examples
-```lua
-local b = buffer.create(8 * 4)
-
-local writer = bitbuffer.writer(b)
-
-writer:Float64(312.249)
-writer:Float64(math.pi)
-writer:Float64(0/0)
-writer:Float64(math.huge)
-
-local reader = bitbuffer.reader(b)
-
-assert(reader:Float64() == 312.249, "312.249 failed to write")
-assert(reader:Float64() == math.pi, "pi failed to write")
-
-local c = reader:Float64()
-assert(c ~= c, "nan failed to write")
-
-assert(reader:Float64() == math.huge, "math.huge failed to write")
-```
-
-```lua
-local b = buffer.create(1)
-
-bitbuffer.write(b, 0, 1, 1) -- Write 1 bit at the first bit.
-assert(bitbuffer.read(b, 0, 1) == 1) -- Validate the write call functioned as expected
-
-print(bitbuffer.tobinary(b)) -- 10000000
-print(bitbuffer.tohex(b)) -- 80
-```
-
-```lua
-local b = buffer.fromstring("foobar")
-
-local encoded = bitbuffer.tobase64(b, "")
-local decoded = bitbuffer.frombase64(encoded)
-
-assert(bitbuffer.tohex(b) == bitbuffer.tohex(decoded)) -- Confirm they are the same
-
-print(encoded) -- Zm9vYmFy
-```
-
-## TODO:
-- given the nature of this module, testez is probably a good idea
+While the cost of using the `writeu` and `writei` functions over the hardcoded width functions (i.e., `writeu4`, `writei7`) is often negligable, if you need that microsecond speed increase of using the hardcoded width functions, you will see they take a separate `byte` and `bit` coordinate as their input, you can specify these as `bitOffset // 8` and `bitOffset % 8` respectively. The reason for this choice is that internally, some of the functions will call lower bit widths (to account for the `bit32` not functioning on more than 32 bits).
