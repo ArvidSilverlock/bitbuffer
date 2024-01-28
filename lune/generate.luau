@@ -1,47 +1,33 @@
-local int = require("./generate/int.luau")
-local uint = require("./generate/uint.luau")
-local float = require("./generate/float.luau")
-
+local process = require("@lune/process")
 local fs = require("@lune/fs")
 
 local output = {}
 
-local function append(value)
-	table.insert(output, value)
-end
-
-append([[--!native
+-- stylua: ignore
+table.insert(output, [[--!native
 --!optimize 2
 --!strict
 -- stylua: ignore start
 
-local bitbuffer = {}
+local bitbuffer = {}]])
 
-local U24_BUFFER = buffer.create(4)
+if process.args[1] then
+	for _, argument in process.args do
+		local callback = require(`./{argument}/init.lua`)
+		callback(output)
+	end
+else
+	local main = require(`./main/init.lua`)
+	local baseconversion = require(`./baseconversion/init.lua`)
+	local reader = require(`./reader/init.lua`)
+	local writer = require(`./writer/init.lua`)
 
-local function readu24(b: buffer, offset: number)
-	buffer.copy(U24_BUFFER, 0, b, offset, 3)
-	return buffer.readu32(U24_BUFFER, 0)
+	main(output)
+	baseconversion(output)
+	reader(output)
+	writer(output)
 end
 
-local function writeu24(b: buffer, offset: number, value: number)
-	buffer.writeu32(U24_BUFFER, 0, value)
-	buffer.copy(b, offset, U24_BUFFER, 0, 3)
-end]])
+table.insert(output, "return bitbuffer")
 
-uint.read(output)
-uint.write(output)
-
-int.read(output)
-int.write(output)
-
-float.read(output)
-float.write(output)
-
-uint.finalise(output)
-int.finalise(output)
-
-append("return bitbuffer")
-
-local outputString = table.concat(output, "\n\n"):gsub("\n\t+\n", "\n\n")
-fs.writeFile("lune/output.luau", outputString)
+fs.writeFile("lune/output.luau", table.concat(output, "\n\n"):gsub("\n\t+\n", "\n\n"))

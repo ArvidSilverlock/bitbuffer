@@ -1430,4 +1430,180 @@ function bitbuffer.writei(b: buffer, offset: number, value: number, width: numbe
 	signedWrite[width](b, offset // 8, offset % 8, value)
 end
 
+local NUMBER_TO_BASE64 = buffer.fromstring("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+local BASE64_TO_NUMBER = {}
+
+local CHARACTER_TO_BINARY = {}
+local BINARY_TO_NUMBER = {}
+
+local CHARACTER_TO_HEXADECIMAL = {}
+local HEXADECIMAL_TO_NUMBER = {}
+
+for index = 0, 255 do
+	local binary = table.create(8)
+	for field = 0, 7 do
+		binary[8 - field] = bit32.extract(index, field, 1)
+	end
+
+	local binaryString = table.concat(binary)
+	local hexadecimalString = string.format("%02x", index)
+
+	local char = string.char(index)
+
+	CHARACTER_TO_BINARY[char] = binaryString
+	BINARY_TO_NUMBER[binaryString] = index
+
+	CHARACTER_TO_HEXADECIMAL[char] = hexadecimalString
+	HEXADECIMAL_TO_NUMBER[hexadecimalString] = index
+end
+
+for index = 0, 63 do
+	BASE64_TO_NUMBER[buffer.readu8(NUMBER_TO_BASE64, index)] = index
+end
+
+local function baseLookupGenerator(default)
+	local cache = { [""] = default }
+
+	return function(separator: string)
+		if cache[separator] then
+			return cache[separator]
+		end
+
+		local lookupTable = {}
+		for index = 0, 255 do
+			local char = string.char(index)
+			lookupTable[char] = default[char] .. separator
+		end
+
+		cache[separator] = lookupTable
+		return lookupTable
+	end
+end
+
+local getBinaryLookup = baseLookupGenerator(CHARACTER_TO_BINARY)
+local getHexadecimalLookup = baseLookupGenerator(CHARACTER_TO_HEXADECIMAL)
+
+-- Pre-create default separator lookups
+getBinaryLookup("_")
+getHexadecimalLookup("_")
+
+function bitbuffer.tobinary(b: buffer, separator: string?): string
+	local separatorLength = if separator then #separator else 1
+	local lookupTable = getBinaryLookup(separator or "_")
+
+	local str = buffer.tostring(b):gsub(".", lookupTable)
+	return str:sub(1, -1 - separatorLength)
+end
+
+function bitbuffer.frombinary(str: string, separator: string?)
+	local separatorLength = if separator then #separator else 0
+
+	local codeLength = 8 + separatorLength
+	local b = buffer.create((#str + separatorLength) / codeLength)
+
+	local offset = 0
+	for index = 1, #str, codeLength do
+		local code = str:sub(index, index + 7)
+		buffer.writeu8(b, offset, BINARY_TO_NUMBER[code])
+		offset += 1
+	end
+
+	return b
+end
+
+function bitbuffer.tohexadecimal(b: buffer, separator: string?): string
+	local separatorLength = if separator then #separator else 1
+	local lookupTable = getHexadecimalLookup(separator or "_")
+
+	local str = buffer.tostring(b):gsub(".", lookupTable)
+	return str:sub(1, -1 - separatorLength)
+end
+
+function bitbuffer.fromhexadecimal(str: string, separator: string?)
+	local separatorLength = if separator then #separator else 0
+
+	local codeLength = 2 + separatorLength
+	local b = buffer.create((#str + separatorLength) / codeLength)
+
+	local offset = 0
+	for index = 1, #str, codeLength do
+		local code = str:sub(index, index + 1)
+		buffer.writeu8(b, offset, HEXADECIMAL_TO_NUMBER[code])
+		offset += 1
+	end
+
+	return b
+end
+
+local function flipu16(value: number): number
+	return (value // 256) -- FF00 -> 00FF
+		+ (value % 256 * 256) -- 00FF -> FF00
+end
+
+function bitbuffer.tobase64(b: buffer): string
+	local bufferLength = buffer.len(b)
+	local bitCount = buffer.len(b) * 8
+
+	local paddingLength = 2 - (bufferLength - 1) % (2 + 1)
+	local characterCount = math.ceil(bitCount / 6)
+
+	local endOffset = (characterCount - 1) * 6
+	local overhang = bitCount - endOffset
+
+	local output = buffer.create(characterCount + paddingLength)
+	local outputIndex = 0
+
+	for offset = 0, endOffset - overhang, 6 do
+		local byte, bit = offset // 8, offset % 8
+		local byteWidth = (bit + 13) // 8
+		bit = (byteWidth * 8 - 6) - bit
+
+		local focus = if byteWidth == 1 then buffer.readu8(b, byte) else flipu16(buffer.readu16(b, byte))
+		local code = bit32.extract(focus, bit, 6)
+
+		buffer.writeu8(output, outputIndex, buffer.readu8(NUMBER_TO_BASE64, code))
+		outputIndex += 1
+	end
+
+	if overhang > 0 then
+		local byte, bit = endOffset // 8, (8 - overhang) - endOffset % 8
+
+		local focus = buffer.readu8(b, byte)
+		local code = bit32.lshift(bit32.extract(focus, bit, overhang), 6 - overhang)
+
+		buffer.writeu8(output, outputIndex, buffer.readu8(NUMBER_TO_BASE64, code))
+	end
+
+	buffer.fill(output, characterCount, 61, paddingLength) -- '='
+	return buffer.tostring(output)
+end
+
+function bitbuffer.frombase64(str: string)
+	local paddingStart, paddingEnd = string.find(str, "=*$")
+	local padding = paddingEnd - paddingStart + 1
+
+	local codeCount = #str - padding
+	local bitCount = (codeCount * 6) - (padding * 2)
+
+	local output = buffer.create(bitCount // 8)
+	local outputOffset = 0
+
+	for inputIndex = 1, codeCount do
+		local byte, bit = outputOffset // 8, outputOffset % 8
+		local byteWidth = (bit + 13) // 8
+		bit = (byteWidth * 8 - 6) - bit
+
+		local code = BASE64_TO_NUMBER[str:byte(inputIndex)]
+		if byteWidth == 2 then
+			buffer.writeu16(output, byte, flipu16(bit32.replace(flipu16(buffer.readu16(output, byte)), code, bit, 6)))
+		else
+			buffer.writeu8(output, byte, bit32.replace(buffer.readu8(output, byte), code, bit, 6))
+		end
+
+		outputOffset += 6
+	end
+
+	return output
+end
+
 return bitbuffer
