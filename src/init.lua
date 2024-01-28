@@ -591,6 +591,60 @@ function bitbuffer.readi52(b: buffer, byte: number, bit: number): number
 	return ( bitbuffer.readu52(b, byte, bit) + 2251799813685248 ) % 4503599627370496 - 2251799813685248
 end
 
+function bitbuffer.readf32(b: buffer, offset: number): number
+	if offset % 8 == 0 then
+		return buffer.readf32(b, offset // 8)
+	end
+
+	local mantissa = bitbuffer.readu23(b, offset // 8, offset % 8)
+	offset += 23
+	local exponent = bitbuffer.readu8(b, offset // 8, offset % 8)
+	offset += 8
+	local sign = bitbuffer.readu1(b, offset // 8, offset % 8) == 1
+
+	if mantissa == 0 and exponent == 0b11111111 then
+		return if sign then -math.huge else math.huge
+	elseif mantissa == 1 and exponent == 0b11111111 then
+		return 0 / 0
+	elseif mantissa == 0 and exponent == 0 then
+		return 0
+	else
+		mantissa = if exponent == 0
+			then mantissa / 0x800000
+			else mantissa / 0x1000000 + 0.5
+
+		local value = math.ldexp(mantissa, exponent - 126)
+		return if sign then -value else value
+	end
+end
+
+function bitbuffer.readf64(b: buffer, offset: number): number
+	if offset % 8 == 0 then
+		return buffer.readf64(b, offset // 8)
+	end
+
+	local mantissa = bitbuffer.readu52(b, offset // 8, offset % 8)
+	offset += 52
+	local exponent = bitbuffer.readu11(b, offset // 8, offset % 8)
+	offset += 11
+	local sign = bitbuffer.readu1(b, offset // 8, offset % 8) == 1
+
+	if mantissa == 0 and exponent == 0b11111111111 then
+		return if sign then -math.huge else math.huge
+	elseif mantissa == 1 and exponent == 0b11111111111 then
+		return 0 / 0
+	elseif mantissa == 0 and exponent == 0 then
+		return 0
+	else
+		mantissa = if exponent == 0
+			then mantissa / 0x10000000000000
+			else mantissa / 0x20000000000000 + 0.5
+
+		local value = math.ldexp(mantissa, exponent - 1022)
+		return if sign then -value else value
+	end
+end
+
 function bitbuffer.writeu1(b: buffer, byte: number, bit: number, value: number)
 	buffer.writeu8(b, byte, bit32.replace(buffer.readu8(b, byte), value, bit, 1))
 end
@@ -1288,6 +1342,68 @@ end
 
 function bitbuffer.writei52(b: buffer, byte: number, bit: number, value: number)
 	return bitbuffer.writeu52(b, byte, bit, (value + 4503599627370496) % 4503599627370496)
+end
+
+function bitbuffer.writef32(b: buffer, offset: number, value: number)
+	if bit == 0 then
+		buffer.writef32(b, offset // 8, value)
+		return
+	end
+
+	local mantissa, exponent, sign = 0, 0, 0
+	if math.abs(value) > 3.4028234663852886e+38 then
+		exponent, sign = 0b11111111, if value < 0 then 1 else 0
+	elseif value ~= value then
+		mantissa, exponent, sign = 1, 0b11111111, 1
+	elseif value ~= 0 then
+		mantissa, exponent = math.frexp(value)
+		exponent += 126
+
+		mantissa = math.round(if exponent <= 0
+			then math.abs(mantissa) * 0x800000 / math.ldexp(1, math.abs(exponent))
+			else math.abs(mantissa) * 0x1000000)
+		exponent = math.max(exponent, 0)
+		sign = if value < 0 then 1 else 0
+	end
+
+	bitbuffer.writeu23(b, offset // 8, offset % 8, mantissa)
+	offset += 23
+
+	bitbuffer.writeu8(b, offset // 8, offset % 8, exponent)
+	offset += 8
+
+	bitbuffer.writeu1(b, offset // 8, offset % 8, sign)
+end
+
+function bitbuffer.writef64(b: buffer, offset: number, value: number)
+	if bit == 0 then
+		buffer.writef64(b, offset // 8, value)
+		return
+	end
+
+	local mantissa, exponent, sign = 0, 0, 0
+	if math.abs(value) > 1.7976931348623157e+308 then
+		exponent, sign = 0b11111111111, if value < 0 then 1 else 0
+	elseif value ~= value then
+		mantissa, exponent, sign = 1, 0b11111111111, 1
+	elseif value ~= 0 then
+		mantissa, exponent = math.frexp(value)
+		exponent += 1022
+
+		mantissa = math.round(if exponent <= 0
+			then math.abs(mantissa) * 0x10000000000000 / math.ldexp(1, math.abs(exponent))
+			else math.abs(mantissa) * 0x20000000000000)
+		exponent = math.max(exponent, 0)
+		sign = if value < 0 then 1 else 0
+	end
+
+	bitbuffer.writeu52(b, offset // 8, offset % 8, mantissa)
+	offset += 52
+
+	bitbuffer.writeu11(b, offset // 8, offset % 8, exponent)
+	offset += 11
+
+	bitbuffer.writeu1(b, offset // 8, offset % 8, sign)
 end
 
 local unsignedRead, unsignedWrite =
