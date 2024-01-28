@@ -5,7 +5,7 @@ local GENERALISED_READ_WRITE = [[function bitbuffer.readu(b: buffer, offset: num
 	return unsignedRead[width](b, offset // 8, offset % 8)
 end
 
-function bitbuffer.writeu(b: buffer, offset: number, width: number, value: number)
+function bitbuffer.writeu(b: buffer, offset: number, value: number, width: number)
 	unsignedWrite[width](b, offset // 8, offset % 8, value)
 end]]
 

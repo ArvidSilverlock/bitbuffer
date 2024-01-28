@@ -30,11 +30,12 @@ local function writeu24(b: buffer, offset: number, value: number)
 end]])
 
 uint.read(output)
-int.read(output)
-float.read(output)
-
 uint.write(output)
+
+int.read(output)
 int.write(output)
+
+float.read(output)
 float.write(output)
 
 uint.finalise(output)

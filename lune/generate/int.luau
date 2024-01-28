@@ -5,7 +5,7 @@ local GENERALISED_READ_WRITE = [[function bitbuffer.readi(b: buffer, offset: num
 	return signedRead[width](b, offset // 8, offset % 8)
 end
 
-function bitbuffer.writei(b: buffer, offset: number, width: number, value: number)
+function bitbuffer.writei(b: buffer, offset: number, value: number, width: number)
 	signedWrite[width](b, offset // 8, offset % 8, value)
 end]]
 
