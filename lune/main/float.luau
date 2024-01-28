@@ -113,10 +113,7 @@ local function generateWrite(output)
 	end
 end
 
-local function finalise(output) end
-
-return {
-	read = generateRead,
-	write = generateWrite,
-	finalise = finalise,
-}
+return function(output)
+	generateWrite(output)
+	generateRead(output)
+end

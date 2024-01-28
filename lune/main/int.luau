@@ -85,8 +85,8 @@ local function finalise(output)
 	table.insert(output, table.concat(body, "\n"))
 end
 
-return {
-	read = generateRead,
-	write = generateWrite,
-	finalise = finalise,
-}
+return function(output)
+	generateWrite(output)
+	generateRead(output)
+	finalise(output)
+end
