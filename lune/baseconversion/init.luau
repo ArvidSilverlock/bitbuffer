@@ -5,11 +5,13 @@ local function insertFile(output, fileName: string)
 	table.insert(output, str)
 end
 
-local function append(output)
+local function create()
+	local output = {}
 	insertFile(output, "constants")
 	insertFile(output, "binary")
 	insertFile(output, "hexadecimal")
 	insertFile(output, "base64")
+	return output
 end
 
-return append
+return create
