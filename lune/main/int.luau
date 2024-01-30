@@ -1,24 +1,29 @@
-local READ_FUNCTION_DEFINITION = "function bitbuffer.readi%d(b: buffer, byte: number, bit: number): number"
-local WRITE_FUNCTION_DEFINITION = "function bitbuffer.writei%d(b: buffer, byte: number, bit: number, value: number)"
-
 local GENERALISED_READ_WRITE = [[function bitbuffer.readi(b: buffer, offset: number, width: number): number
-	return signedRead[width](b, offset // 8, offset % 8)
+	return signedRead[width](b, offset)
 end
 
 function bitbuffer.writei(b: buffer, offset: number, value: number, width: number)
-	signedWrite[width](b, offset // 8, offset % 8, value)
+	signedWrite[width](b, offset, value)
 end]]
 
+local LOCALISED_FUNCTIONS = [[local readi8 = buffer.readi8
+local readi16 = buffer.readi16
+local readi32 = buffer.readi32
+
+local writei8 = buffer.writei8
+local writei16 = buffer.writei16
+local writei32 = buffer.writei32]]
+
 local BUILT_IN_READ = {
-	[8] = "buffer.readi8",
-	[16] = "buffer.readi16",
-	[32] = "buffer.readi32",
+	[8] = "readi8",
+	[16] = "readi16",
+	[32] = "readi32",
 }
 
 local BUILT_IN_WRITE = {
-	[8] = "buffer.writei8",
-	[16] = "buffer.writei16",
-	[32] = "buffer.writei32",
+	[8] = "writei8",
+	[16] = "writei16",
+	[32] = "writei32",
 }
 
 local function generateRead(output)
@@ -27,13 +32,13 @@ local function generateRead(output)
 		local a, b = 2 ^ width, 2 ^ (width - 1)
 
 		local alignedCallback = BUILT_IN_READ[width]
-		local unalignedCallback = `( bitbuffer.readu{width}(b, byte, bit) + {b} ) % {a} - {b}`
+		local unalignedCallback = `( bitbuffer.readu{width}(b, offset) + {b} ) % {a} - {b}`
 
-		table.insert(body, READ_FUNCTION_DEFINITION:format(width))
+		table.insert(body, `function bitbuffer.readi{width}(b: buffer, offset: number): number`)
 		if alignedCallback then
-			table.insert(body, "\treturn if bit > 0")
+			table.insert(body, "\treturn if offset % 8 > 0")
 			table.insert(body, `\t\tthen {unalignedCallback}`)
-			table.insert(body, `\t\telse {alignedCallback}(b, byte)`)
+			table.insert(body, `\t\telse {alignedCallback}(b, offset // 8)`)
 		else
 			table.insert(body, `\treturn {unalignedCallback}`)
 		end
@@ -49,17 +54,17 @@ local function generateWrite(output)
 		local a = 2 ^ width
 
 		local alignedCallback = BUILT_IN_WRITE[width]
-		local unalignedCallback = `bitbuffer.writeu{width}(b, byte, bit, (value + {a}) % {a})`
+		local unalignedCallback = `bitbuffer.writeu{width}(b, offset, (value + {a}) % {a})`
 
-		table.insert(body, WRITE_FUNCTION_DEFINITION:format(width))
+		table.insert(body, `function bitbuffer.writei{width}(b: buffer, offset: number, value: number)`)
 		if alignedCallback then
-			table.insert(body, "\tif bit > 0 then")
+			table.insert(body, "\tif offset % 8 > 0 then")
 			table.insert(body, `\t\t{unalignedCallback}`)
 			table.insert(body, "\telse")
-			table.insert(body, `\t\t{alignedCallback}(b, byte, value)`)
+			table.insert(body, `\t\t{alignedCallback}(b, offset // 8, value)`)
 			table.insert(body, "\tend")
 		else
-			table.insert(body, `\treturn {unalignedCallback}`)
+			table.insert(body, `\t{unalignedCallback}`)
 		end
 		table.insert(body, "end")
 
@@ -85,8 +90,13 @@ local function finalise(output)
 	table.insert(output, table.concat(body, "\n"))
 end
 
-return function(output)
+local function create()
+	local output = {}
+	table.insert(output, LOCALISED_FUNCTIONS)
 	generateWrite(output)
 	generateRead(output)
 	finalise(output)
+	return output
 end
+
+return create
