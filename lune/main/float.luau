@@ -2,11 +2,9 @@ local READ_TEMPALTE = [[if offset % 8 == 0 then
 	return buffer.readf<WIDTH>(b, offset // 8)
 end
 
-local mantissa = bitbuffer.readu<MANTISSA_WIDTH>(b, offset // 8, offset % 8)
-offset += <MANTISSA_WIDTH>
-local exponent = bitbuffer.readu<EXPONENT_WIDTH>(b, offset // 8, offset % 8)
-offset += <EXPONENT_WIDTH>
-local sign = bitbuffer.readu1(b, offset // 8, offset % 8) == 1
+local mantissa = bitbuffer.readu<MANTISSA_WIDTH>(b, offset)
+local exponent = bitbuffer.readu<EXPONENT_WIDTH>(b, offset + <MANTISSA_WIDTH>)
+local sign = bitbuffer.readu1(b, offset + <MANTISSA_EXPONENT_WIDTH>) == 1
 
 if mantissa == 0 and exponent == <EXPONENT_MAX> then
 	return if sign then -math.huge else math.huge
@@ -23,7 +21,7 @@ else
 	return if sign then -value else value
 end]]
 
-local WRITE_TEMPLATE = [[if bit == 0 then
+local WRITE_TEMPLATE = [[if offset % 8 == 0 then
 	buffer.writef<WIDTH>(b, offset // 8, value)
 	return
 end
@@ -44,13 +42,9 @@ elseif value ~= 0 then
 	sign = if value < 0 then 1 else 0
 end
 
-bitbuffer.writeu<MANTISSA_WIDTH>(b, offset // 8, offset % 8, mantissa)
-offset += <MANTISSA_WIDTH>
-
-bitbuffer.writeu<EXPONENT_WIDTH>(b, offset // 8, offset % 8, exponent)
-offset += <EXPONENT_WIDTH>
-
-bitbuffer.writeu1(b, offset // 8, offset % 8, sign)]]
+bitbuffer.writeu<MANTISSA_WIDTH>(b, offset, mantissa)
+bitbuffer.writeu<EXPONENT_WIDTH>(b, offset + <MANTISSA_WIDTH>, exponent)
+bitbuffer.writeu1(b, offset + <MANTISSA_EXPONENT_WIDTH>, sign)]]
 
 local FLOAT_WIDTHS = {
 	[32] = { mantissa = 23, exponent = 8 },
@@ -70,6 +64,7 @@ local function generateRead(output)
 
 		local content = READ_TEMPALTE:gsub("<MANTISSA_WIDTH>", mantissaWidth)
 			:gsub("<EXPONENT_WIDTH>", exponentWidth)
+			:gsub("<MANTISSA_EXPONENT_WIDTH>", mantissaWidth + exponentWidth)
 			:gsub("<EXPONENT_MAX>", `0b{string.rep("1", exponentWidth)}`)
 			:gsub("<EXPONENT_BIAS>", 2 ^ (exponentWidth - 1) - 2)
 			:gsub("<SUBNORMAL>", tohex(2 ^ mantissaWidth))
@@ -97,6 +92,7 @@ local function generateWrite(output)
 			:gsub("<MAX_VALUE>", math.ldexp((2 - 2 ^ -mantissaWidth), (2 ^ (exponentWidth - 1) - 1)))
 			:gsub("<MANTISSA_WIDTH>", mantissaWidth)
 			:gsub("<EXPONENT_WIDTH>", exponentWidth)
+			:gsub("<MANTISSA_EXPONENT_WIDTH>", mantissaWidth + exponentWidth)
 			:gsub("<EXPONENT_MAX>", `0b{string.rep("1", exponentWidth)}`)
 			:gsub("<EXPONENT_BIAS>", 2 ^ (exponentWidth - 1) - 2)
 			:gsub("<SUBNORMAL>", tohex(2 ^ mantissaWidth))
@@ -113,7 +109,11 @@ local function generateWrite(output)
 	end
 end
 
-return function(output)
+local function create()
+	local output = {}
 	generateWrite(output)
 	generateRead(output)
+	return output
 end
+
+return create
