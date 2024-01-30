@@ -14,3 +14,4 @@
 
 # generate.luau output file
 /lune/output.luau
+/lune/bytecode.txt
