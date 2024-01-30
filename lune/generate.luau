@@ -1,4 +1,5 @@
 local process = require("@lune/process")
+local luau = require("@lune/luau")
 local fs = require("@lune/fs")
 
 local output = {}
@@ -7,50 +8,43 @@ local output = {}
 table.insert(output, [[--!native
 --!optimize 2
 --!strict
+
 -- stylua: ignore start
-
-local U24_BUFFER = buffer.create(4)
-
-local function readu24(b: buffer, offset: number)
-	buffer.copy(U24_BUFFER, 0, b, offset, 3)
-	return buffer.readu32(U24_BUFFER, 0)
-end
-	
-local function writeu24(b: buffer, offset: number, value: number)
-	buffer.writeu32(U24_BUFFER, 0, value)
-	buffer.copy(b, offset, U24_BUFFER, 0, 3)
-end
+---@diagnostic disable: undefined-type
 
 local bitbuffer = {}]])
 
-local function addSection(name, generator)
-	local section = {}
-	generator(section)
-
+local function addSection(name, create, outputTable)
+	local section = create(addSection)
 	local str = table.concat(section, "\n\n")
-	table.insert(output, `do -- {name}\n\t{str:gsub("\n", "\n\t")}\nend`)
+	table.insert(outputTable or output, `do -- {name}\n\t{str:gsub("\n\t*", "%1\t")}\nend`)
 end
 
 if process.args[1] then
 	for _, argument in process.args do
-		local callback = require(`./{argument}/init.lua`)
-		callback(output)
+		local callback = require(`./{argument}/init.luau`)
+		if argument == "main" then
+			addSection("uint", callback.uint)
+			addSection("int", callback.int)
+			addSection("float", callback.float)
+		else
+			addSection(argument, callback)
+		end
 	end
 else
-	local main = require(`./main/init.lua`)
-	local baseconversion = require(`./baseconversion/init.lua`)
-	local reader = require(`./reader/init.lua`)
-	local writer = require(`./writer/init.lua`)
+	local main = require("./main/init.luau")
+	local baseconversion = require("./baseconversion/init.luau")
+	local editors = require("./editors/init.luau")
 
 	addSection("uint", main.uint)
 	addSection("int", main.int)
 	addSection("float", main.float)
 
 	addSection("base conversion", baseconversion)
-	addSection("reader", reader)
-	addSection("writer", writer)
+	addSection("editors", editors)
 end
 
 table.insert(output, "return bitbuffer")
 
-fs.writeFile("lune/output.luau", table.concat(output, "\n\n"):gsub("\n%s+\n", "\n\n"))
+local source = table.concat(output, "\n\n"):gsub("\n%s+\n", "\n\n")
+fs.writeFile("lune/output.luau", source)
