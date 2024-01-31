@@ -1,3 +1,5 @@
+local Snippet = require("../Snippet.luau")
+
 local GENERALISED_READ_WRITE = [[function bitbuffer.readu(b: buffer, offset: number, width: number): number
 	return unsignedRead[width](b, offset)
 end
@@ -29,48 +31,33 @@ local bit32_extract = bit32.extract]]
 local readCalls = {}
 local writeCalls = {}
 
-local function indent(str: string, amount: number): string
-	local tab = string.rep("\t", amount)
-	return tab .. str:gsub("\n", "\n" .. tab)
-end
-
 local function alignedRead(width: number)
-	local lines = {}
+	local chunkCount = math.ceil(width / 32)
+	local body = Snippet.new("readu32(b, byte) % ", string.format("0x%x", 2 ^ math.min(width, 32)))
 
-	local position, chunkWidth = 0, math.min(width, 32)
-
-	local band = if width ~= 32 then string.format(" %% 0x%x", 2 ^ chunkWidth) else ""
-	table.insert(lines, `readu32(b, byte){band}`)
-
-	while true do
-		position += chunkWidth
-		chunkWidth = math.min(width - position, 32)
-		if chunkWidth == 0 then
-			break
-		end
+	for index = 1, chunkCount - 1 do
+		local position, bytePosition = index * 32, index * 4
+		local chunkWidth = math.min(width - position, 32)
 
 		local multiplier = string.format(" * 0x%x", 2 ^ position)
 		local bound = string.format(" %% 0x%x", 2 ^ chunkWidth)
-		local offset = ` + {position / 8}`
 
 		local alignedWidth = math.ceil(chunkWidth / 8) * 8
 		if chunkWidth == alignedWidth then
-			table.insert(lines, `\t+ readu{alignedWidth}(b, byte{offset}){multiplier}`)
+			body:Push("+ readu", alignedWidth, "(b, byte + ", bytePosition, ")", multiplier):Indent()
 		else
-			table.insert(lines, `\t+ readu{alignedWidth}(b, byte{offset}){bound}{multiplier}`)
+			body:Push("+ readu", alignedWidth, "(b, byte + ", bytePosition, ")", bound, multiplier):Indent()
 		end
 	end
 
-	return table.concat(lines, "\n")
+	return tostring(body)
 end
 
 local function unalignedRead(width: number)
-	local lines = {}
-
 	local chunkCount = math.ceil(width / 24)
-
 	local position, chunkWidth = 0, math.min(width, 24)
-	table.insert(lines, `return bit32_extract(readu32(b, byte), bit, 24)`)
+
+	local body = Snippet.new()
 
 	for _ = 2, chunkCount do
 		position += chunkWidth
@@ -80,72 +67,69 @@ local function unalignedRead(width: number)
 		local offset = ` + {position / 8}`
 
 		if chunkWidth == 24 then
-			table.insert(lines, `\t+ bit32_extract(readu32(b, byte{offset}), bit, {chunkWidth}){multiplier}`)
+			body:Push("+ bit32_extract(readu32(b, byte", offset, "), bit, ", chunkWidth, ")", multiplier)
 		else
 			local read = `{readCalls[chunkWidth]:gsub("byte", `byte{offset}`)}`
 			if read:match("^if") then
-				table.insert(lines, `\t+ (\n\t\t{read:gsub("\n", "\n\t\t")}\n\t){multiplier}`)
+				body:Push("+ (")
+				body:Push(read):Indent()
+				body:Push(")", multiplier)
 			else
-				table.insert(lines, `\t+ {read}{multiplier}`)
+				body:Push("+ ", read, multiplier)
 			end
 		end
 	end
 
-	return table.concat(lines, "\n")
+	body:Indent()
+	body:Insert(1, "return bit32_extract(readu32(b, byte), bit, 24)")
+
+	return tostring(body)
 end
 
 local function alignedWrite(width: number)
-	local position, chunkWidth = 0, math.min(width, 32)
-	local lines = {}
+	local chunkCount = math.ceil(width / 32)
+	local body = Snippet.new()
 
-	table.insert(lines, `writeu32(b, byte, value)`)
-
-	while true do
-		position += chunkWidth
-		chunkWidth = math.min(width - position, 32)
-		if chunkWidth == 0 then
-			break
-		end
+	for index = 0, chunkCount - 1 do
+		local position = 32 * index
+		local chunkWidth = math.min(width - position, 32)
 
 		local alignedWidth = math.ceil(chunkWidth / 8) * 8
-		local divisor = string.format(" // 0x%x", 2 ^ position)
+		local divisor = if index > 0 then string.format(" // 0x%x", 2 ^ position) else ""
 
 		if chunkWidth ~= alignedWidth then
 			local replacement = `bit32_replace(readu{alignedWidth}(b, byte), value{divisor}, 0, {chunkWidth})`
-			table.insert(lines, "byte += 4")
-			table.insert(lines, `writeu{alignedWidth}(b, byte, {replacement})`)
+			body:ConditionalPush(index > 0, "byte += 4")
+			body:Push("writeu", alignedWidth, "(b, byte, ", replacement, ")")
+		elseif index == 0 then
+			body:Push("writeu", alignedWidth, "(b, byte, value", divisor, ")")
 		else
-			table.insert(lines, `writeu{alignedWidth}(b, byte + 4, value{divisor})`)
+			body:Push("writeu", alignedWidth, "(b, byte + 4, value", divisor, ")")
 		end
 	end
 
-	return table.concat(lines, "\n")
+	return tostring(body)
 end
 
 local function unalignedWrite(width: number)
-	local position, chunkWidth = 0, 24
-	local lines = {}
+	local chunkCount = math.ceil(width / 24)
+	local body = Snippet.new("writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))")
 
-	table.insert(lines, "writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))")
-
-	while true do
-		position += chunkWidth
-		chunkWidth = math.min(width - position, 24)
-		if chunkWidth == 0 then
-			break
-		end
+	for index = 1, chunkCount - 1 do
+		local position = 24 * index
+		local chunkWidth = math.min(width - position, 24)
 
 		local divisor = string.format(" // 0x%x", 2 ^ position)
-		table.insert(lines, "byte += 3")
+		body:Push("byte += 3")
 
 		if chunkWidth == 24 then
-			table.insert(lines, `writeu32(b, byte, bit32_replace(readu32(b, byte), value{divisor}, bit, 24))`)
+			body:Push("writeu32(b, byte, bit32_replace(readu32(b, byte), value", divisor, ", bit, 24))")
 		else
-			table.insert(lines, (writeCalls[chunkWidth]:gsub("value", `value{divisor}`)))
+			body:Push((writeCalls[chunkWidth]:gsub("value", `value{divisor}`)))
 		end
 	end
 
-	return table.concat(lines, "\n")
+	return tostring(body)
 end
 
 local function getReadCallback(width: number, threshold: number)
@@ -188,67 +172,67 @@ end
 
 local function generateRead(output)
 	for width = 1, 53 do
-		local body = {}
+		local body = Snippet.new()
 
 		local bitThreshold = getBitThreshold(width)
 		local alignedCase, unalignedCase, isSingleLine = getReadCallback(width, bitThreshold)
 
 		if unalignedCase then
 			if isSingleLine then
-				table.insert(body, `\treturn if bit > {if width > 24 then 0 else bitThreshold}`)
-				table.insert(body, indent("then " .. unalignedCase, 2))
-				table.insert(body, indent("else " .. alignedCase, 2))
+				body:Push("return if bit > ", if width > 24 then 0 else bitThreshold)
+				body:Push("then ", unalignedCase):Indent()
+				body:Push("else ", alignedCase):Indent()
 			else
-				table.insert(body, `\tif bit > {if width > 24 then 0 else bitThreshold} then`)
-				table.insert(body, indent(unalignedCase, 2))
-				table.insert(body, "\telse")
-				table.insert(body, indent("return " .. alignedCase, 2))
-				table.insert(body, "\tend")
+				body:Push("if bit > ", if width > 24 then 0 else bitThreshold, " then")
+				body:Push(unalignedCase):Indent()
+				body:Push("else")
+				body:Push("return ", alignedCase):Indent()
+				body:Push("end")
 			end
 		else
-			for index, line in alignedCase:split("\n") do
-				table.insert(body, `\t{if index == 1 then "return " else ""}{line}`)
-			end
+			body:Push("return ", alignedCase)
 		end
 
 		readCalls[width] = if bitThreshold > 0
-			then table.concat(body, "\n"):gsub("\n\t", "\n"):gsub("^\t", ""):gsub("^return ", "")
+			then tostring(body):gsub("^return ", "")
 			else unalignedCase or alignedCase
 
-		table.insert(body, 1, `function bitbuffer.readu{width}(b: buffer, offset: number): number`)
-		table.insert(body, 2, `\tlocal byte, bit = offset // 8, offset % 8`)
-		table.insert(body, "end")
+		body:Insert(1, "local byte, bit = offset // 8, offset % 8")
+		body:Indent()
 
-		table.insert(output, table.concat(body, "\n"))
+		body:Insert(1, "function bitbuffer.readu", width, "(b: buffer, offset: number): number")
+		body:Push("end")
+
+		table.insert(output, tostring(body))
 	end
 end
 
 local function generateWrite(output)
 	for width = 1, 53 do
-		local body = {}
+		local body = Snippet.new()
 
 		local bitThreshold = getBitThreshold(width)
 		local alignedCase, unalignedCase = getWriteCallback(width, bitThreshold)
 
 		if unalignedCase then
-			table.insert(body, `\tif bit > {if width > 24 then 0 else bitThreshold} then`)
-			table.insert(body, indent(unalignedCase, 2))
-			table.insert(body, `\telse`)
-			table.insert(body, indent(alignedCase, 2))
-			table.insert(body, "\tend")
+			body:Push("if bit > ", if width > 24 then 0 else bitThreshold, " then")
+			body:Push(unalignedCase):Indent()
+			body:Push("else")
+			body:Push(alignedCase):Indent()
+			body:Push("end")
 		else
-			table.insert(body, indent(alignedCase, 1))
+			body:Push(alignedCase)
 		end
 
-		writeCalls[width] = if bitThreshold > 0
-			then table.concat(body, "\n"):gsub("\n\t", "\n"):gsub("^\t", "")
-			else unalignedCase or alignedCase
+		writeCalls[width] = if bitThreshold > 0 then tostring(body) else unalignedCase or alignedCase
 
-		table.insert(body, 1, `function bitbuffer.writeu{width}(b: buffer, offset: number, value: number)`)
-		table.insert(body, 2, `\tlocal byte, bit = offset // 8, offset % 8`)
-		table.insert(body, "end")
+		body:Insert(1, "local byte, bit = offset // 8, offset % 8")
+		body:Indent()
 
-		table.insert(output, table.concat(body, "\n"))
+		body:Insert(1, "function bitbuffer.writeu", width, "(b: buffer, offset: number, value: number)")
+		body:Push("end")
+
+		table.insert(output, tostring(body))
 	end
 end
 
