@@ -7,10 +7,10 @@ local READER_CONSTRUCTOR = [[function bitbuffer.reader(b: buffer)
 	}, Reader)
 end]]
 
-local UINT_FORMAT = `bitbuffer.readu%d(self._buffer, self._offset // 8, self._offset %% 8)`
-local INT_FORMAT = `bitbuffer.readi%d(self._buffer, self._offset // 8, self._offset %% 8)`
+local UINT_FORMAT = `bitbuffer.readu%d(self._buffer, self._offset)`
+local INT_FORMAT = `bitbuffer.readi%d(self._buffer, self._offset)`
 local FLOAT_FORMAT = `bitbuffer.readf%d(self._buffer, self._offset)`
-local ALPHA_FORMAT = "bitbuffer.readu%d(self._buffer, self._offset // 8, self._offset %% 8) / %d"
+local ALPHA_FORMAT = "bitbuffer.readu%d(self._buffer, self._offset) / %d"
 
 local numberFormats = {
 	UInt = UINT_FORMAT,
@@ -46,30 +46,36 @@ local function insertSimpleValues(output)
 
 		local variables = {}
 
-		for index, value in valueData.Values do
+		local offset = 0
+		for _, value in valueData.Values do
 			local data = valueData.Types[value]
 
 			local variableName = value:gsub("^%u", string.lower)
 			table.insert(variables, variableName)
 
 			local line
+			local currentOffset = if offset > 0 then `self._offset + {offset}` else "self._offset"
+
 			if type(data) == "string" then
-				line = `local {variableName} = self:{data}()`
+				if offset > 0 then
+					table.insert(body, `\tself:IncrementOffset({offset})`)
+					offset = 0
+				end
+				line = `self:{data}()`
 			elseif data.type == "Alpha" then
-				line = `local {variableName} = {ALPHA_FORMAT:format(data.width, 2 ^ data.width - 1)}`
+				line = `bitbuffer.readu{data.width}(self._buffer, {currentOffset}) / {2 ^ data.width - 1}`
+				offset += data.width
 			elseif numberFormats[data.type] then
-				line = `local {variableName} = {numberFormats[data.type]:format(data.width)}`
+				local prefix = data.type:sub(1, 1):lower()
+				line = `bitbuffer.read{prefix}{data.width}(self._buffer, {currentOffset})`
+				offset += data.width
 			end
 
-			table.insert(body, `\t{line}`)
-			if type(data) ~= "string" then
-				table.insert(
-					body,
-					if index ~= #valueData.Values
-						then `\tself._offset += {data.width}`
-						else `\tself:IncrementOffset({data.width})`
-				)
-			end
+			table.insert(body, `\tlocal {variableName} = {line}`)
+		end
+
+		if offset > 0 then
+			table.insert(body, `\tself:IncrementOffset({offset})`)
 		end
 
 		table.insert(body, "")
