@@ -248,7 +248,7 @@ do -- uint
 				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 2))
 			end
 		else
-			writeu32(b, byte, value)
+			writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 26))
 		end
 	end
 
@@ -263,7 +263,7 @@ do -- uint
 				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 3))
 			end
 		else
-			writeu32(b, byte, value)
+			writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 27))
 		end
 	end
 
@@ -278,7 +278,7 @@ do -- uint
 				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 4))
 			end
 		else
-			writeu32(b, byte, value)
+			writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 28))
 		end
 	end
 
@@ -293,7 +293,7 @@ do -- uint
 				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 5))
 			end
 		else
-			writeu32(b, byte, value)
+			writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 29))
 		end
 	end
 
@@ -308,7 +308,7 @@ do -- uint
 				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 6))
 			end
 		else
-			writeu32(b, byte, value)
+			writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 30))
 		end
 	end
 
@@ -323,7 +323,7 @@ do -- uint
 				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 7))
 			end
 		else
-			writeu32(b, byte, value)
+			writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 31))
 		end
 	end
 
@@ -940,7 +940,7 @@ do -- uint
 			return bit32_extract(readu32(b, byte), bit, 24)
 				+ bit32_extract(readu16(b, byte + 3), bit, 8) * 0x1000000
 		else
-			return readu32(b, byte)
+			return readu32(b, byte) % 0x100000000
 		end
 	end
 
