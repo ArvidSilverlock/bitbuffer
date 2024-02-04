@@ -170,7 +170,8 @@ local function getBitThreshold(width: number): number
 	return 8 * math.ceil((width - 1) / 8) - width
 end
 
-local function generateRead(output)
+local function generateRead()
+	local output = {}
 	for width = 1, 53 do
 		local body = Snippet.new()
 
@@ -205,9 +206,11 @@ local function generateRead(output)
 
 		table.insert(output, tostring(body))
 	end
+	return output
 end
 
-local function generateWrite(output)
+local function generateWrite()
+	local output = {}
 	for width = 1, 53 do
 		local body = Snippet.new()
 
@@ -234,6 +237,7 @@ local function generateWrite(output)
 
 		table.insert(output, tostring(body))
 	end
+	return output
 end
 
 local function finalise(output)
@@ -254,11 +258,13 @@ local function finalise(output)
 	table.insert(output, table.concat(body, "\n"))
 end
 
-local function create()
+local function create(addSection)
 	local output = {}
 	table.insert(output, LOCALISED_FUNCTIONS)
-	generateWrite(output)
-	generateRead(output)
+
+	addSection("write", generateWrite, output)
+	addSection("read", generateRead, output)
+
 	finalise(output)
 	return output
 end

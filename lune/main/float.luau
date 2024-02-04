@@ -55,7 +55,8 @@ local function tohex(value: number): string
 	return string.format("0x%x", value)
 end
 
-local function generateRead(output)
+local function generateRead()
+	local output = {}
 	for width = 32, 64, 32 do
 		local componentWidths = FLOAT_WIDTHS[width]
 		local mantissaWidth, exponentWidth = componentWidths.mantissa, componentWidths.exponent
@@ -79,9 +80,11 @@ local function generateRead(output)
 
 		table.insert(output, table.concat(body, "\n"))
 	end
+	return output
 end
 
-local function generateWrite(output)
+local function generateWrite()
+	local output = {}
 	for width = 32, 64, 32 do
 		local componentWidths = FLOAT_WIDTHS[width]
 		local mantissaWidth, exponentWidth = componentWidths.mantissa, componentWidths.exponent
@@ -107,12 +110,15 @@ local function generateWrite(output)
 
 		table.insert(output, table.concat(body, "\n"))
 	end
+	return output
 end
 
-local function create()
+local function create(addSection)
 	local output = {}
-	generateWrite(output)
-	generateRead(output)
+
+	addSection("write", generateWrite, output)
+	addSection("read", generateRead, output)
+
 	return output
 end
 
