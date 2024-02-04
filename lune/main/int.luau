@@ -84,8 +84,8 @@ local function finalise(output)
 	local body = Snippet.new()
 
 	body:Push(`local signedRead, signedWrite =`)
-	body:Push("\t{ nil :: any, ", table.concat(readLookup, ", "), "},")
-	body:Push("\t{ nil :: any, ", table.concat(writeLookup, ", "), "}")
+	body:Push("\t{ nil :: any, ", table.concat(readLookup, ", "), " },")
+	body:Push("\t{ nil :: any, ", table.concat(writeLookup, ", "), " }")
 	body:Push("")
 	body:Push([[function bitbuffer.readi(b: buffer, offset: number, width: number): number
 	return signedRead[width](b, offset)
