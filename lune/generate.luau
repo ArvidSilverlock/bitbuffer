@@ -19,25 +19,29 @@ local function addSection(name, create, outputTable)
 	table.insert(outputTable or output, `do -- {name}\n\t{str:gsub("\n\t*", "%1\t")}\nend`)
 end
 
+local function writeMain()
+	local main = require("./main/init.luau")
+	addSection("uint", main.uint)
+	addSection("int", main.int)
+	addSection("float", main.float)
+	addSection("string", main.string)
+	addSection("other", main.other)
+end
+
 if process.args[1] then
 	for _, argument in process.args do
-		local callback = require(`./{argument}/init.luau`)
 		if argument == "main" then
-			addSection("uint", callback.uint)
-			addSection("int", callback.int)
-			addSection("float", callback.float)
+			writeMain()
 		else
+			local callback = require(`./{argument}/init.luau`)
 			addSection(argument, callback)
 		end
 	end
 else
-	local main = require("./main/init.luau")
 	local baseconversion = require("./baseconversion/init.luau")
 	local editors = require("./editors/init.luau")
 
-	addSection("uint", main.uint)
-	addSection("int", main.int)
-	addSection("float", main.float)
+	writeMain()
 
 	addSection("base conversion", baseconversion)
 	addSection("editors", editors)
