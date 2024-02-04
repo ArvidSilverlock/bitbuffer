@@ -13,9 +13,8 @@ table.insert(output, [[--!native
 
 local bitbuffer = {}]])
 
-local function addSection(name, create, outputTable)
-	local section = create(addSection)
-	local str = table.concat(section, "\n\n")
+local function addSection(name, section, outputTable)
+	local str = if type(section) == "function" then table.concat(section(addSection), "\n\n") else tostring(section)
 	table.insert(outputTable or output, `do -- {name}\n\t{str:gsub("\n\t*", "%1\t")}\nend`)
 end
 

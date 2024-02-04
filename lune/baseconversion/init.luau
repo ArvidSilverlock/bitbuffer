@@ -1,16 +1,15 @@
 local fs = require("@lune/fs")
 
-local function insertFile(output, fileName: string)
-	local str = fs.readFile(`lune/baseconversion/{fileName}.luau`):gsub("\n$", "")
-	table.insert(output, str)
+local function get(fileName: string)
+	return (fs.readFile(`lune/baseconversion/{fileName}.luau`):gsub("\n$", ""))
 end
 
-local function create()
+local function create(addSection)
 	local output = {}
-	insertFile(output, "constants")
-	insertFile(output, "binary")
-	insertFile(output, "hexadecimal")
-	insertFile(output, "base64")
+	table.insert(output, get("constants"))
+	addSection("binary", get("binary"), output)
+	addSection("hexadecimal", get("hexadecimal"), output)
+	addSection("base64", get("base64"), output)
 	return output
 end
 

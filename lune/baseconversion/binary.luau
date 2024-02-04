@@ -1,6 +1,9 @@
+local getLookup = baseLookupGenerator(CHARACTER_TO_BINARY)
+getLookup("_")
+
 function bitbuffer.tobinary(b: buffer, separator: string?): string
 	local separatorLength = if separator then #separator else 1
-	local lookupTable = getBinaryLookup(separator or "_")
+	local lookupTable = getLookup(separator or "_")
 
 	local str = buffer.tostring(b):gsub(".", lookupTable)
 	return str:sub(1, -1 - separatorLength)

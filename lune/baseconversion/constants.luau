@@ -47,10 +47,3 @@ local function baseLookupGenerator(default: { [string]: string })
 		return lookupTable
 	end
 end
-
-local getBinaryLookup = baseLookupGenerator(CHARACTER_TO_BINARY)
-local getHexadecimalLookup = baseLookupGenerator(CHARACTER_TO_HEXADECIMAL)
-
--- Pre-create default separator lookups
-getBinaryLookup("_")
-getHexadecimalLookup("_")

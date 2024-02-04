@@ -1,6 +1,9 @@
+local getLookup = baseLookupGenerator(CHARACTER_TO_HEXADECIMAL)
+getLookup("_")
+
 function bitbuffer.tohexadecimal(b: buffer, separator: string?): string
 	local separatorLength = if separator then #separator else 1
-	local lookupTable = getHexadecimalLookup(separator or "_")
+	local lookupTable = getLookup(separator or "_")
 
 	local str = buffer.tostring(b):gsub(".", lookupTable)
 	return str:sub(1, -1 - separatorLength)
