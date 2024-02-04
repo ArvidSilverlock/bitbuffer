@@ -1824,12 +1824,11 @@ do -- float
 end
 
 do -- string
-	function bitbuffer.readstring(b: buffer, offset: number, count: number?): string
+	function bitbuffer.readstring(b: buffer, offset: number, count: number): string
 		if offset % 8 == 0 then
-			return buffer.readtring(b, offset // 8)
+			return buffer.readstring(b, offset // 8, count)
 		else
 			local output = table.create((count + 5) // 6)
-
 			local chunkMax = count // 6 * 6
 
 			for stringIndex = 1, chunkMax, 6 do
@@ -1905,6 +1904,9 @@ do -- other
 	end
 
 	function bitbuffer.copy(target: buffer, targetOffset: number, source: buffer, sourceOffset: number?, count: number?)
+		local sourceOffset = sourceOffset or 0
+		local count = count or buffer.len(source) * 8 - sourceOffset
+
 		if targetOffset % 8 == 0 and sourceOffset % 8 == 0 and count % 8 == 0 then
 			buffer.copy(target, targetOffset, source, sourceOffset, count)
 		else
@@ -1945,10 +1947,10 @@ do -- baseconversion
 		BASE64_TO_NUMBER[buffer.readu8(NUMBER_TO_BASE64, index)] = index
 	end
 
-	local function baseLookupGenerator(default)
+	local function baseLookupGenerator(default: { [string]: string })
 		local cache = { [""] = default }
 
-		return function(separator: string)
+		return function(separator: string): { [string]: string }
 			if cache[separator] then
 				return cache[separator]
 			end
@@ -2064,7 +2066,7 @@ do -- baseconversion
 
 	function bitbuffer.frombase64(str: string)
 		local paddingStart, paddingEnd = string.find(str, "=*$")
-		local padding = paddingEnd - paddingStart + 1
+		local padding = (paddingEnd :: any) - (paddingStart :: any) + 1
 
 		local codeCount = #str - padding
 		local bitCount = (codeCount * 6) - (padding * 2)

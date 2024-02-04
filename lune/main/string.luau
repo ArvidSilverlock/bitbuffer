@@ -18,12 +18,11 @@ local READ_STRING = [[function bitbuffer.writestring(b: buffer, offset: number, 
 	end
 end]]
 
-local WRITE_STRING = [[function bitbuffer.readstring(b: buffer, offset: number, count: number?): string
+local WRITE_STRING = [[function bitbuffer.readstring(b: buffer, offset: number, count: number): string
 	if offset % 8 == 0 then
-		return buffer.readtring(b, offset // 8)
+		return buffer.readstring(b, offset // 8, count)
 	else
 		local output = table.create((count + 5) // 6)
-
 		local chunkMax = count // 6 * 6
 
 		for stringIndex = 1, chunkMax, 6 do

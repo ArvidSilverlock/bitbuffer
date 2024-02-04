@@ -29,10 +29,10 @@ for index = 0, 63 do
 	BASE64_TO_NUMBER[buffer.readu8(NUMBER_TO_BASE64, index)] = index
 end
 
-local function baseLookupGenerator(default)
+local function baseLookupGenerator(default: { [string]: string })
 	local cache = { [""] = default }
 
-	return function(separator: string)
+	return function(separator: string): { [string]: string }
 		if cache[separator] then
 			return cache[separator]
 		end

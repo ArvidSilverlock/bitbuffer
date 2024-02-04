@@ -43,7 +43,7 @@ end
 
 function bitbuffer.frombase64(str: string)
 	local paddingStart, paddingEnd = string.find(str, "=*$")
-	local padding = paddingEnd - paddingStart + 1
+	local padding = (paddingEnd :: any) - (paddingStart :: any) + 1
 
 	local codeCount = #str - padding
 	local bitCount = (codeCount * 6) - (padding * 2)

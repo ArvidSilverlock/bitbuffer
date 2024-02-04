@@ -36,6 +36,9 @@ end]]
 
 -- stylua: ignore
 local BUFFER_COPY = [[function bitbuffer.copy(target: buffer, targetOffset: number, source: buffer, sourceOffset: number?, count: number?)
+	local sourceOffset = sourceOffset or 0
+	local count = count or buffer.len(source) * 8 - sourceOffset
+
 	if targetOffset % 8 == 0 and sourceOffset % 8 == 0 and count % 8 == 0 then
 		buffer.copy(target, targetOffset, source, sourceOffset, count)
 	else
