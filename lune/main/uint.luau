@@ -8,26 +8,6 @@ function bitbuffer.writeu(b: buffer, offset: number, value: number, width: numbe
 	unsignedWrite[width](b, offset, value)
 end]]
 
-local LOCALISED_FUNCTIONS = [[local readu8 = buffer.readu8
-local readu16 = buffer.readu16
-local readu32 = buffer.readu32
-
-local writeu8 = buffer.writeu8
-local writeu16 = buffer.writeu16
-local writeu32 = buffer.writeu32
-
-local function readu24(b: buffer, offset: number)
-	return readu8(b, offset) + readu16(b, offset + 1) * 256
-end
-
-local function writeu24(b: buffer, offset: number, value: number)
-	writeu8(b, offset, value)
-	writeu16(b, offset + 1, value // 256)
-end
-
-local bit32_replace = bit32.replace
-local bit32_extract = bit32.extract]]
-
 local readCalls = {}
 local writeCalls = {}
 
