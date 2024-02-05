@@ -5,7 +5,7 @@ end
 
 function bitbuffer.tobase64(b: buffer): string
 	local bufferLength = buffer.len(b)
-	local bitCount = buffer.len(b) * 8
+	local bitCount = bufferLength * 8
 
 	local paddingLength = 2 - (bufferLength - 1) % (2 + 1)
 	local characterCount = math.ceil(bitCount / 6)
@@ -21,20 +21,20 @@ function bitbuffer.tobase64(b: buffer): string
 		local byteWidth = (bit + 13) // 8
 		bit = (byteWidth * 8 - 6) - bit
 
-		local focus = if byteWidth == 1 then buffer.readu8(b, byte) else flipu16(buffer.readu16(b, byte))
-		local code = bit32.extract(focus, bit, 6)
+		local focus = if byteWidth == 1 then readu8(b, byte) else flipu16(readu16(b, byte))
+		local code = bit32_extract(focus, bit, 6)
 
-		buffer.writeu8(output, outputIndex, buffer.readu8(NUMBER_TO_BASE64, code))
+		writeu8(output, outputIndex, readu8(NUMBER_TO_BASE64, code))
 		outputIndex += 1
 	end
 
 	if overhang > 0 then
 		local byte, bit = endOffset // 8, (8 - overhang) - endOffset % 8
 
-		local focus = buffer.readu8(b, byte)
-		local code = bit32.lshift(bit32.extract(focus, bit, overhang), 6 - overhang)
+		local focus = readu8(b, byte)
+		local code = bit32.lshift(bit32_extract(focus, bit, overhang), 6 - overhang)
 
-		buffer.writeu8(output, outputIndex, buffer.readu8(NUMBER_TO_BASE64, code))
+		writeu8(output, outputIndex, readu8(NUMBER_TO_BASE64, code))
 	end
 
 	buffer.fill(output, characterCount, 61, paddingLength) -- '='
@@ -58,9 +58,9 @@ function bitbuffer.frombase64(str: string)
 
 		local code = BASE64_TO_NUMBER[str:byte(inputIndex)]
 		if byteWidth == 2 then
-			buffer.writeu16(output, byte, flipu16(bit32.replace(flipu16(buffer.readu16(output, byte)), code, bit, 6)))
+			writeu16(output, byte, flipu16(bit32_replace(flipu16(readu16(output, byte)), code, bit, 6)))
 		else
-			buffer.writeu8(output, byte, bit32.replace(buffer.readu8(output, byte), code, bit, 6))
+			writeu8(output, byte, bit32_replace(readu8(output, byte), code, bit, 6))
 		end
 
 		outputOffset += 6
