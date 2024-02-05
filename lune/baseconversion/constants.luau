@@ -10,7 +10,7 @@ local HEXADECIMAL_TO_NUMBER = {}
 for index = 0, 255 do
 	local binary = table.create(8)
 	for field = 0, 7 do
-		binary[8 - field] = bit32.extract(index, field, 1)
+		binary[field + 1] = bit32.extract(index, field, 1)
 	end
 
 	local binaryString = table.concat(binary)
