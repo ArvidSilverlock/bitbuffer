@@ -1,3 +1,5 @@
+local Snippet = require("../Snippet.luau")
+
 local READ_TEMPALTE = [[if offset % 8 == 0 then
 	return buffer.readf<WIDTH>(b, offset // 8)
 end
@@ -47,8 +49,9 @@ bitbuffer.writeu<EXPONENT_WIDTH>(b, offset + <MANTISSA_WIDTH>, exponent)
 bitbuffer.writeu1(b, offset + <MANTISSA_EXPONENT_WIDTH>, sign)]]
 
 local FLOAT_WIDTHS = {
-	[32] = { mantissa = 23, exponent = 8 },
-	[64] = { mantissa = 52, exponent = 11 },
+	[16] = { mantissa = 10, exponent = 5, name = "Half-precision IEEE 754 number" },
+	[32] = { mantissa = 23, exponent = 8, name = "Single-precision IEEE 754 number" },
+	[64] = { mantissa = 52, exponent = 11, name = "Double-precision IEEE 754 number" },
 }
 
 local function tohex(value: number): string
@@ -57,11 +60,11 @@ end
 
 local function generateRead()
 	local output = {}
-	for width = 32, 64, 32 do
+	for _, width in { 16, 32, 64 } do
 		local componentWidths = FLOAT_WIDTHS[width]
 		local mantissaWidth, exponentWidth = componentWidths.mantissa, componentWidths.exponent
 
-		local body = {}
+		local body = Snippet.new()
 
 		local content = READ_TEMPALTE:gsub("<MANTISSA_WIDTH>", mantissaWidth)
 			:gsub("<EXPONENT_WIDTH>", exponentWidth)
@@ -72,24 +75,23 @@ local function generateRead()
 			:gsub("<NORMAL>", tohex(2 ^ (mantissaWidth + 1)))
 			:gsub("<WIDTH>", width)
 
-		table.insert(body, `function bitbuffer.readf{width}(b: buffer, offset: number): number`)
-		for _, line in content:split("\n") do
-			table.insert(body, `\t{line}`)
-		end
-		table.insert(body, "end")
+		body:Push("--- Reads a ", componentWidths.name)
+		body:Push("function bitbuffer.readf", width, "(b: buffer, offset: number): number")
+		body:Push(content):Indent()
+		body:Push("end")
 
-		table.insert(output, table.concat(body, "\n"))
+		table.insert(output, tostring(body))
 	end
 	return output
 end
 
 local function generateWrite()
 	local output = {}
-	for width = 32, 64, 32 do
+	for _, width in { 16, 32, 64 } do
 		local componentWidths = FLOAT_WIDTHS[width]
 		local mantissaWidth, exponentWidth = componentWidths.mantissa, componentWidths.exponent
 
-		local body = {}
+		local body = Snippet.new()
 
 		local content = WRITE_TEMPLATE
 			:gsub("<MAX_VALUE>", math.ldexp((2 - 2 ^ -mantissaWidth), (2 ^ (exponentWidth - 1) - 1)))
@@ -102,13 +104,12 @@ local function generateWrite()
 			:gsub("<NORMAL>", tohex(2 ^ (mantissaWidth + 1)))
 			:gsub("<WIDTH>", width)
 
-		table.insert(body, `function bitbuffer.writef{width}(b: buffer, offset: number, value: number)`)
-		for _, line in content:split("\n") do
-			table.insert(body, `\t{line}`)
-		end
-		table.insert(body, "end")
+		body:Push("--- Writes a ", componentWidths.name)
+		body:Push("function bitbuffer.writef", width, "(b: buffer, offset: number, value: number)")
+		body:Push(content):Indent()
+		body:Push("end")
 
-		table.insert(output, table.concat(body, "\n"))
+		table.insert(output, tostring(body))
 	end
 	return output
 end
