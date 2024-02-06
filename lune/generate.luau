@@ -9,7 +9,7 @@ table.insert(output, [[--!native
 --!strict
 
 -- stylua: ignore start
----@diagnostic disable: undefined-type
+-- @diagnostic disable: undefined-type
 
 local readu8 = buffer.readu8
 local readu16 = buffer.readu16
@@ -31,6 +31,7 @@ end
 local bit32_replace = bit32.replace
 local bit32_extract = bit32.extract
 
+--- @class bitbuffer
 local bitbuffer = {}]])
 
 local function addSection(name, section, outputTable)
@@ -68,5 +69,5 @@ end
 
 table.insert(output, "return bitbuffer")
 
-local source = table.concat(output, "\n\n"):gsub("\n%s+\n", "\n\n")
-fs.writeFile("lune/output.luau", source)
+local source = table.concat(output, "\n\n"):gsub("\n%s+\n", "\n\n"):gsub("//", "/")
+fs.writeFile("./src/init.luau", source)

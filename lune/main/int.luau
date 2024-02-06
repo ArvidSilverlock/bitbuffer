@@ -38,7 +38,8 @@ local function generateRead()
 		end
 
 		body:Indent()
-		body:Insert(1, "function bitbuffer.readi", width, "(b: buffer, offset: number): number")
+		body:Insert(1, "--- Reads a ", width, " bit signed integer [", -a, ", ", a - 1, "]")
+		body:Insert(2, "function bitbuffer.readi", width, "(b: buffer, offset: number): number")
 		body:Push("end")
 
 		table.insert(output, tostring(body))
@@ -66,7 +67,8 @@ local function generateWrite()
 		end
 
 		body:Indent()
-		body:Insert(1, "function bitbuffer.writei", width, "(b: buffer, offset: number, value: number)")
+		body:Insert(1, "--- Writes a ", width, " bit signed integer [", -a, ", ", a - 1, "]")
+		body:Insert(2, "function bitbuffer.writei", width, "(b: buffer, offset: number, value: number)")
 		body:Push("end")
 
 		table.insert(output, tostring(body))

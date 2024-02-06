@@ -1,6 +1,17 @@
 local getLookup = baseLookupGenerator(CHARACTER_TO_HEXADECIMAL)
 getLookup("_")
 
+--[=[
+	@function tobinary
+	@within bitbuffer
+
+	Returns the buffer data as a hexadecimal string, mainly useful for debugging.
+
+	@param b buffer
+	@param separator string -- the separator characters to use between bytes
+
+	@return string
+]=]
 function bitbuffer.tohexadecimal(b: buffer, separator: string?): string
 	local separatorLength = if separator then #separator else 1
 	local lookupTable = getLookup(separator or "_")
@@ -9,6 +20,17 @@ function bitbuffer.tohexadecimal(b: buffer, separator: string?): string
 	return str:sub(1, -1 - separatorLength)
 end
 
+--[=[
+	@function fromhexadecimal
+	@within bitbuffer
+
+	Creates a buffer initialized to the contents of the hexadecimal string.
+
+	@param str string
+	@param separator string -- the separator characters to use between bytes
+
+	@return buffer
+]=]
 function bitbuffer.fromhexadecimal(str: string, separator: string?)
 	local separatorLength = if separator then #separator else 0
 

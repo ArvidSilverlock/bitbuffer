@@ -1,6 +1,17 @@
 local getLookup = baseLookupGenerator(CHARACTER_TO_BINARY)
 getLookup("_")
 
+--[=[
+	@function tobinary
+	@within bitbuffer
+
+	Returns the buffer data as a 'binary' string, mainly useful for debugging.
+
+	@param b buffer
+	@param separator string -- the separator characters to use between bytes
+	
+	@return string
+]=]
 function bitbuffer.tobinary(b: buffer, separator: string?): string
 	local separatorLength = if separator then #separator else 1
 	local lookupTable = getLookup(separator or "_")
@@ -9,6 +20,17 @@ function bitbuffer.tobinary(b: buffer, separator: string?): string
 	return str:sub(1, -1 - separatorLength)
 end
 
+--[=[
+	@function frombinary
+	@within bitbuffer
+
+	Creates a buffer initialized to the contents of the 'binary' string.
+
+	@param str string
+	@param separator string -- the separator characters to use between bytes
+
+	@return buffer
+]=]
 function bitbuffer.frombinary(str: string, separator: string?)
 	local separatorLength = if separator then #separator else 0
 

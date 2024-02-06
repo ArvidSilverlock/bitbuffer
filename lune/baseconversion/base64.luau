@@ -3,6 +3,15 @@ local function flipu16(value: number): number
 		+ (value % 256 * 256) -- 00FF -> FF00
 end
 
+--[=[
+	@function tobase64
+	@within bitbuffer
+
+	Returns the buffer data as a base64 encoded string.
+
+	@param b buffer
+	@return string
+]=]
 function bitbuffer.tobase64(b: buffer): string
 	local bufferLength = buffer.len(b)
 	local bitCount = bufferLength * 8
@@ -41,6 +50,15 @@ function bitbuffer.tobase64(b: buffer): string
 	return buffer.tostring(output)
 end
 
+--[=[
+	@function frombase64
+	@within bitbuffer
+
+	Creates a buffer initialized to the contents of the base64 encoded string.
+
+	@param str string
+	@return buffer
+]=]
 function bitbuffer.frombase64(str: string)
 	local paddingStart, paddingEnd = string.find(str, "=*$")
 	local padding = (paddingEnd :: any) - (paddingStart :: any) + 1

@@ -1,17 +1,22 @@
 local CONSTANTS =
 	[[local POWERS_OF_TWO = { [0] = 1, [1] = 2, [2] = 4, [3] = 8, [4] = 16, [5] = 32, [6] = 64, [7] = 128, [8] = 256 }]]
 
-local BUFFER_FILL = [[--[=[
+--[[
 	There are three cases for filling.
 	- The first case is offset and count are byte aligned, meaning we can directly
 	  use `buffer.fill`.
-	- The second dcase is when we can acheive the action in one write call (i.e.,
+	- The second case is when we can acheive the action in one write call (i.e.,
 	  we only ever need to write `00000000` or `11111111`, and the width is <= 53,
 	  the maximum write width, either this or the count is less than eight, in that
 	  case there is only ever up to one occurance of the value being written, so there
 	  is no need to do excess calculations)
 	- The third case will write the first `x` bits till it's byte aligned, then use
 	  `buffer.fill` to write the main bulk, then write the last `n` unaligned bits.
+]]
+local BUFFER_FILL = [[--[=[
+	Sets the ‘count’ bytes in the buffer starting at the specified ‘offset’ to the ‘value’.
+
+	If ‘count’ is ‘nil’ or is omitted, all bytes from the specified offset until the end of the buffer are set.
 ]=]
 function bitbuffer.fill(b: buffer, offset: number, value: number, count: number?)
 	local count: number = count or buffer.len(b) * 8 - offset
@@ -47,7 +52,7 @@ function bitbuffer.fill(b: buffer, offset: number, value: number, count: number?
 end]]
 
 -- stylua: ignore
-local BUFFER_COPY = [[--[=[
+--[[
 	There are three cases for copying.
 	- The first case is all the values are byte aligned, meaning we can
 	  directly use `buffer.copy`.
@@ -58,6 +63,15 @@ local BUFFER_COPY = [[--[=[
 	  at the same time, so we align the offset target offset by writing the first
 	  `n` bits, then write in chunks of 3 bytes at once, then write the remaining
 	  unaligned bits.
+]]
+local BUFFER_COPY = [[--[=[
+	Copy ‘count’ bytes from ‘source’ starting at offset ‘sourceOffset’ into the ‘target’ at ‘targetOffset’.
+
+	Unlike `buffer.copy`, it is not possible for ‘source’ and ‘target’ to be the same and then copy an overlapping region. This may be added in future.
+
+	If ‘sourceOffset’ is nil or is omitted, it defaults to 0.
+
+	If ‘count’ is ‘nil’ or is omitted, the whole ‘source’ data starting from ‘sourceOffset’ is copied.
 ]=]
 function bitbuffer.copy(target: buffer, targetOffset: number, source: buffer, sourceOffset: number?, count: number?)
 	local sourceOffset = sourceOffset or 0

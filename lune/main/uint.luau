@@ -181,7 +181,8 @@ local function generateRead()
 		body:Insert(1, "local byte, bit = offset // 8, offset % 8")
 		body:Indent()
 
-		body:Insert(1, "function bitbuffer.readu", width, "(b: buffer, offset: number): number")
+		body:Insert(1, "--- Writes a ", width, " bit unsigned integer [0, ", 2 ^ width - 1, "]")
+		body:Insert(2, "function bitbuffer.readu", width, "(b: buffer, offset: number): number")
 		body:Push("end")
 
 		table.insert(output, tostring(body))
@@ -212,7 +213,8 @@ local function generateWrite()
 		body:Insert(1, "local byte, bit = offset // 8, offset % 8")
 		body:Indent()
 
-		body:Insert(1, "function bitbuffer.writeu", width, "(b: buffer, offset: number, value: number)")
+		body:Insert(1, "--- Writes a ", width, " bit unsigned integer [0, ", 2 ^ width - 1, "]")
+		body:Insert(2, "function bitbuffer.writeu", width, "(b: buffer, offset: number, value: number)")
 		body:Push("end")
 
 		table.insert(output, tostring(body))

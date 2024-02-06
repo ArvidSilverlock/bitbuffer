@@ -1,4 +1,5 @@
-local READ_STRING = [[function bitbuffer.writestring(b: buffer, offset: number, value: string, count: number?)
+local READ_STRING = [[--- Used to read a string of length ‘count’ from the buffer at specified offset.
+function bitbuffer.writestring(b: buffer, offset: number, value: string, count: number?)
 	if offset % 8 == 0 then
 		buffer.writestring(b, offset // 8, value, count)
 	else
@@ -18,7 +19,14 @@ local READ_STRING = [[function bitbuffer.writestring(b: buffer, offset: number, 
 	end
 end]]
 
-local WRITE_STRING = [[function bitbuffer.readstring(b: buffer, offset: number, count: number): string
+local WRITE_STRING = [[--[=[
+	Used to write data from a string into the buffer at a specified offset.
+
+	If an optional ‘count’ is specified, only ‘count’ bytes are taken from the string.
+
+	Count cannot be larger than the string length.
+]=]
+function bitbuffer.readstring(b: buffer, offset: number, count: number): string
 	if offset % 8 == 0 then
 		return buffer.readstring(b, offset // 8, count)
 	else
