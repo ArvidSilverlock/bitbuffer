@@ -11,3 +11,10 @@
 # Roblox Studio lock files
 /*.rbxlx.lock
 /*.rbxl.lock
+
+# generate.luau output file
+/lune/output.luau
+/lune/bytecode.txt
+
+# ignore DS_Store (mac specific)
+.DS_Store

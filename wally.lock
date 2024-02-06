@@ -4,10 +4,5 @@ registry = "test"
 
 [[package]]
 name = "arvidsilverlock/bitbuffer"
-version = "0.1.0"
-dependencies = [["testez", "roblox/testez@0.4.1"]]
-
-[[package]]
-name = "roblox/testez"
-version = "0.4.1"
+version = "0.0.1"
 dependencies = []
