@@ -19,7 +19,7 @@ end
 
 local function writeu24(b: buffer, offset: number, value: number)
 	writeu8(b, offset, value)
-	writeu16(b, offset + 1, value / 256)
+	writeu16(b, offset + 1, value // 256)
 end
 
 local bit32_replace = bit32.replace
@@ -32,13 +32,13 @@ do -- uint
 	do -- write
 		--- Writes a 1 bit unsigned integer [0, 1]
 		function bitbuffer.writeu1(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			writeu8(b, byte, bit32_replace(readu8(b, byte), value, bit, 1))
 		end
 
 		--- Writes a 2 bit unsigned integer [0, 3]
 		function bitbuffer.writeu2(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 6 then
 				writeu16(b, byte, bit32_replace(readu16(b, byte), value, bit, 2))
 			else
@@ -48,7 +48,7 @@ do -- uint
 
 		--- Writes a 3 bit unsigned integer [0, 7]
 		function bitbuffer.writeu3(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 5 then
 				writeu16(b, byte, bit32_replace(readu16(b, byte), value, bit, 3))
 			else
@@ -58,7 +58,7 @@ do -- uint
 
 		--- Writes a 4 bit unsigned integer [0, 15]
 		function bitbuffer.writeu4(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 4 then
 				writeu16(b, byte, bit32_replace(readu16(b, byte), value, bit, 4))
 			else
@@ -68,7 +68,7 @@ do -- uint
 
 		--- Writes a 5 bit unsigned integer [0, 31]
 		function bitbuffer.writeu5(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 3 then
 				writeu16(b, byte, bit32_replace(readu16(b, byte), value, bit, 5))
 			else
@@ -78,7 +78,7 @@ do -- uint
 
 		--- Writes a 6 bit unsigned integer [0, 63]
 		function bitbuffer.writeu6(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 2 then
 				writeu16(b, byte, bit32_replace(readu16(b, byte), value, bit, 6))
 			else
@@ -88,7 +88,7 @@ do -- uint
 
 		--- Writes a 7 bit unsigned integer [0, 127]
 		function bitbuffer.writeu7(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 1 then
 				writeu16(b, byte, bit32_replace(readu16(b, byte), value, bit, 7))
 			else
@@ -98,7 +98,7 @@ do -- uint
 
 		--- Writes a 8 bit unsigned integer [0, 255]
 		function bitbuffer.writeu8(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu16(b, byte, bit32_replace(readu16(b, byte), value, bit, 8))
 			else
@@ -108,13 +108,13 @@ do -- uint
 
 		--- Writes a 9 bit unsigned integer [0, 511]
 		function bitbuffer.writeu9(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			writeu16(b, byte, bit32_replace(readu16(b, byte), value, bit, 9))
 		end
 
 		--- Writes a 10 bit unsigned integer [0, 1023]
 		function bitbuffer.writeu10(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 6 then
 				writeu24(b, byte, bit32_replace(readu24(b, byte), value, bit, 10))
 			else
@@ -124,7 +124,7 @@ do -- uint
 
 		--- Writes a 11 bit unsigned integer [0, 2047]
 		function bitbuffer.writeu11(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 5 then
 				writeu24(b, byte, bit32_replace(readu24(b, byte), value, bit, 11))
 			else
@@ -134,7 +134,7 @@ do -- uint
 
 		--- Writes a 12 bit unsigned integer [0, 4095]
 		function bitbuffer.writeu12(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 4 then
 				writeu24(b, byte, bit32_replace(readu24(b, byte), value, bit, 12))
 			else
@@ -144,7 +144,7 @@ do -- uint
 
 		--- Writes a 13 bit unsigned integer [0, 8191]
 		function bitbuffer.writeu13(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 3 then
 				writeu24(b, byte, bit32_replace(readu24(b, byte), value, bit, 13))
 			else
@@ -154,7 +154,7 @@ do -- uint
 
 		--- Writes a 14 bit unsigned integer [0, 16383]
 		function bitbuffer.writeu14(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 2 then
 				writeu24(b, byte, bit32_replace(readu24(b, byte), value, bit, 14))
 			else
@@ -164,7 +164,7 @@ do -- uint
 
 		--- Writes a 15 bit unsigned integer [0, 32767]
 		function bitbuffer.writeu15(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 1 then
 				writeu24(b, byte, bit32_replace(readu24(b, byte), value, bit, 15))
 			else
@@ -174,7 +174,7 @@ do -- uint
 
 		--- Writes a 16 bit unsigned integer [0, 65535]
 		function bitbuffer.writeu16(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu24(b, byte, bit32_replace(readu24(b, byte), value, bit, 16))
 			else
@@ -184,13 +184,13 @@ do -- uint
 
 		--- Writes a 17 bit unsigned integer [0, 131071]
 		function bitbuffer.writeu17(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			writeu24(b, byte, bit32_replace(readu24(b, byte), value, bit, 17))
 		end
 
 		--- Writes a 18 bit unsigned integer [0, 262143]
 		function bitbuffer.writeu18(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 6 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 18))
 			else
@@ -200,7 +200,7 @@ do -- uint
 
 		--- Writes a 19 bit unsigned integer [0, 524287]
 		function bitbuffer.writeu19(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 5 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 19))
 			else
@@ -210,7 +210,7 @@ do -- uint
 
 		--- Writes a 20 bit unsigned integer [0, 1048575]
 		function bitbuffer.writeu20(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 4 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 20))
 			else
@@ -220,7 +220,7 @@ do -- uint
 
 		--- Writes a 21 bit unsigned integer [0, 2097151]
 		function bitbuffer.writeu21(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 3 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 21))
 			else
@@ -230,7 +230,7 @@ do -- uint
 
 		--- Writes a 22 bit unsigned integer [0, 4194303]
 		function bitbuffer.writeu22(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 2 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 22))
 			else
@@ -240,7 +240,7 @@ do -- uint
 
 		--- Writes a 23 bit unsigned integer [0, 8388607]
 		function bitbuffer.writeu23(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 1 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 23))
 			else
@@ -250,7 +250,7 @@ do -- uint
 
 		--- Writes a 24 bit unsigned integer [0, 16777215]
 		function bitbuffer.writeu24(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 			else
@@ -260,20 +260,20 @@ do -- uint
 
 		--- Writes a 25 bit unsigned integer [0, 33554431]
 		function bitbuffer.writeu25(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 25))
 		end
 
 		--- Writes a 26 bit unsigned integer [0, 67108863]
 		function bitbuffer.writeu26(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 6 then
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 2))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 2))
 				else
-					writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000, bit, 2))
+					writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 2))
 				end
 			else
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 26))
@@ -282,14 +282,14 @@ do -- uint
 
 		--- Writes a 27 bit unsigned integer [0, 134217727]
 		function bitbuffer.writeu27(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 5 then
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 3))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 3))
 				else
-					writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000, bit, 3))
+					writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 3))
 				end
 			else
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 27))
@@ -298,14 +298,14 @@ do -- uint
 
 		--- Writes a 28 bit unsigned integer [0, 268435455]
 		function bitbuffer.writeu28(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 4 then
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 4))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 4))
 				else
-					writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000, bit, 4))
+					writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 4))
 				end
 			else
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 28))
@@ -314,14 +314,14 @@ do -- uint
 
 		--- Writes a 29 bit unsigned integer [0, 536870911]
 		function bitbuffer.writeu29(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 3 then
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 5))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 5))
 				else
-					writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000, bit, 5))
+					writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 5))
 				end
 			else
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 29))
@@ -330,14 +330,14 @@ do -- uint
 
 		--- Writes a 30 bit unsigned integer [0, 1073741823]
 		function bitbuffer.writeu30(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 2 then
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 6))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 6))
 				else
-					writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000, bit, 6))
+					writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 6))
 				end
 			else
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 30))
@@ -346,14 +346,14 @@ do -- uint
 
 		--- Writes a 31 bit unsigned integer [0, 2147483647]
 		function bitbuffer.writeu31(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 1 then
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 7))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 7))
 				else
-					writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000, bit, 7))
+					writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000, bit, 7))
 				end
 			else
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, 0, 31))
@@ -362,11 +362,11 @@ do -- uint
 
 		--- Writes a 32 bit unsigned integer [0, 4294967295]
 		function bitbuffer.writeu32(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
-				writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 8))
+				writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 8))
 			else
 				writeu32(b, byte, value)
 			end
@@ -374,367 +374,367 @@ do -- uint
 
 		--- Writes a 33 bit unsigned integer [0, 8589934591]
 		function bitbuffer.writeu33(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
-				writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 9))
+				writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 9))
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x100000000, 0, 1))
+				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x100000000, 0, 1))
 			end
 		end
 
 		--- Writes a 34 bit unsigned integer [0, 17179869183]
 		function bitbuffer.writeu34(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 6 then
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 10))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 10))
 				else
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 10))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 10))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x100000000, 0, 2))
+				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x100000000, 0, 2))
 			end
 		end
 
 		--- Writes a 35 bit unsigned integer [0, 34359738367]
 		function bitbuffer.writeu35(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 5 then
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 11))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 11))
 				else
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 11))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 11))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x100000000, 0, 3))
+				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x100000000, 0, 3))
 			end
 		end
 
 		--- Writes a 36 bit unsigned integer [0, 68719476735]
 		function bitbuffer.writeu36(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 4 then
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 12))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 12))
 				else
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 12))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 12))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x100000000, 0, 4))
+				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x100000000, 0, 4))
 			end
 		end
 
 		--- Writes a 37 bit unsigned integer [0, 137438953471]
 		function bitbuffer.writeu37(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 3 then
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 13))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 13))
 				else
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 13))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 13))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x100000000, 0, 5))
+				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x100000000, 0, 5))
 			end
 		end
 
 		--- Writes a 38 bit unsigned integer [0, 274877906943]
 		function bitbuffer.writeu38(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 2 then
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 14))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 14))
 				else
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 14))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 14))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x100000000, 0, 6))
+				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x100000000, 0, 6))
 			end
 		end
 
 		--- Writes a 39 bit unsigned integer [0, 549755813887]
 		function bitbuffer.writeu39(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 1 then
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 15))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 15))
 				else
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000, bit, 15))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000, bit, 15))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x100000000, 0, 7))
+				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x100000000, 0, 7))
 			end
 		end
 
 		--- Writes a 40 bit unsigned integer [0, 1099511627775]
 		function bitbuffer.writeu40(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
-				writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 16))
+				writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 16))
 			else
 				writeu32(b, byte, value)
-				writeu8(b, byte + 4, value / 0x100000000)
+				writeu8(b, byte + 4, value // 0x100000000)
 			end
 		end
 
 		--- Writes a 41 bit unsigned integer [0, 2199023255551]
 		function bitbuffer.writeu41(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
-				writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 17))
+				writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 17))
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x100000000, 0, 9))
+				writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x100000000, 0, 9))
 			end
 		end
 
 		--- Writes a 42 bit unsigned integer [0, 4398046511103]
 		function bitbuffer.writeu42(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 6 then
-					writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 18))
+					writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 18))
 				else
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 18))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 18))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x100000000, 0, 10))
+				writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x100000000, 0, 10))
 			end
 		end
 
 		--- Writes a 43 bit unsigned integer [0, 8796093022207]
 		function bitbuffer.writeu43(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 5 then
-					writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 19))
+					writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 19))
 				else
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 19))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 19))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x100000000, 0, 11))
+				writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x100000000, 0, 11))
 			end
 		end
 
 		--- Writes a 44 bit unsigned integer [0, 17592186044415]
 		function bitbuffer.writeu44(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 4 then
-					writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 20))
+					writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 20))
 				else
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 20))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 20))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x100000000, 0, 12))
+				writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x100000000, 0, 12))
 			end
 		end
 
 		--- Writes a 45 bit unsigned integer [0, 35184372088831]
 		function bitbuffer.writeu45(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 3 then
-					writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 21))
+					writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 21))
 				else
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 21))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 21))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x100000000, 0, 13))
+				writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x100000000, 0, 13))
 			end
 		end
 
 		--- Writes a 46 bit unsigned integer [0, 70368744177663]
 		function bitbuffer.writeu46(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 2 then
-					writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 22))
+					writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 22))
 				else
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 22))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 22))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x100000000, 0, 14))
+				writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x100000000, 0, 14))
 			end
 		end
 
 		--- Writes a 47 bit unsigned integer [0, 140737488355327]
 		function bitbuffer.writeu47(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
 				if bit > 1 then
-					writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 23))
+					writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 23))
 				else
-					writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x1000000, bit, 23))
+					writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x1000000, bit, 23))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x100000000, 0, 15))
+				writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x100000000, 0, 15))
 			end
 		end
 
 		--- Writes a 48 bit unsigned integer [0, 281474976710655]
 		function bitbuffer.writeu48(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
-				writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 24))
+				writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 24))
 			else
 				writeu32(b, byte, value)
-				writeu16(b, byte + 4, value / 0x100000000)
+				writeu16(b, byte + 4, value // 0x100000000)
 			end
 		end
 
 		--- Writes a 49 bit unsigned integer [0, 562949953421311]
 		function bitbuffer.writeu49(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
-				writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 24))
+				writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 24))
 				byte += 3
-				writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000000000, bit, 1))
+				writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000000000, bit, 1))
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x100000000, 0, 17))
+				writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x100000000, 0, 17))
 			end
 		end
 
 		--- Writes a 50 bit unsigned integer [0, 1125899906842623]
 		function bitbuffer.writeu50(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
-				writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 24))
+				writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 24))
 				byte += 3
 				if bit > 6 then
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000000000, bit, 2))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000000000, bit, 2))
 				else
-					writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000000000, bit, 2))
+					writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000000000, bit, 2))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x100000000, 0, 18))
+				writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x100000000, 0, 18))
 			end
 		end
 
 		--- Writes a 51 bit unsigned integer [0, 2251799813685247]
 		function bitbuffer.writeu51(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
-				writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 24))
+				writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 24))
 				byte += 3
 				if bit > 5 then
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000000000, bit, 3))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000000000, bit, 3))
 				else
-					writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000000000, bit, 3))
+					writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000000000, bit, 3))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x100000000, 0, 19))
+				writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x100000000, 0, 19))
 			end
 		end
 
 		--- Writes a 52 bit unsigned integer [0, 4503599627370495]
 		function bitbuffer.writeu52(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
-				writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 24))
+				writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 24))
 				byte += 3
 				if bit > 4 then
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000000000, bit, 4))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000000000, bit, 4))
 				else
-					writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000000000, bit, 4))
+					writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000000000, bit, 4))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x100000000, 0, 20))
+				writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x100000000, 0, 20))
 			end
 		end
 
 		--- Writes a 53 bit unsigned integer [0, 9007199254740991]
 		function bitbuffer.writeu53(b: buffer, offset: number, value: number)
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))
 				byte += 3
-				writeu32(b, byte, bit32_replace(readu32(b, byte), value / 0x1000000, bit, 24))
+				writeu32(b, byte, bit32_replace(readu32(b, byte), value // 0x1000000, bit, 24))
 				byte += 3
 				if bit > 3 then
-					writeu16(b, byte, bit32_replace(readu16(b, byte), value / 0x1000000000000, bit, 5))
+					writeu16(b, byte, bit32_replace(readu16(b, byte), value // 0x1000000000000, bit, 5))
 				else
-					writeu8(b, byte, bit32_replace(readu8(b, byte), value / 0x1000000000000, bit, 5))
+					writeu8(b, byte, bit32_replace(readu8(b, byte), value // 0x1000000000000, bit, 5))
 				end
 			else
 				writeu32(b, byte, value)
 				byte += 4
-				writeu24(b, byte, bit32_replace(readu24(b, byte), value / 0x100000000, 0, 21))
+				writeu24(b, byte, bit32_replace(readu24(b, byte), value // 0x100000000, 0, 21))
 			end
 		end
 	end
@@ -742,13 +742,13 @@ do -- uint
 	do -- read
 		--- Writes a 1 bit unsigned integer [0, 1]
 		function bitbuffer.readu1(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return bit32_extract(readu8(b, byte), bit, 1)
 		end
 
 		--- Writes a 2 bit unsigned integer [0, 3]
 		function bitbuffer.readu2(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 6
 				then bit32_extract(readu16(b, byte), bit, 2)
 				else bit32_extract(readu8(b, byte), bit, 2)
@@ -756,7 +756,7 @@ do -- uint
 
 		--- Writes a 3 bit unsigned integer [0, 7]
 		function bitbuffer.readu3(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 5
 				then bit32_extract(readu16(b, byte), bit, 3)
 				else bit32_extract(readu8(b, byte), bit, 3)
@@ -764,7 +764,7 @@ do -- uint
 
 		--- Writes a 4 bit unsigned integer [0, 15]
 		function bitbuffer.readu4(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 4
 				then bit32_extract(readu16(b, byte), bit, 4)
 				else bit32_extract(readu8(b, byte), bit, 4)
@@ -772,7 +772,7 @@ do -- uint
 
 		--- Writes a 5 bit unsigned integer [0, 31]
 		function bitbuffer.readu5(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 3
 				then bit32_extract(readu16(b, byte), bit, 5)
 				else bit32_extract(readu8(b, byte), bit, 5)
@@ -780,7 +780,7 @@ do -- uint
 
 		--- Writes a 6 bit unsigned integer [0, 63]
 		function bitbuffer.readu6(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 2
 				then bit32_extract(readu16(b, byte), bit, 6)
 				else bit32_extract(readu8(b, byte), bit, 6)
@@ -788,7 +788,7 @@ do -- uint
 
 		--- Writes a 7 bit unsigned integer [0, 127]
 		function bitbuffer.readu7(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 1
 				then bit32_extract(readu16(b, byte), bit, 7)
 				else bit32_extract(readu8(b, byte), bit, 7)
@@ -796,7 +796,7 @@ do -- uint
 
 		--- Writes a 8 bit unsigned integer [0, 255]
 		function bitbuffer.readu8(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 0
 				then bit32_extract(readu16(b, byte), bit, 8)
 				else readu8(b, byte)
@@ -804,13 +804,13 @@ do -- uint
 
 		--- Writes a 9 bit unsigned integer [0, 511]
 		function bitbuffer.readu9(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return bit32_extract(readu16(b, byte), bit, 9)
 		end
 
 		--- Writes a 10 bit unsigned integer [0, 1023]
 		function bitbuffer.readu10(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 6
 				then bit32_extract(readu24(b, byte), bit, 10)
 				else bit32_extract(readu16(b, byte), bit, 10)
@@ -818,7 +818,7 @@ do -- uint
 
 		--- Writes a 11 bit unsigned integer [0, 2047]
 		function bitbuffer.readu11(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 5
 				then bit32_extract(readu24(b, byte), bit, 11)
 				else bit32_extract(readu16(b, byte), bit, 11)
@@ -826,7 +826,7 @@ do -- uint
 
 		--- Writes a 12 bit unsigned integer [0, 4095]
 		function bitbuffer.readu12(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 4
 				then bit32_extract(readu24(b, byte), bit, 12)
 				else bit32_extract(readu16(b, byte), bit, 12)
@@ -834,7 +834,7 @@ do -- uint
 
 		--- Writes a 13 bit unsigned integer [0, 8191]
 		function bitbuffer.readu13(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 3
 				then bit32_extract(readu24(b, byte), bit, 13)
 				else bit32_extract(readu16(b, byte), bit, 13)
@@ -842,7 +842,7 @@ do -- uint
 
 		--- Writes a 14 bit unsigned integer [0, 16383]
 		function bitbuffer.readu14(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 2
 				then bit32_extract(readu24(b, byte), bit, 14)
 				else bit32_extract(readu16(b, byte), bit, 14)
@@ -850,7 +850,7 @@ do -- uint
 
 		--- Writes a 15 bit unsigned integer [0, 32767]
 		function bitbuffer.readu15(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 1
 				then bit32_extract(readu24(b, byte), bit, 15)
 				else bit32_extract(readu16(b, byte), bit, 15)
@@ -858,7 +858,7 @@ do -- uint
 
 		--- Writes a 16 bit unsigned integer [0, 65535]
 		function bitbuffer.readu16(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 0
 				then bit32_extract(readu24(b, byte), bit, 16)
 				else readu16(b, byte)
@@ -866,13 +866,13 @@ do -- uint
 
 		--- Writes a 17 bit unsigned integer [0, 131071]
 		function bitbuffer.readu17(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return bit32_extract(readu24(b, byte), bit, 17)
 		end
 
 		--- Writes a 18 bit unsigned integer [0, 262143]
 		function bitbuffer.readu18(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 6
 				then bit32_extract(readu32(b, byte), bit, 18)
 				else bit32_extract(readu24(b, byte), bit, 18)
@@ -880,7 +880,7 @@ do -- uint
 
 		--- Writes a 19 bit unsigned integer [0, 524287]
 		function bitbuffer.readu19(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 5
 				then bit32_extract(readu32(b, byte), bit, 19)
 				else bit32_extract(readu24(b, byte), bit, 19)
@@ -888,7 +888,7 @@ do -- uint
 
 		--- Writes a 20 bit unsigned integer [0, 1048575]
 		function bitbuffer.readu20(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 4
 				then bit32_extract(readu32(b, byte), bit, 20)
 				else bit32_extract(readu24(b, byte), bit, 20)
@@ -896,7 +896,7 @@ do -- uint
 
 		--- Writes a 21 bit unsigned integer [0, 2097151]
 		function bitbuffer.readu21(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 3
 				then bit32_extract(readu32(b, byte), bit, 21)
 				else bit32_extract(readu24(b, byte), bit, 21)
@@ -904,7 +904,7 @@ do -- uint
 
 		--- Writes a 22 bit unsigned integer [0, 4194303]
 		function bitbuffer.readu22(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 2
 				then bit32_extract(readu32(b, byte), bit, 22)
 				else bit32_extract(readu24(b, byte), bit, 22)
@@ -912,7 +912,7 @@ do -- uint
 
 		--- Writes a 23 bit unsigned integer [0, 8388607]
 		function bitbuffer.readu23(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 1
 				then bit32_extract(readu32(b, byte), bit, 23)
 				else bit32_extract(readu24(b, byte), bit, 23)
@@ -920,7 +920,7 @@ do -- uint
 
 		--- Writes a 24 bit unsigned integer [0, 16777215]
 		function bitbuffer.readu24(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return if bit > 0
 				then bit32_extract(readu32(b, byte), bit, 24)
 				else readu24(b, byte)
@@ -928,13 +928,13 @@ do -- uint
 
 		--- Writes a 25 bit unsigned integer [0, 33554431]
 		function bitbuffer.readu25(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			return bit32_extract(readu32(b, byte), bit, 25)
 		end
 
 		--- Writes a 26 bit unsigned integer [0, 67108863]
 		function bitbuffer.readu26(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -949,7 +949,7 @@ do -- uint
 
 		--- Writes a 27 bit unsigned integer [0, 134217727]
 		function bitbuffer.readu27(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -964,7 +964,7 @@ do -- uint
 
 		--- Writes a 28 bit unsigned integer [0, 268435455]
 		function bitbuffer.readu28(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -979,7 +979,7 @@ do -- uint
 
 		--- Writes a 29 bit unsigned integer [0, 536870911]
 		function bitbuffer.readu29(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -994,7 +994,7 @@ do -- uint
 
 		--- Writes a 30 bit unsigned integer [0, 1073741823]
 		function bitbuffer.readu30(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1009,7 +1009,7 @@ do -- uint
 
 		--- Writes a 31 bit unsigned integer [0, 2147483647]
 		function bitbuffer.readu31(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1024,7 +1024,7 @@ do -- uint
 
 		--- Writes a 32 bit unsigned integer [0, 4294967295]
 		function bitbuffer.readu32(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ bit32_extract(readu16(b, byte + 3), bit, 8) * 0x1000000
@@ -1035,7 +1035,7 @@ do -- uint
 
 		--- Writes a 33 bit unsigned integer [0, 8589934591]
 		function bitbuffer.readu33(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ bit32_extract(readu16(b, byte + 3), bit, 9) * 0x1000000
@@ -1047,7 +1047,7 @@ do -- uint
 
 		--- Writes a 34 bit unsigned integer [0, 17179869183]
 		function bitbuffer.readu34(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1063,7 +1063,7 @@ do -- uint
 
 		--- Writes a 35 bit unsigned integer [0, 34359738367]
 		function bitbuffer.readu35(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1079,7 +1079,7 @@ do -- uint
 
 		--- Writes a 36 bit unsigned integer [0, 68719476735]
 		function bitbuffer.readu36(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1095,7 +1095,7 @@ do -- uint
 
 		--- Writes a 37 bit unsigned integer [0, 137438953471]
 		function bitbuffer.readu37(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1111,7 +1111,7 @@ do -- uint
 
 		--- Writes a 38 bit unsigned integer [0, 274877906943]
 		function bitbuffer.readu38(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1127,7 +1127,7 @@ do -- uint
 
 		--- Writes a 39 bit unsigned integer [0, 549755813887]
 		function bitbuffer.readu39(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1143,7 +1143,7 @@ do -- uint
 
 		--- Writes a 40 bit unsigned integer [0, 1099511627775]
 		function bitbuffer.readu40(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ bit32_extract(readu24(b, byte + 3), bit, 16) * 0x1000000
@@ -1155,7 +1155,7 @@ do -- uint
 
 		--- Writes a 41 bit unsigned integer [0, 2199023255551]
 		function bitbuffer.readu41(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ bit32_extract(readu24(b, byte + 3), bit, 17) * 0x1000000
@@ -1167,7 +1167,7 @@ do -- uint
 
 		--- Writes a 42 bit unsigned integer [0, 4398046511103]
 		function bitbuffer.readu42(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1183,7 +1183,7 @@ do -- uint
 
 		--- Writes a 43 bit unsigned integer [0, 8796093022207]
 		function bitbuffer.readu43(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1199,7 +1199,7 @@ do -- uint
 
 		--- Writes a 44 bit unsigned integer [0, 17592186044415]
 		function bitbuffer.readu44(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1215,7 +1215,7 @@ do -- uint
 
 		--- Writes a 45 bit unsigned integer [0, 35184372088831]
 		function bitbuffer.readu45(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1231,7 +1231,7 @@ do -- uint
 
 		--- Writes a 46 bit unsigned integer [0, 70368744177663]
 		function bitbuffer.readu46(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1247,7 +1247,7 @@ do -- uint
 
 		--- Writes a 47 bit unsigned integer [0, 140737488355327]
 		function bitbuffer.readu47(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ (
@@ -1263,7 +1263,7 @@ do -- uint
 
 		--- Writes a 48 bit unsigned integer [0, 281474976710655]
 		function bitbuffer.readu48(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ bit32_extract(readu32(b, byte + 3), bit, 24) * 0x1000000
@@ -1275,7 +1275,7 @@ do -- uint
 
 		--- Writes a 49 bit unsigned integer [0, 562949953421311]
 		function bitbuffer.readu49(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ bit32_extract(readu32(b, byte + 3), bit, 24) * 0x1000000
@@ -1288,7 +1288,7 @@ do -- uint
 
 		--- Writes a 50 bit unsigned integer [0, 1125899906842623]
 		function bitbuffer.readu50(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ bit32_extract(readu32(b, byte + 3), bit, 24) * 0x1000000
@@ -1305,7 +1305,7 @@ do -- uint
 
 		--- Writes a 51 bit unsigned integer [0, 2251799813685247]
 		function bitbuffer.readu51(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ bit32_extract(readu32(b, byte + 3), bit, 24) * 0x1000000
@@ -1322,7 +1322,7 @@ do -- uint
 
 		--- Writes a 52 bit unsigned integer [0, 4503599627370495]
 		function bitbuffer.readu52(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ bit32_extract(readu32(b, byte + 3), bit, 24) * 0x1000000
@@ -1339,7 +1339,7 @@ do -- uint
 
 		--- Writes a 53 bit unsigned integer [0, 9007199254740991]
 		function bitbuffer.readu53(b: buffer, offset: number): number
-			local byte, bit = offset / 8, offset % 8
+			local byte, bit = offset // 8, offset % 8
 			if bit > 0 then
 				return bit32_extract(readu32(b, byte), bit, 24)
 					+ bit32_extract(readu32(b, byte + 3), bit, 24) * 0x1000000
@@ -1413,7 +1413,7 @@ do -- int
 			if offset % 8 > 0 then
 				bitbuffer.writeu8(b, offset, (value + 256) % 256)
 			else
-				writei8(b, offset / 8, value)
+				writei8(b, offset // 8, value)
 			end
 		end
 
@@ -1457,7 +1457,7 @@ do -- int
 			if offset % 8 > 0 then
 				bitbuffer.writeu16(b, offset, (value + 65536) % 65536)
 			else
-				writei16(b, offset / 8, value)
+				writei16(b, offset // 8, value)
 			end
 		end
 
@@ -1541,7 +1541,7 @@ do -- int
 			if offset % 8 > 0 then
 				bitbuffer.writeu32(b, offset, (value + 4294967296) % 4294967296)
 			else
-				writei32(b, offset / 8, value)
+				writei32(b, offset // 8, value)
 			end
 		end
 
@@ -1681,7 +1681,7 @@ do -- int
 		function bitbuffer.readi8(b: buffer, offset: number): number
 			return if offset % 8 > 0
 				then ( bitbuffer.readu8(b, offset) + 128 ) % 256 - 128
-				else readi8(b, offset / 8)
+				else readi8(b, offset // 8)
 		end
 
 		--- Reads a 9 bit signed integer [-512, 511]
@@ -1723,7 +1723,7 @@ do -- int
 		function bitbuffer.readi16(b: buffer, offset: number): number
 			return if offset % 8 > 0
 				then ( bitbuffer.readu16(b, offset) + 32768 ) % 65536 - 32768
-				else readi16(b, offset / 8)
+				else readi16(b, offset // 8)
 		end
 
 		--- Reads a 17 bit signed integer [-131072, 131071]
@@ -1805,7 +1805,7 @@ do -- int
 		function bitbuffer.readi32(b: buffer, offset: number): number
 			return if offset % 8 > 0
 				then ( bitbuffer.readu32(b, offset) + 2147483648 ) % 4294967296 - 2147483648
-				else readi32(b, offset / 8)
+				else readi32(b, offset // 8)
 		end
 
 		--- Reads a 33 bit signed integer [-8589934592, 8589934591]
@@ -1927,7 +1927,7 @@ do -- float
 		--- Writes a Half-precision IEEE 754 number
 		function bitbuffer.writef16(b: buffer, offset: number, value: number)
 			if offset % 8 == 0 then
-				buffer.writef16(b, offset / 8, value)
+				buffer.writef16(b, offset // 8, value)
 				return
 			end
 
@@ -1955,7 +1955,7 @@ do -- float
 		--- Writes a Single-precision IEEE 754 number
 		function bitbuffer.writef32(b: buffer, offset: number, value: number)
 			if offset % 8 == 0 then
-				buffer.writef32(b, offset / 8, value)
+				buffer.writef32(b, offset // 8, value)
 				return
 			end
 
@@ -1983,7 +1983,7 @@ do -- float
 		--- Writes a Double-precision IEEE 754 number
 		function bitbuffer.writef64(b: buffer, offset: number, value: number)
 			if offset % 8 == 0 then
-				buffer.writef64(b, offset / 8, value)
+				buffer.writef64(b, offset // 8, value)
 				return
 			end
 
@@ -2013,7 +2013,7 @@ do -- float
 		--- Reads a Half-precision IEEE 754 number
 		function bitbuffer.readf16(b: buffer, offset: number): number
 			if offset % 8 == 0 then
-				return buffer.readf16(b, offset / 8)
+				return buffer.readf16(b, offset // 8)
 			end
 
 			local mantissa = bitbuffer.readu10(b, offset)
@@ -2039,7 +2039,7 @@ do -- float
 		--- Reads a Single-precision IEEE 754 number
 		function bitbuffer.readf32(b: buffer, offset: number): number
 			if offset % 8 == 0 then
-				return buffer.readf32(b, offset / 8)
+				return buffer.readf32(b, offset // 8)
 			end
 
 			local mantissa = bitbuffer.readu23(b, offset)
@@ -2065,7 +2065,7 @@ do -- float
 		--- Reads a Double-precision IEEE 754 number
 		function bitbuffer.readf64(b: buffer, offset: number): number
 			if offset % 8 == 0 then
-				return buffer.readf64(b, offset / 8)
+				return buffer.readf64(b, offset // 8)
 			end
 
 			local mantissa = bitbuffer.readu52(b, offset)
@@ -2100,10 +2100,10 @@ do -- string
 	]=]
 	function bitbuffer.readstring(b: buffer, offset: number, count: number): string
 		if offset % 8 == 0 then
-			return buffer.readstring(b, offset / 8, count)
+			return buffer.readstring(b, offset // 8, count)
 		else
-			local output = table.create((count + 5) / 6)
-			local chunkMax = count / 6 * 6
+			local output = table.create((count + 5) // 6)
+			local chunkMax = count // 6 * 6
 
 			for stringIndex = 1, chunkMax, 6 do
 				local chunk = bitbuffer.readu48(b, offset + (stringIndex - 1) * 8)
@@ -2123,10 +2123,10 @@ do -- string
 	--- Used to read a string of length ‘count’ from the buffer at specified offset.
 	function bitbuffer.writestring(b: buffer, offset: number, value: string, count: number?)
 		if offset % 8 == 0 then
-			buffer.writestring(b, offset / 8, value, count)
+			buffer.writestring(b, offset // 8, value, count)
 		else
 			local stringLength = count or #value
-			local chunkMax = stringLength / 6 * 6
+			local chunkMax = stringLength // 6 * 6
 
 			for stringIndex = 1, chunkMax, 6 do
 				local chunk = string.unpack("I6", value, stringIndex)
@@ -2155,7 +2155,7 @@ do -- other
 
 		local bit = offset % 8
 		if bit == 0 and count % 8 == 0 then
-			buffer.fill(b, offset / 8, value, count / 8)
+			buffer.fill(b, offset // 8, value, count // 8)
 		elseif ( (value == 0 or value == 255) and count <= 53 ) or count <= 8 then
 			bitbuffer.writeu(b, offset, value, count)
 		else
@@ -2165,14 +2165,14 @@ do -- other
 			local mid = value
 			if value ~= 0 and value ~= 255 then
 				local a = POWERS_OF_TWO[preWidth]
-				mid = (value / a) + (value % a * POWERS_OF_TWO[bit]) -- i.e., ABCDE-FGH -> FGH-ABCDE when `bit` is `3`
+				mid = (value // a) + (value % a * POWERS_OF_TWO[bit]) -- i.e., ABCDE-FGH -> FGH-ABCDE when `bit` is `3`
 			end
 
 			bitbuffer.writeu8(b, offset, value)
 
-			local midWidthBytes = ( count - preWidth ) / 8
+			local midWidthBytes = ( count - preWidth ) // 8
 			if midWidthBytes > 0 then
-				local offsetMid = ( offset + preWidth ) / 8
+				local offsetMid = ( offset + preWidth ) // 8
 				buffer.fill(b, offsetMid, mid, midWidthBytes)
 			end
 
@@ -2198,7 +2198,7 @@ do -- other
 
 		local targetBit, sourceBit = targetOffset % 8, sourceOffset % 8
 		if targetBit == 0 and sourceBit == 0 and count % 8 == 0 then
-			buffer.copy(target, targetOffset / 8, source, sourceOffset / 8, count / 8)
+			buffer.copy(target, targetOffset // 8, source, sourceOffset // 8, count // 8)
 		elseif count <= 53 then
 			local value = bitbuffer.readu(source, sourceOffset, count)
 			bitbuffer.writeu(target, targetOffset, value, count)
@@ -2211,9 +2211,9 @@ do -- other
 				bitbuffer.writeu8(target, targetOffset, value)
 			end
 
-			local midWidthBytes = ( count - preWidth ) / 8
+			local midWidthBytes = ( count - preWidth ) // 8
 			if midWidthBytes > 0 then
-				local targetMid, sourceMid = ( targetOffset + preWidth ) / 8, ( sourceOffset + preWidth ) / 8
+				local targetMid, sourceMid = ( targetOffset + preWidth ) // 8, ( sourceOffset + preWidth ) // 8
 				buffer.copy(target, targetMid, source, sourceMid, midWidthBytes)
 			end
 
@@ -2233,13 +2233,13 @@ do -- other
 				bitbuffer.writeu(target, targetOffset, value, preWidth)
 			end
 
-			local targetByte = ( targetOffset + preWidth ) / 8
+			local targetByte = ( targetOffset + preWidth ) // 8
 			local sourceBit = sourceOffset + preWidth
 
-			local alignedCount = ( count - preWidth ) / 8
-			local chunkCount = alignedCount / 3 * 3
+			local alignedCount = ( count - preWidth ) // 8
+			local chunkCount = alignedCount // 3 * 3
 
-			local readByte, readBit = sourceBit / 8, sourceBit % 8
+			local readByte, readBit = sourceBit // 8, sourceBit % 8
 			for byteOffset = 0, chunkCount - 1, 3 do
 				local value = bit32_extract(readu32(source, readByte + byteOffset), readBit, 24)
 				writeu24(target, targetByte + byteOffset, value)
@@ -2409,7 +2409,7 @@ do -- baseconversion
 
 	do -- base64
 		local function flipu16(value: number): number
-			return (value / 256) -- FF00 -> 00FF
+			return (value // 256) -- FF00 -> 00FF
 				+ (value % 256 * 256) -- 00FF -> FF00
 		end
 
@@ -2436,8 +2436,8 @@ do -- baseconversion
 			local outputIndex = 0
 
 			for offset = 0, endOffset - overhang, 6 do
-				local byte, bit = offset / 8, offset % 8
-				local byteWidth = (bit + 13) / 8
+				local byte, bit = offset // 8, offset % 8
+				local byteWidth = (bit + 13) // 8
 				bit = (byteWidth * 8 - 6) - bit
 
 				local focus = if byteWidth == 1 then readu8(b, byte) else flipu16(readu16(b, byte))
@@ -2448,7 +2448,7 @@ do -- baseconversion
 			end
 
 			if overhang > 0 then
-				local byte, bit = endOffset / 8, (8 - overhang) - endOffset % 8
+				local byte, bit = endOffset // 8, (8 - overhang) - endOffset % 8
 
 				local focus = readu8(b, byte)
 				local code = bit32.lshift(bit32_extract(focus, bit, overhang), 6 - overhang)
@@ -2476,12 +2476,12 @@ do -- baseconversion
 			local codeCount = #str - padding
 			local bitCount = (codeCount * 6) - (padding * 2)
 
-			local output = buffer.create(bitCount / 8)
+			local output = buffer.create(bitCount // 8)
 			local outputOffset = 0
 
 			for inputIndex = 1, codeCount do
-				local byte, bit = outputOffset / 8, outputOffset % 8
-				local byteWidth = (bit + 13) / 8
+				local byte, bit = outputOffset // 8, outputOffset % 8
+				local byteWidth = (bit + 13) // 8
 				bit = (byteWidth * 8 - 6) - bit
 
 				local code = BASE64_TO_NUMBER[str:byte(inputIndex)]
