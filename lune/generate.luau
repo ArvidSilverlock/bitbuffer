@@ -9,7 +9,7 @@ table.insert(output, [[--!native
 --!strict
 
 -- stylua: ignore start
--- @diagnostic disable: undefined-type
+---@diagnostic disable: undefined-type
 
 local readu8 = buffer.readu8
 local readu16 = buffer.readu16
