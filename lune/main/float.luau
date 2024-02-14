@@ -1,53 +1,5 @@
 local Snippet = require("../Snippet.luau")
 
-local READ_TEMPALTE = [[if offset % 8 == 0 then
-	return buffer.readf<WIDTH>(b, offset // 8)
-end
-
-local mantissa = bitbuffer.readu<MANTISSA_WIDTH>(b, offset)
-local exponent = bitbuffer.readu<EXPONENT_WIDTH>(b, offset + <MANTISSA_WIDTH>)
-local sign = bitbuffer.readu1(b, offset + <MANTISSA_EXPONENT_WIDTH>) == 1
-
-if mantissa == 0 and exponent == <EXPONENT_MAX> then
-	return if sign then -math.huge else math.huge
-elseif mantissa == 1 and exponent == <EXPONENT_MAX> then
-	return 0 / 0
-elseif mantissa == 0 and exponent == 0 then
-	return 0
-else
-	mantissa = if exponent == 0
-		then mantissa / <SUBNORMAL>
-		else mantissa / <NORMAL> + 0.5
-
-	local value = math.ldexp(mantissa, exponent - <EXPONENT_BIAS>)
-	return if sign then -value else value
-end]]
-
-local WRITE_TEMPLATE = [[if offset % 8 == 0 then
-	buffer.writef<WIDTH>(b, offset // 8, value)
-	return
-end
-
-local mantissa, exponent, sign = 0, 0, 0
-if math.abs(value) > <MAX_VALUE> then
-	exponent, sign = <EXPONENT_MAX>, if value < 0 then 1 else 0
-elseif value ~= value then
-	mantissa, exponent, sign = 1, <EXPONENT_MAX>, 1
-elseif value ~= 0 then
-	mantissa, exponent = math.frexp(value)
-	exponent += <EXPONENT_BIAS>
-
-	mantissa = math.round(if exponent <= 0
-		then math.abs(mantissa) * <SUBNORMAL> / math.ldexp(1, math.abs(exponent))
-		else math.abs(mantissa) * <NORMAL>)
-	exponent = math.max(exponent, 0)
-	sign = if value < 0 then 1 else 0
-end
-
-bitbuffer.writeu<MANTISSA_WIDTH>(b, offset, mantissa)
-bitbuffer.writeu<EXPONENT_WIDTH>(b, offset + <MANTISSA_WIDTH>, exponent)
-bitbuffer.writeu1(b, offset + <MANTISSA_EXPONENT_WIDTH>, sign)]]
-
 local FLOAT_WIDTHS = {
 	[16] = { mantissa = 10, exponent = 5, name = "Half-precision IEEE 754 number" },
 	[32] = { mantissa = 23, exponent = 8, name = "Single-precision IEEE 754 number" },
@@ -66,18 +18,47 @@ local function generateRead()
 
 		local body = Snippet.new()
 
-		local content = READ_TEMPALTE:gsub("<MANTISSA_WIDTH>", mantissaWidth)
-			:gsub("<EXPONENT_WIDTH>", exponentWidth)
-			:gsub("<MANTISSA_EXPONENT_WIDTH>", mantissaWidth + exponentWidth)
-			:gsub("<EXPONENT_MAX>", `0b{string.rep("1", exponentWidth)}`)
-			:gsub("<EXPONENT_BIAS>", 2 ^ (exponentWidth - 1) - 2)
-			:gsub("<SUBNORMAL>", tohex(2 ^ mantissaWidth))
-			:gsub("<NORMAL>", tohex(2 ^ (mantissaWidth + 1)))
-			:gsub("<WIDTH>", width)
+		local exponentMax = `0b{string.rep("1", exponentWidth)}`
+		local exponentBias = 2 ^ (exponentWidth - 1) - 2
 
-		body:Push("--- Reads a ", componentWidths.name)
-		body:Push("function bitbuffer.readf", width, "(b: buffer, offset: number): number")
-		body:Push(content):Indent()
+		if width == 32 or width == 64 then
+			body:Push("\tif offset % 8 == 0 then")
+			body:Push("\t\treturn buffer.readf", width, "(b, offset // 8)")
+			body:Push("\tend\n")
+		end
+
+		-- Read each component
+		body:Push("local mantissa = bitbuffer.readu", mantissaWidth, "(b, offset)")
+		body:Push("local exponent = bitbuffer.readu", exponentWidth, "(b, offset + ", mantissaWidth, ")")
+		body:Push("local sign = bitbuffer.readu1(b, offset + ", mantissaWidth + exponentWidth, ") == 1\n")
+
+		-- Handle infinity
+		body:Push("if mantissa == 0 and exponent == ", exponentMax, " then")
+		body:Push("\treturn if sign then -math.huge else math.huge")
+
+		-- Handle NaN
+		body:Push("elseif mantissa == 1 and exponent == ", exponentMax, " then")
+		body:Push("\treturn 0 / 0")
+
+		-- Handle 0
+		body:Push("elseif mantissa == 0 and exponent == 0 then")
+		body:Push("\treturn 0")
+
+		-- Handle everything else
+		body:Push("else")
+		body:Push("\tmantissa = if exponent == 0")
+		body:Push("\t\tthen mantissa / ", tohex(2 ^ mantissaWidth))
+		body:Push("\t\telse mantissa / ", tohex(2 ^ (mantissaWidth + 1)), " + 0.5\n")
+
+		body:Push("\tlocal value = math.ldexp(mantissa, exponent - ", exponentBias, ")")
+		body:Push("	return if sign then -value else value")
+		body:Push("end")
+
+		body:Indent()
+
+		body:Insert(1, "--- Reads a ", componentWidths.name)
+		body:Insert(2, "function bitbuffer.readf", width, "(b: buffer, offset: number): number")
+
 		body:Push("end")
 
 		table.insert(output, tostring(body))
@@ -88,25 +69,69 @@ end
 local function generateWrite()
 	local output = {}
 	for _, width in { 16, 32, 64 } do
-		local componentWidths = FLOAT_WIDTHS[width]
-		local mantissaWidth, exponentWidth = componentWidths.mantissa, componentWidths.exponent
+		local floatData = FLOAT_WIDTHS[width]
+		local mantissaWidth, exponentWidth = floatData.mantissa, floatData.exponent
 
 		local body = Snippet.new()
 
-		local content = WRITE_TEMPLATE
-			:gsub("<MAX_VALUE>", math.ldexp((2 - 2 ^ -mantissaWidth), (2 ^ (exponentWidth - 1) - 1)))
-			:gsub("<MANTISSA_WIDTH>", mantissaWidth)
-			:gsub("<EXPONENT_WIDTH>", exponentWidth)
-			:gsub("<MANTISSA_EXPONENT_WIDTH>", mantissaWidth + exponentWidth)
-			:gsub("<EXPONENT_MAX>", `0b{string.rep("1", exponentWidth)}`)
-			:gsub("<EXPONENT_BIAS>", 2 ^ (exponentWidth - 1) - 2)
-			:gsub("<SUBNORMAL>", tohex(2 ^ mantissaWidth))
-			:gsub("<NORMAL>", tohex(2 ^ (mantissaWidth + 1)))
-			:gsub("<WIDTH>", width)
+		local exponentMax = `0b{string.rep("1", exponentWidth)}`
+		local exponentBias = 2 ^ (exponentWidth - 1) - 2
 
-		body:Push("--- Writes a ", componentWidths.name)
-		body:Push("function bitbuffer.writef", width, "(b: buffer, offset: number, value: number)")
-		body:Push(content):Indent()
+		-- Handle byte aligned cases when applicable
+		if width == 32 or width == 64 then
+			body:Push("if offset % 8 == 0 then")
+			body:Push("\tbuffer.writef", width, "(b, offset // 8, value)")
+			body:Push("\treturn")
+			body:Push("end\n")
+		end
+
+		-- Set default values, this automatically handles the 0 case
+		body:Push("local mantissa, exponent, sign = 0, 0, 0")
+
+		-- Handle infinity
+		if width ~= 64 then
+			local maxValue = (2 - 2 ^ -mantissaWidth) * 2 ^ (exponentBias + 1)
+			body:Push("if math.abs(value) > ", maxValue, " then")
+		else
+			body:Push("if math.abs(value) >= math.huge then")
+		end
+		body:Push("\texponent, sign = ", exponentMax, ", if value < 0 then 1 else 0")
+
+		-- Handle NaN
+		body:Push("elseif value ~= value then")
+		body:Push("\tmantissa, exponent, sign = 1, ", exponentMax, ", 1")
+
+		-- Handle everything else
+		body:Push("elseif value ~= 0 then")
+		body:Push("\tlocal absValue = math.abs(value)")
+
+		-- Round the value to the nearest epsilon, only for halfs and singles, since
+		-- luau numbers are already doubles, so it would just yield the same result
+		if width ~= 64 then
+			local min = "math.floor(math.log(absValue, 2))"
+			body:Push("\tlocal interval = math.ldexp(1, ", min, " - ", mantissaWidth, ")")
+			body:Push("\tvalue = math.round(value / interval) * interval\n")
+		end
+
+		body:Push("\tmantissa, exponent = math.frexp(absValue)")
+		body:Push("\texponent += ", exponentBias, "\n")
+		body:Push("\tmantissa = math.round(if exponent <= 0")
+		body:Push("\t\tthen mantissa * ", tohex(2 ^ mantissaWidth), " / math.ldexp(1, math.abs(exponent))")
+		body:Push("\t\telse mantissa * ", tohex(2 ^ (mantissaWidth + 1)), ")")
+		body:Push("\texponent = math.max(exponent, 0)")
+		body:Push("\tsign = if value < 0 then 1 else 0")
+		body:Push("end\n")
+
+		-- Write the values to the buffer
+		body:Push("bitbuffer.writeu", mantissaWidth, "(b, offset, mantissa)")
+		body:Push("bitbuffer.writeu", exponentWidth, "(b, offset + ", mantissaWidth, ", exponent)")
+		body:Push("bitbuffer.writeu1(b, offset + ", mantissaWidth + exponentWidth, ", sign)")
+
+		body:Indent()
+
+		body:Insert(1, "--- Writes a ", floatData.name)
+		body:Insert(2, "function bitbuffer.writef", width, "(b: buffer, offset: number, value: number)")
+
 		body:Push("end")
 
 		table.insert(output, tostring(body))

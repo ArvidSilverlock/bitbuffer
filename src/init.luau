@@ -1926,23 +1926,22 @@ do -- float
 	do -- write
 		--- Writes a Half-precision IEEE 754 number
 		function bitbuffer.writef16(b: buffer, offset: number, value: number)
-			if offset % 8 == 0 then
-				buffer.writef16(b, offset // 8, value)
-				return
-			end
-
 			local mantissa, exponent, sign = 0, 0, 0
 			if math.abs(value) > 65504 then
 				exponent, sign = 0b11111, if value < 0 then 1 else 0
 			elseif value ~= value then
 				mantissa, exponent, sign = 1, 0b11111, 1
 			elseif value ~= 0 then
-				mantissa, exponent = math.frexp(value)
+				local absValue = math.abs(value)
+				local interval = math.ldexp(1, math.floor(math.log(absValue, 2)) - 10)
+				value = math.round(value / interval) * interval
+
+				mantissa, exponent = math.frexp(absValue)
 				exponent += 14
 
 				mantissa = math.round(if exponent <= 0
-					then math.abs(mantissa) * 0x400 / math.ldexp(1, math.abs(exponent))
-					else math.abs(mantissa) * 0x800)
+					then mantissa * 0x400 / math.ldexp(1, math.abs(exponent))
+					else mantissa * 0x800)
 				exponent = math.max(exponent, 0)
 				sign = if value < 0 then 1 else 0
 			end
@@ -1965,12 +1964,16 @@ do -- float
 			elseif value ~= value then
 				mantissa, exponent, sign = 1, 0b11111111, 1
 			elseif value ~= 0 then
-				mantissa, exponent = math.frexp(value)
+				local absValue = math.abs(value)
+				local interval = math.ldexp(1, math.floor(math.log(absValue, 2)) - 23)
+				value = math.round(value / interval) * interval
+
+				mantissa, exponent = math.frexp(absValue)
 				exponent += 126
 
 				mantissa = math.round(if exponent <= 0
-					then math.abs(mantissa) * 0x800000 / math.ldexp(1, math.abs(exponent))
-					else math.abs(mantissa) * 0x1000000)
+					then mantissa * 0x800000 / math.ldexp(1, math.abs(exponent))
+					else mantissa * 0x1000000)
 				exponent = math.max(exponent, 0)
 				sign = if value < 0 then 1 else 0
 			end
@@ -1988,17 +1991,18 @@ do -- float
 			end
 
 			local mantissa, exponent, sign = 0, 0, 0
-			if math.abs(value) > 1.7976931348623157e+308 then
+			if math.abs(value) >= math.huge then
 				exponent, sign = 0b11111111111, if value < 0 then 1 else 0
 			elseif value ~= value then
 				mantissa, exponent, sign = 1, 0b11111111111, 1
 			elseif value ~= 0 then
-				mantissa, exponent = math.frexp(value)
+				local absValue = math.abs(value)
+				mantissa, exponent = math.frexp(absValue)
 				exponent += 1022
 
 				mantissa = math.round(if exponent <= 0
-					then math.abs(mantissa) * 0x10000000000000 / math.ldexp(1, math.abs(exponent))
-					else math.abs(mantissa) * 0x20000000000000)
+					then mantissa * 0x10000000000000 / math.ldexp(1, math.abs(exponent))
+					else mantissa * 0x20000000000000)
 				exponent = math.max(exponent, 0)
 				sign = if value < 0 then 1 else 0
 			end
@@ -2012,10 +2016,6 @@ do -- float
 	do -- read
 		--- Reads a Half-precision IEEE 754 number
 		function bitbuffer.readf16(b: buffer, offset: number): number
-			if offset % 8 == 0 then
-				return buffer.readf16(b, offset // 8)
-			end
-
 			local mantissa = bitbuffer.readu10(b, offset)
 			local exponent = bitbuffer.readu5(b, offset + 10)
 			local sign = bitbuffer.readu1(b, offset + 15) == 1
@@ -2038,9 +2038,9 @@ do -- float
 
 		--- Reads a Single-precision IEEE 754 number
 		function bitbuffer.readf32(b: buffer, offset: number): number
-			if offset % 8 == 0 then
-				return buffer.readf32(b, offset // 8)
-			end
+				if offset % 8 == 0 then
+					return buffer.readf32(b, offset // 8)
+				end
 
 			local mantissa = bitbuffer.readu23(b, offset)
 			local exponent = bitbuffer.readu8(b, offset + 23)
@@ -2064,9 +2064,9 @@ do -- float
 
 		--- Reads a Double-precision IEEE 754 number
 		function bitbuffer.readf64(b: buffer, offset: number): number
-			if offset % 8 == 0 then
-				return buffer.readf64(b, offset // 8)
-			end
+				if offset % 8 == 0 then
+					return buffer.readf64(b, offset // 8)
+				end
 
 			local mantissa = bitbuffer.readu52(b, offset)
 			local exponent = bitbuffer.readu11(b, offset + 52)
