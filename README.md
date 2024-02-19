@@ -5,4 +5,4 @@ Bit level manipulation of buffers :sunglasses:
 
 `writeu` allows for widths ranging from 1 to 53, whereas `writei` only allows widths 2 to 52. UInts can only be written up to 52 bytes due to precision issues when calculating the 2's compliment of the number.
 
-Can be installed with wally using `arvidsilverlock/bitbuffer@0.0.1`
+Can be installed with wally using `arvidsilverlock/bitbuffer@latest`

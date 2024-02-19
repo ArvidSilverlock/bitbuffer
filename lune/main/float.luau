@@ -110,7 +110,7 @@ local function generateWrite()
 		if width ~= 64 then
 			local min = "math.floor(math.log(absValue, 2))"
 			body:Push("\tlocal interval = math.ldexp(1, ", min, " - ", mantissaWidth, ")")
-			body:Push("\tvalue = math.round(value / interval) * interval\n")
+			body:Push("\tabsValue = math.floor(absValue / interval) * interval\n")
 		end
 
 		body:Push("\tmantissa, exponent = math.frexp(absValue)")
