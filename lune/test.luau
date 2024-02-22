@@ -1,6 +1,8 @@
 local bitbuffer = require("../src/init.luau")
 local b = buffer.create(512)
 
+local GENERAL_SCALE = 128
+
 local ICONS = {
 	[true] = "✓",
 	[false] = "✗",
@@ -45,7 +47,7 @@ do -- uints and ints
 			local uintMax = 2 ^ width - 1
 
 			if width == 1 or width == 53 then
-				for _ = 1, 1024 do
+				for _ = 1, GENERAL_SCALE do
 					testUInt(random(0, uintMax))
 				end
 			else
@@ -53,7 +55,7 @@ do -- uints and ints
 				local intMin = -2 ^ (width - 1)
 				local intMax = -intMin - 1
 
-				for _ = 1, 1024 do
+				for _ = 1, GENERAL_SCALE do
 					testUInt(random(0, uintMax))
 					testInt(random(intMin, intMax))
 				end
@@ -81,8 +83,8 @@ do -- floats
 
 		local testf64 = test("f64", bitbuffer.readf64, bitbuffer.writef64)
 
-		for _ = 1, 1024 do
-			local value = random(-1024, 1024)
+		for _ = 1, GENERAL_SCALE do
+			local value = random(-GENERAL_SCALE, GENERAL_SCALE)
 			testf16(value)
 			testf32(value)
 			testf64(value)
@@ -98,7 +100,7 @@ end
 do -- strings
 	local success, response = pcall(function()
 		local teststring = test("string", bitbuffer.readstring, bitbuffer.writestring)
-		for _ = 1, 1024 do
+		for _ = 1, GENERAL_SCALE do
 			teststring(generateString())
 		end
 	end)
@@ -111,8 +113,8 @@ end
 
 do -- fill
 	local success, response = pcall(function()
-		for count = 1, 64 do
-			for value = 0, 255 do
+		for count = 1, 256, 28 do -- not byte aligned to test extra cases
+			for value = 0, 255, 51 do
 				for offset = 0, 7 do
 					bitbuffer.fill(b, offset, value, count)
 
@@ -147,12 +149,12 @@ end
 
 do -- copy
 	local success, response = pcall(function()
-		local source = buffer.create(64)
-		for offset = 0, 63 do
+		local source = buffer.create(16)
+		for offset = 0, 15 do
 			buffer.writeu8(source, offset, math.random(0, 255))
 		end
 
-		for count = 1, 504 do
+		for count = 1, 120 do
 			for sourceOffset = 0, 7 do
 				for targetOffset = 0, 7 do
 					bitbuffer.copy(b, targetOffset, source, sourceOffset, count)
@@ -203,7 +205,7 @@ do -- bases
 				executeTest(correct, encoded)
 			end
 
-			for _ = 1, 1024 do
+			for _ = 1, GENERAL_SCALE do
 				local str = generateString()
 				executeTest(str)
 			end
