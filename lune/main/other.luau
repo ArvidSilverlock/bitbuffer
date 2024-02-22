@@ -14,9 +14,9 @@ local CONSTANTS =
 	  `buffer.fill` to write the main bulk, then write the last `n` unaligned bits.
 ]]
 local BUFFER_FILL = [[--[=[
-	Sets the ‘count’ bytes in the buffer starting at the specified ‘offset’ to the ‘value’.
+	Sets the `count` bits in the buffer starting at the specified ‘offset’ to the ‘value’.
 
-	If ‘count’ is ‘nil’ or is omitted, all bytes from the specified offset until the end of the buffer are set.
+	If `count` is ‘nil’ or is omitted, all bytes from the specified offset until the end of the buffer are set.
 ]=]
 function bitbuffer.fill(b: buffer, offset: number, value: number, count: number?)
 	local count: number = count or buffer.len(b) * 8 - offset
@@ -24,8 +24,10 @@ function bitbuffer.fill(b: buffer, offset: number, value: number, count: number?
 	local bit = offset % 8
 	if bit == 0 and count % 8 == 0 then
 		buffer.fill(b, offset // 8, value, count // 8)
-	elseif ( (value == 0 or value == 255) and count <= 53 ) or count <= 8 then
+	elseif count <= 8 then
 		bitbuffer.writeu(b, offset, value, count)
+	elseif count <= 53 and (value == 0 or value == 255) then
+		bitbuffer.writeu(b, offset, if value == 255 then 2^count - 1 else 0, count)
 	else
 		local preWidth = 8 - bit
 		local postWidth = (count + bit) % 8
@@ -65,13 +67,13 @@ end]]
 	  unaligned bits.
 ]]
 local BUFFER_COPY = [[--[=[
-	Copy ‘count’ bytes from ‘source’ starting at offset ‘sourceOffset’ into the ‘target’ at ‘targetOffset’.
+	Copy `count` bytes from ‘source’ starting at offset ‘sourceOffset’ into the ‘target’ at ‘targetOffset’.
 
 	Unlike `buffer.copy`, it is not possible for ‘source’ and ‘target’ to be the same and then copy an overlapping region. This may be added in future.
 
 	If ‘sourceOffset’ is nil or is omitted, it defaults to 0.
 
-	If ‘count’ is ‘nil’ or is omitted, the whole ‘source’ data starting from ‘sourceOffset’ is copied.
+	If `count` is ‘nil’ or is omitted, the whole ‘source’ data starting from ‘sourceOffset’ is copied.
 ]=]
 function bitbuffer.copy(target: buffer, targetOffset: number, source: buffer, sourceOffset: number?, count: number?)
 	local sourceOffset = sourceOffset or 0
