@@ -1,6 +1,11 @@
 local bitbuffer = require("../src/init.luau")
 local b = buffer.create(512)
 
+local ICONS = {
+	[true] = "✓",
+	[false] = "✗",
+}
+
 local function random(min: number, max: number): number
 	return math.random() * (max - min) + min
 end
@@ -31,164 +36,202 @@ end
 
 local output = setmetatable({}, { __index = table })
 
-output:insert("┌────────────┬────┐")
+output:insert("┌────────────┬───┐")
 
 do -- uints and ints
-	for width = 1, 53 do
-		local testUInt = test(`u{width}`, bitbuffer[`readu{width}`], bitbuffer[`writeu{width}`], math.round)
-		local uintMax = 2 ^ width - 1
+	local success, response = pcall(function()
+		for width = 1, 53 do
+			local testUInt = test(`u{width}`, bitbuffer[`readu{width}`], bitbuffer[`writeu{width}`], math.round)
+			local uintMax = 2 ^ width - 1
 
-		if width == 1 or width == 53 then
-			for _ = 1, 1024 do
-				testUInt(random(0, uintMax))
-			end
-		else
-			local testInt = test(`i{width}`, bitbuffer[`readi{width}`], bitbuffer[`writei{width}`], math.round)
-			local intMin = -2 ^ (width - 1)
-			local intMax = -intMin - 1
+			if width == 1 or width == 53 then
+				for _ = 1, 1024 do
+					testUInt(random(0, uintMax))
+				end
+			else
+				local testInt = test(`i{width}`, bitbuffer[`readi{width}`], bitbuffer[`writei{width}`], math.round)
+				local intMin = -2 ^ (width - 1)
+				local intMax = -intMin - 1
 
-			for _ = 1, 1024 do
-				testUInt(random(0, uintMax))
-				testInt(random(intMin, intMax))
+				for _ = 1, 1024 do
+					testUInt(random(0, uintMax))
+					testInt(random(intMin, intMax))
+				end
 			end
 		end
+	end)
+
+	if not success then
+		warn(response)
 	end
+	output:insert(`│ uints/ints │ {ICONS[success]} │`)
 end
-output:insert("│ uints/ints │ ✅ │")
 
 do -- floats
-	local testf16 = test("f16", bitbuffer.readf16, bitbuffer.writef16, function(value)
-		local interval = 2 ^ (math.floor(math.log(math.abs(value), 2)) - 10)
-		return math.floor(value / interval) * interval
+	local success, response = pcall(function()
+		local testf16 = test("f16", bitbuffer.readf16, bitbuffer.writef16, function(value)
+			local interval = 2 ^ (math.floor(math.log(math.abs(value), 2)) - 10)
+			return math.floor(value / interval) * interval
+		end)
+
+		local testf32 = test("f32", bitbuffer.readf32, bitbuffer.writef32, function(value)
+			local interval = 2 ^ (math.floor(math.log(math.abs(value), 2)) - 23)
+			return math.floor(value / interval) * interval
+		end)
+
+		local testf64 = test("f64", bitbuffer.readf64, bitbuffer.writef64)
+
+		for _ = 1, 1024 do
+			local value = random(-1024, 1024)
+			testf16(value)
+			testf32(value)
+			testf64(value)
+		end
 	end)
 
-	local testf32 = test("f32", bitbuffer.readf32, bitbuffer.writef32, function(value)
-		local interval = 2 ^ (math.floor(math.log(math.abs(value), 2)) - 23)
-		return math.floor(value / interval) * interval
-	end)
-
-	local testf64 = test("f64", bitbuffer.readf64, bitbuffer.writef64)
-
-	for _ = 1, 1024 do
-		local value = random(-1024, 1024)
-		testf16(value)
-		testf32(value)
-		testf64(value)
+	if not success then
+		warn(response)
 	end
+	output:insert(`│ floats     │ {ICONS[success]} │`)
 end
-output:insert("│ floats     │ ✅ │")
 
 do -- strings
-	local teststring = test("string", bitbuffer.readstring, bitbuffer.writestring)
-	for _ = 1, 1024 do
-		teststring(generateString())
+	local success, response = pcall(function()
+		local teststring = test("string", bitbuffer.readstring, bitbuffer.writestring)
+		for _ = 1, 1024 do
+			teststring(generateString())
+		end
+	end)
+
+	if not success then
+		warn(response)
 	end
+	output:insert(`│ strings    │ {ICONS[success]} │`)
 end
-output:insert("│ strings    │ ✅ │")
 
 do -- fill
-	for count = 1, 64 do
-		for value = 0, 255 do
-			for offset = 0, 7 do
-				bitbuffer.fill(b, offset, value, count)
+	local success, response = pcall(function()
+		for count = 1, 64 do
+			for value = 0, 255 do
+				for offset = 0, 7 do
+					bitbuffer.fill(b, offset, value, count)
 
-				local endOffset = count // 8 * 8
-				local overhang = count - endOffset
+					local endOffset = count // 8 * 8
+					local overhang = count - endOffset
 
-				for chunkOffset = 0, endOffset - 8, 8 do
-					local chunk = bitbuffer.readu8(b, offset + chunkOffset)
-					if chunk ~= value then
-						error(`{chunk} ~= {value} ({count})`)
+					for chunkOffset = 0, endOffset - 8, 8 do
+						local chunk = bitbuffer.readu8(b, offset + chunkOffset)
+						if chunk ~= value then
+							error(`{chunk} ~= {value} ({count})`)
+						end
 					end
-				end
 
-				if overhang > 0 then
-					local chunk = bitbuffer.readu(b, offset + endOffset, overhang)
-					local targetValue = value % 2 ^ overhang
+					if overhang > 0 then
+						local chunk = bitbuffer.readu(b, offset + endOffset, overhang)
+						local targetValue = value % 2 ^ overhang
 
-					if chunk ~= targetValue then
-						error(`{chunk} ~= {targetValue} ({count})`)
+						if chunk ~= targetValue then
+							error(`{chunk} ~= {targetValue} ({count})`)
+						end
 					end
 				end
 			end
 		end
+	end)
+
+	if not success then
+		warn(response)
 	end
+	output:insert(`│ fill       │ {ICONS[success]} │`)
 end
-output:insert("│ fill       │ ✅ │")
 
 do -- copy
-	local source = buffer.create(64)
-	for offset = 0, 63 do
-		buffer.writeu8(source, offset, math.random(0, 255))
-	end
+	local success, response = pcall(function()
+		local source = buffer.create(64)
+		for offset = 0, 63 do
+			buffer.writeu8(source, offset, math.random(0, 255))
+		end
 
-	for count = 1, 504 do
-		for sourceOffset = 0, 7 do
-			for targetOffset = 0, 7 do
-				bitbuffer.copy(b, targetOffset, source, sourceOffset, count)
+		for count = 1, 504 do
+			for sourceOffset = 0, 7 do
+				for targetOffset = 0, 7 do
+					bitbuffer.copy(b, targetOffset, source, sourceOffset, count)
 
-				local endOffset = count // 8 * 8
-				local overhang = count - endOffset
+					local endOffset = count // 8 * 8
+					local overhang = count - endOffset
 
-				for chunkOffset = 0, endOffset - 8, 8 do
-					local sourceChunk = bitbuffer.readu8(source, sourceOffset + chunkOffset)
-					local targetChunk = bitbuffer.readu8(b, targetOffset + chunkOffset)
-					if sourceChunk ~= targetChunk then
-						error(`{sourceChunk} ~= {targetChunk} ({chunkOffset}, {count})`)
+					for chunkOffset = 0, endOffset - 8, 8 do
+						local sourceChunk = bitbuffer.readu8(source, sourceOffset + chunkOffset)
+						local targetChunk = bitbuffer.readu8(b, targetOffset + chunkOffset)
+						if sourceChunk ~= targetChunk then
+							error(`{sourceChunk} ~= {targetChunk} ({chunkOffset}, {count})`)
+						end
 					end
-				end
 
-				if overhang > 0 then
-					local sourceChunk = bitbuffer.readu(source, sourceOffset + endOffset, overhang)
-					local targetChunk = bitbuffer.readu(b, targetOffset + endOffset, overhang)
-					if sourceChunk ~= targetChunk then
-						error(`{sourceChunk} ~= {targetChunk} (overhang, {endOffset}, {count})`)
+					if overhang > 0 then
+						local sourceChunk = bitbuffer.readu(source, sourceOffset + endOffset, overhang)
+						local targetChunk = bitbuffer.readu(b, targetOffset + endOffset, overhang)
+						if sourceChunk ~= targetChunk then
+							error(`{sourceChunk} ~= {targetChunk} (overhang, {endOffset}, {count})`)
+						end
 					end
 				end
 			end
 		end
-	end
-end
-output:insert("│ copy       │ ✅ │")
+	end)
 
-local function testbase(tobase, frombase, testTable: { [string]: string })
-	local function executeTest(input: string, correctEncoded: string?)
-		local encoded = tobase(buffer.fromstring(input))
-		local decoded = buffer.tostring(frombase(encoded))
-
-		assert(decoded == input, `'{encoded}' failed to decode into '{input}' (got '{decoded}')`)
-		if encoded then
-			assert(encoded == encoded, `'{input}' failed to encode into '{correctEncoded}' (got '{encoded}')`)
-		end
+	if not success then
+		warn(response)
 	end
-
-	for correct, encoded in testTable do
-		executeTest(correct, encoded)
-	end
-
-	for _ = 1, 1024 do
-		local str = generateString()
-		executeTest(str)
-	end
+	output:insert(`│ copy       │ {ICONS[success]} │`)
 end
 
 do -- bases
-	testbase(bitbuffer.tobinary, bitbuffer.frombinary, {})
-	output:insert("│ binary     │ ✅ │")
+	local function testbase(tobase, frombase, testTable: { [string]: string })
+		local function executeTest(input: string, correctEncoded: string?)
+			local encoded = tobase(buffer.fromstring(input))
+			local decoded = buffer.tostring(frombase(encoded))
 
-	testbase(bitbuffer.tohexadecimal, bitbuffer.fromhexadecimal, {})
-	output:insert("│ hex        │ ✅ │")
+			assert(decoded == input, `'{encoded}' failed to decode into '{input}' (got '{decoded}')`)
+			if encoded then
+				assert(encoded == encoded, `'{input}' failed to encode into '{correctEncoded}' (got '{encoded}')`)
+			end
+		end
 
-	testbase(bitbuffer.tobase64, bitbuffer.frombase64, {
+		local success, response = pcall(function()
+			for correct, encoded in testTable do
+				executeTest(correct, encoded)
+			end
+
+			for _ = 1, 1024 do
+				local str = generateString()
+				executeTest(str)
+			end
+		end)
+
+		if not success then
+			warn(response)
+		end
+
+		return success
+	end
+
+	local success = testbase(bitbuffer.tobinary, bitbuffer.frombinary, {})
+	output:insert(`│ binary     │ {ICONS[success]} │`)
+
+	local success = testbase(bitbuffer.tohexadecimal, bitbuffer.fromhexadecimal, {})
+	output:insert(`│ hex        │ {ICONS[success]} │`)
+
+	local success = testbase(bitbuffer.tobase64, bitbuffer.frombase64, {
 		["The quick brown fox jumps over the lazy dog."] = "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZy4=",
 		["foobar"] = "Zm9vYmFy",
 		["glaggle"] = "Z2xhZ2dsZQ==",
 		["a"] = "YQ==",
 		["ab"] = "YWI=",
 	})
-	output:insert("│ base64     │ ✅ │")
+	output:insert(`│ base64     │ {ICONS[success]} │`)
 end
 
-output:insert("└────────────┴────┘")
+output:insert("└────────────┴───┘")
 
 print(output:concat("\n"))
