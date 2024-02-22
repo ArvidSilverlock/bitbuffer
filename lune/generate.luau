@@ -64,7 +64,7 @@ else
 	writeMain()
 
 	addSection("base conversion", baseconversion)
-	addSection("editors", editors)
+	-- addSection("editors", editors)
 end
 
 table.insert(output, "return bitbuffer")
