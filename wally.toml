@@ -1,5 +1,5 @@
 [package]
 name = "arvidsilverlock/bitbuffer"
-version = "0.0.4"
+version = "0.0.5"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
