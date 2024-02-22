@@ -76,6 +76,7 @@ local function generateWrite()
 
 		local exponentMax = `0b{string.rep("1", exponentWidth)}`
 		local exponentBias = 2 ^ (exponentWidth - 1) - 2
+		local signValue = if width == 64 then tohex(2 ^ 31) else tohex(2 ^ (mantissaWidth + exponentWidth))
 
 		-- Handle byte aligned cases when applicable
 		if width == 32 or width == 64 then
@@ -95,11 +96,11 @@ local function generateWrite()
 		else
 			body:Push("if math.abs(value) >= math.huge then")
 		end
-		body:Push("\texponent, sign = ", exponentMax, ", if value < 0 then 1 else 0")
+		body:Push("\texponent, sign = ", exponentMax, ", if value < 0 then ", signValue, " else 0")
 
 		-- Handle NaN
 		body:Push("elseif value ~= value then")
-		body:Push("\tmantissa, exponent, sign = 1, ", exponentMax, ", 1")
+		body:Push("\tmantissa, exponent, sign = 1, ", exponentMax, ", ", signValue)
 
 		-- Handle everything else
 		body:Push("elseif value ~= 0 then")
@@ -119,13 +120,21 @@ local function generateWrite()
 		body:Push("\t\tthen mantissa * ", tohex(2 ^ mantissaWidth), " / math.ldexp(1, math.abs(exponent))")
 		body:Push("\t\telse mantissa * ", tohex(2 ^ (mantissaWidth + 1)), ")")
 		body:Push("\texponent = math.max(exponent, 0)")
-		body:Push("\tsign = if value < 0 then 1 else 0")
+		body:Push("\tsign = if value < 0 then ", signValue, " else 0")
 		body:Push("end\n")
 
-		-- Write the values to the buffer
-		body:Push("bitbuffer.writeu", mantissaWidth, "(b, offset, mantissa)")
-		body:Push("bitbuffer.writeu", exponentWidth, "(b, offset + ", mantissaWidth, ", exponent)")
-		body:Push("bitbuffer.writeu1(b, offset + ", mantissaWidth + exponentWidth, ", sign)")
+		-- If we can utilise a single write call, do so
+		if width ~= 64 then
+			local hexExponent = tohex(2 ^ mantissaWidth)
+			body:Push("bitbuffer.writeu", width, "(b, offset, mantissa % ", hexExponent)
+			body:Push("\t+ exponent * ", hexExponent)
+			body:Push("\t+ sign)")
+		else
+			body:Push("bitbuffer.writeu32(b, offset, mantissa % ", tohex(2 ^ 32), ")")
+			body:Push("bitbuffer.writeu32(b, offset + 32, mantissa // ", tohex(2 ^ 32), " % ", tohex(2 ^ 20))
+			body:Push("\t+ exponent * ", tohex(2 ^ 20))
+			body:Push("\t+ sign)")
+		end
 
 		body:Indent()
 

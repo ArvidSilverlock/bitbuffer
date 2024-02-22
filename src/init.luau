@@ -1928,9 +1928,9 @@ do -- float
 		function bitbuffer.writef16(b: buffer, offset: number, value: number)
 			local mantissa, exponent, sign = 0, 0, 0
 			if math.abs(value) > 65504 then
-				exponent, sign = 0b11111, if value < 0 then 1 else 0
+				exponent, sign = 0b11111, if value < 0 then 0x8000 else 0
 			elseif value ~= value then
-				mantissa, exponent, sign = 1, 0b11111, 1
+				mantissa, exponent, sign = 1, 0b11111, 0x8000
 			elseif value ~= 0 then
 				local absValue = math.abs(value)
 				local interval = math.ldexp(1, math.floor(math.log(absValue, 2)) - 10)
@@ -1943,12 +1943,12 @@ do -- float
 					then mantissa * 0x400 / math.ldexp(1, math.abs(exponent))
 					else mantissa * 0x800)
 				exponent = math.max(exponent, 0)
-				sign = if value < 0 then 1 else 0
+				sign = if value < 0 then 0x8000 else 0
 			end
 
-			bitbuffer.writeu10(b, offset, mantissa)
-			bitbuffer.writeu5(b, offset + 10, exponent)
-			bitbuffer.writeu1(b, offset + 15, sign)
+			bitbuffer.writeu16(b, offset, mantissa % 0x400
+				+ exponent * 0x400
+				+ sign)
 		end
 
 		--- Writes a Single-precision IEEE 754 number
@@ -1960,9 +1960,9 @@ do -- float
 
 			local mantissa, exponent, sign = 0, 0, 0
 			if math.abs(value) > 3.4028234663852886e+38 then
-				exponent, sign = 0b11111111, if value < 0 then 1 else 0
+				exponent, sign = 0b11111111, if value < 0 then 0x80000000 else 0
 			elseif value ~= value then
-				mantissa, exponent, sign = 1, 0b11111111, 1
+				mantissa, exponent, sign = 1, 0b11111111, 0x80000000
 			elseif value ~= 0 then
 				local absValue = math.abs(value)
 				local interval = math.ldexp(1, math.floor(math.log(absValue, 2)) - 23)
@@ -1975,12 +1975,12 @@ do -- float
 					then mantissa * 0x800000 / math.ldexp(1, math.abs(exponent))
 					else mantissa * 0x1000000)
 				exponent = math.max(exponent, 0)
-				sign = if value < 0 then 1 else 0
+				sign = if value < 0 then 0x80000000 else 0
 			end
 
-			bitbuffer.writeu23(b, offset, mantissa)
-			bitbuffer.writeu8(b, offset + 23, exponent)
-			bitbuffer.writeu1(b, offset + 31, sign)
+			bitbuffer.writeu32(b, offset, mantissa % 0x800000
+				+ exponent * 0x800000
+				+ sign)
 		end
 
 		--- Writes a Double-precision IEEE 754 number
@@ -1992,9 +1992,9 @@ do -- float
 
 			local mantissa, exponent, sign = 0, 0, 0
 			if math.abs(value) >= math.huge then
-				exponent, sign = 0b11111111111, if value < 0 then 1 else 0
+				exponent, sign = 0b11111111111, if value < 0 then 0x80000000 else 0
 			elseif value ~= value then
-				mantissa, exponent, sign = 1, 0b11111111111, 1
+				mantissa, exponent, sign = 1, 0b11111111111, 0x80000000
 			elseif value ~= 0 then
 				local absValue = math.abs(value)
 				mantissa, exponent = math.frexp(absValue)
@@ -2004,12 +2004,13 @@ do -- float
 					then mantissa * 0x10000000000000 / math.ldexp(1, math.abs(exponent))
 					else mantissa * 0x20000000000000)
 				exponent = math.max(exponent, 0)
-				sign = if value < 0 then 1 else 0
+				sign = if value < 0 then 0x80000000 else 0
 			end
 
-			bitbuffer.writeu52(b, offset, mantissa)
-			bitbuffer.writeu11(b, offset + 52, exponent)
-			bitbuffer.writeu1(b, offset + 63, sign)
+			bitbuffer.writeu32(b, offset, mantissa % 0x100000000)
+			bitbuffer.writeu32(b, offset + 32, mantissa // 0x100000000 % 0x100000
+				+ exponent * 0x100000
+				+ sign)
 		end
 	end
 
