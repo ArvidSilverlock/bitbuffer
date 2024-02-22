@@ -1,13 +1,5 @@
 local Snippet = require("../Snippet.luau")
 
-local GENERALISED_READ_WRITE = [[function bitbuffer.readu(b: buffer, offset: number, width: number): number
-	return unsignedRead[width](b, offset)
-end
-
-function bitbuffer.writeu(b: buffer, offset: number, value: number, width: number)
-	unsignedWrite[width](b, offset, value)
-end]]
-
 local readCalls = {}
 local writeCalls = {}
 
@@ -231,18 +223,14 @@ local function finalise(output)
 
 	local body = {}
 
-	table.insert(body, `local unsignedRead, unsignedWrite =`)
-	table.insert(body, `\t\{ {table.concat(readLookup, ", ")} \},`)
-	table.insert(body, `\t\{ {table.concat(writeLookup, ", ")} \}`)
-	table.insert(body, "")
-	table.insert(body, GENERALISED_READ_WRITE)
+	table.insert(body, `bitbuffer.readu = \{ {table.concat(readLookup, ", ")} \}`)
+	table.insert(body, `bitbuffer.writeu = \{ {table.concat(writeLookup, ", ")} \}`)
 
 	table.insert(output, table.concat(body, "\n"))
 end
 
 local function create(addSection)
 	local output = {}
-	table.insert(output, LOCALISED_FUNCTIONS)
 
 	addSection("write", generateWrite, output)
 	addSection("read", generateRead, output)

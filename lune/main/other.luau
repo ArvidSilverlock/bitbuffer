@@ -25,9 +25,9 @@ function bitbuffer.fill(b: buffer, offset: number, value: number, count: number?
 	if bit == 0 and count % 8 == 0 then
 		buffer.fill(b, offset // 8, value, count // 8)
 	elseif count <= 8 then
-		bitbuffer.writeu(b, offset, value, count)
+		bitbuffer.writeu[count](b, offset, value)
 	elseif count <= 53 and (value == 0 or value == 255) then
-		bitbuffer.writeu(b, offset, if value == 255 then 2^count - 1 else 0, count)
+		bitbuffer.writeu[count](b, offset, if value == 255 then 2^count - 1 else 0)
 	else
 		local preWidth = 8 - bit
 		local postWidth = (count + bit) % 8
@@ -48,7 +48,7 @@ function bitbuffer.fill(b: buffer, offset: number, value: number, count: number?
 
 		if postWidth > 0 then
 			local offsetPost = offset + preWidth + midWidthBytes * 8
-			bitbuffer.writeu(b, offsetPost, mid, postWidth)
+			bitbuffer.writeu[postWidth](b, offsetPost, mid)
 		end
 	end
 end]]
@@ -83,8 +83,8 @@ function bitbuffer.copy(target: buffer, targetOffset: number, source: buffer, so
 	if targetBit == 0 and sourceBit == 0 and count % 8 == 0 then
 		buffer.copy(target, targetOffset // 8, source, sourceOffset // 8, count // 8)
 	elseif count <= 53 then
-		local value = bitbuffer.readu(source, sourceOffset, count)
-		bitbuffer.writeu(target, targetOffset, value, count)
+		local value = bitbuffer.readu[count](source, sourceOffset)
+		bitbuffer.writeu[count](target, targetOffset, value)
 	elseif targetBit == sourceBit then
 		local preWidth = 8 - targetBit
 		local postWidth = (count + targetBit) % 8
@@ -104,16 +104,16 @@ function bitbuffer.copy(target: buffer, targetOffset: number, source: buffer, so
 			local totalOffset = preWidth + midWidthBytes * 8
 			local targetPost, sourcePost = targetOffset + totalOffset, sourceOffset + totalOffset
 
-			local value = bitbuffer.readu(source, sourcePost, postWidth)
-			bitbuffer.writeu(target, targetPost, value, postWidth)
+			local value = bitbuffer.readu[postWidth](source, sourcePost)
+			bitbuffer.writeu[postWidth](target, targetPost, value)
 		end
 	else
 		local preWidth = 8 - targetBit
 		local postWidth = (count + targetBit) % 8
 
 		if preWidth > 0 then
-			local value = bitbuffer.readu(source, sourceOffset, preWidth)
-			bitbuffer.writeu(target, targetOffset, value, preWidth)
+			local value = bitbuffer.readu[preWidth](source, sourceOffset)
+			bitbuffer.writeu[preWidth](target, targetOffset, value)
 		end
 
 		local targetByte = ( targetOffset + preWidth ) // 8
@@ -130,8 +130,8 @@ function bitbuffer.copy(target: buffer, targetOffset: number, source: buffer, so
 
 		local overflow = count - preWidth - chunkCount * 8
 		if overflow > 0 then
-			local value = bitbuffer.readu(source, sourceBit + chunkCount * 8, overflow)
-			bitbuffer.writeu(target, (targetByte + chunkCount) * 8, value, overflow)
+			local value = bitbuffer.readu[overflow](source, sourceBit + chunkCount * 8)
+			bitbuffer.writeu[overflow](target, (targetByte + chunkCount) * 8, value)
 		end
 	end
 end]]
