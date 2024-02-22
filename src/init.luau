@@ -2147,9 +2147,9 @@ do -- other
 	local POWERS_OF_TWO = { [0] = 1, [1] = 2, [2] = 4, [3] = 8, [4] = 16, [5] = 32, [6] = 64, [7] = 128, [8] = 256 }
 
 	--[=[
-		Sets the ‘count’ bytes in the buffer starting at the specified ‘offset’ to the ‘value’.
+		Sets the `count` bits in the buffer starting at the specified ‘offset’ to the ‘value’.
 
-		If ‘count’ is ‘nil’ or is omitted, all bytes from the specified offset until the end of the buffer are set.
+		If `count` is ‘nil’ or is omitted, all bytes from the specified offset until the end of the buffer are set.
 	]=]
 	function bitbuffer.fill(b: buffer, offset: number, value: number, count: number?)
 		local count: number = count or buffer.len(b) * 8 - offset
@@ -2157,8 +2157,10 @@ do -- other
 		local bit = offset % 8
 		if bit == 0 and count % 8 == 0 then
 			buffer.fill(b, offset // 8, value, count // 8)
-		elseif ( (value == 0 or value == 255) and count <= 53 ) or count <= 8 then
+		elseif count <= 8 then
 			bitbuffer.writeu(b, offset, value, count)
+		elseif count <= 53 and (value == 0 or value == 255) then
+			bitbuffer.writeu(b, offset, if value == 255 then 2^count - 1 else 0, count)
 		else
 			local preWidth = 8 - bit
 			local postWidth = (count + bit) % 8
@@ -2185,13 +2187,13 @@ do -- other
 	end
 
 	--[=[
-		Copy ‘count’ bytes from ‘source’ starting at offset ‘sourceOffset’ into the ‘target’ at ‘targetOffset’.
+		Copy `count` bytes from ‘source’ starting at offset ‘sourceOffset’ into the ‘target’ at ‘targetOffset’.
 
 		Unlike `buffer.copy`, it is not possible for ‘source’ and ‘target’ to be the same and then copy an overlapping region. This may be added in future.
 
 		If ‘sourceOffset’ is nil or is omitted, it defaults to 0.
 
-		If ‘count’ is ‘nil’ or is omitted, the whole ‘source’ data starting from ‘sourceOffset’ is copied.
+		If `count` is ‘nil’ or is omitted, the whole ‘source’ data starting from ‘sourceOffset’ is copied.
 	]=]
 	function bitbuffer.copy(target: buffer, targetOffset: number, source: buffer, sourceOffset: number?, count: number?)
 		local sourceOffset = sourceOffset or 0
@@ -2255,7 +2257,7 @@ do -- other
 	end
 end
 
-do -- baseconversion
+do -- base conversion
 	local NUMBER_TO_BASE64 = buffer.fromstring("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
 	local BASE64_TO_NUMBER = {}
 
@@ -2308,7 +2310,6 @@ do -- baseconversion
 
 	do -- binary
 		local getLookup = baseLookupGenerator(CHARACTER_TO_BINARY)
-		getLookup("_")
 
 		--[=[
 			@function tobinary
@@ -2322,8 +2323,8 @@ do -- baseconversion
 			@return string
 		]=]
 		function bitbuffer.tobinary(b: buffer, separator: string?): string
-			local separatorLength = if separator then #separator else 1
-			local lookupTable = getLookup(separator or "_")
+			local separatorLength = if separator then #separator else 0
+			local lookupTable = getLookup(separator or "")
 
 			local str = buffer.tostring(b):gsub(".", lookupTable)
 			return str:sub(1, -1 - separatorLength)
@@ -2359,7 +2360,6 @@ do -- baseconversion
 
 	do -- hexadecimal
 		local getLookup = baseLookupGenerator(CHARACTER_TO_HEXADECIMAL)
-		getLookup("_")
 
 		--[=[
 			@function tobinary
@@ -2373,8 +2373,8 @@ do -- baseconversion
 			@return string
 		]=]
 		function bitbuffer.tohexadecimal(b: buffer, separator: string?): string
-			local separatorLength = if separator then #separator else 1
-			local lookupTable = getLookup(separator or "_")
+			local separatorLength = if separator then #separator else 0
+			local lookupTable = getLookup(separator or "")
 
 			local str = buffer.tostring(b):gsub(".", lookupTable)
 			return str:sub(1, -1 - separatorLength)
@@ -2477,10 +2477,13 @@ do -- baseconversion
 			local codeCount = #str - padding
 			local bitCount = (codeCount * 6) - (padding * 2)
 
-			local output = buffer.create(bitCount // 8)
-			local outputOffset = 0
+			local endOffset = bitCount // 6 * 6
+			local overhang = bitCount - endOffset
 
-			for inputIndex = 1, codeCount do
+			local output = buffer.create(bitCount // 8)
+
+			local inputIndex = 1
+			for outputOffset = 0, endOffset - 6, 6 do
 				local byte, bit = outputOffset // 8, outputOffset % 8
 				local byteWidth = (bit + 13) // 8
 				bit = (byteWidth * 8 - 6) - bit
@@ -2492,7 +2495,14 @@ do -- baseconversion
 					writeu8(output, byte, bit32_replace(readu8(output, byte), code, bit, 6))
 				end
 
-				outputOffset += 6
+				inputIndex += 1
+			end
+
+			if overhang > 0 then
+				local byte, bit = endOffset // 8, (8 - overhang) - endOffset % 8
+				local code = bit32.rshift(BASE64_TO_NUMBER[str:byte(inputIndex)], 6 - overhang)
+
+				writeu8(output, byte, bit32_replace(readu8(output, byte), code, bit, overhang))
 			end
 
 			return output
