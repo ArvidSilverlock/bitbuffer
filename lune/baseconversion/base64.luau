@@ -66,10 +66,13 @@ function bitbuffer.frombase64(str: string)
 	local codeCount = #str - padding
 	local bitCount = (codeCount * 6) - (padding * 2)
 
-	local output = buffer.create(bitCount // 8)
-	local outputOffset = 0
+	local endOffset = bitCount // 6 * 6
+	local overhang = bitCount - endOffset
 
-	for inputIndex = 1, codeCount do
+	local output = buffer.create(bitCount // 8)
+
+	local inputIndex = 1
+	for outputOffset = 0, endOffset - 6, 6 do
 		local byte, bit = outputOffset // 8, outputOffset % 8
 		local byteWidth = (bit + 13) // 8
 		bit = (byteWidth * 8 - 6) - bit
@@ -81,7 +84,14 @@ function bitbuffer.frombase64(str: string)
 			writeu8(output, byte, bit32_replace(readu8(output, byte), code, bit, 6))
 		end
 
-		outputOffset += 6
+		inputIndex += 1
+	end
+
+	if overhang > 0 then
+		local byte, bit = endOffset // 8, (8 - overhang) - endOffset % 8
+		local code = bit32.rshift(BASE64_TO_NUMBER[str:byte(inputIndex)], 6 - overhang)
+
+		writeu8(output, byte, bit32_replace(readu8(output, byte), code, bit, overhang))
 	end
 
 	return output
