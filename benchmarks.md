@@ -64,5 +64,6 @@ The optimization level was set to 0 for as well.
 ## Float Read and Write Time (ns)
 |bits|read|write|
 |----|----|-----|
-| 32 | 129.933 | 128.709 |
-| 64 | 136.584 | 148.250 |
+| 16 | 128.043 | 132.113 |
+| 32 | 123.429 | 127.416 |
+| 64 | 131.702 | 144.631 |
