@@ -71,3 +71,5 @@ table.insert(output, "return bitbuffer")
 
 local source = table.concat(output, "\n\n"):gsub("\n%s+\n", "\n\n")
 fs.writeFile("./src/init.luau", source)
+
+require("./test.luau")
