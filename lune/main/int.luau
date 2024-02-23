@@ -38,7 +38,7 @@ local function generateRead()
 		end
 
 		body:Indent()
-		body:Insert(1, "--- Reads a ", width, " bit signed integer [", -a, ", ", a - 1, "]")
+		body:Insert(1, "--- Reads a ", width, " bit signed integer [", -b, ", ", b - 1, "]")
 		body:Insert(2, "function bitbuffer.readi", width, "(b: buffer, offset: number): number")
 		body:Push("end")
 
@@ -51,7 +51,7 @@ local function generateWrite()
 	local output = {}
 	for width = 2, 52 do
 		local body = Snippet.new()
-		local a = 2 ^ width
+		local a, b = 2 ^ width, 2 ^ (width - 1)
 
 		local alignedCallback = BUILT_IN_WRITE[width]
 		local unalignedCallback = `bitbuffer.writeu{width}(b, offset, (value + {a}) % {a})`
@@ -67,7 +67,7 @@ local function generateWrite()
 		end
 
 		body:Indent()
-		body:Insert(1, "--- Writes a ", width, " bit signed integer [", -a, ", ", a - 1, "]")
+		body:Insert(1, "--- Writes a ", width, " bit signed integer [", -b, ", ", b - 1, "]")
 		body:Insert(2, "function bitbuffer.writei", width, "(b: buffer, offset: number, value: number)")
 		body:Push("end")
 
