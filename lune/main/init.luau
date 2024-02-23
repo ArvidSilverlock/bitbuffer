@@ -2,7 +2,7 @@ local int = require("./int.luau")
 local uint = require("./uint.luau")
 local float = require("./float.luau")
 local string = require("./string.luau")
-local other = require("./other.luau")
+local other = require("./other/init.luau")
 
 return {
 	int = int,
