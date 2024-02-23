@@ -1369,37 +1369,37 @@ do -- int
 	local writei32 = buffer.writei32
 
 	do -- write
-		--- Writes a 2 bit signed integer [-4, 3]
+		--- Writes a 2 bit signed integer [-2, 1]
 		function bitbuffer.writei2(b: buffer, offset: number, value: number)
 			bitbuffer.writeu2(b, offset, (value + 4) % 4)
 		end
 
-		--- Writes a 3 bit signed integer [-8, 7]
+		--- Writes a 3 bit signed integer [-4, 3]
 		function bitbuffer.writei3(b: buffer, offset: number, value: number)
 			bitbuffer.writeu3(b, offset, (value + 8) % 8)
 		end
 
-		--- Writes a 4 bit signed integer [-16, 15]
+		--- Writes a 4 bit signed integer [-8, 7]
 		function bitbuffer.writei4(b: buffer, offset: number, value: number)
 			bitbuffer.writeu4(b, offset, (value + 16) % 16)
 		end
 
-		--- Writes a 5 bit signed integer [-32, 31]
+		--- Writes a 5 bit signed integer [-16, 15]
 		function bitbuffer.writei5(b: buffer, offset: number, value: number)
 			bitbuffer.writeu5(b, offset, (value + 32) % 32)
 		end
 
-		--- Writes a 6 bit signed integer [-64, 63]
+		--- Writes a 6 bit signed integer [-32, 31]
 		function bitbuffer.writei6(b: buffer, offset: number, value: number)
 			bitbuffer.writeu6(b, offset, (value + 64) % 64)
 		end
 
-		--- Writes a 7 bit signed integer [-128, 127]
+		--- Writes a 7 bit signed integer [-64, 63]
 		function bitbuffer.writei7(b: buffer, offset: number, value: number)
 			bitbuffer.writeu7(b, offset, (value + 128) % 128)
 		end
 
-		--- Writes a 8 bit signed integer [-256, 255]
+		--- Writes a 8 bit signed integer [-128, 127]
 		function bitbuffer.writei8(b: buffer, offset: number, value: number)
 			if offset % 8 > 0 then
 				bitbuffer.writeu8(b, offset, (value + 256) % 256)
@@ -1408,42 +1408,42 @@ do -- int
 			end
 		end
 
-		--- Writes a 9 bit signed integer [-512, 511]
+		--- Writes a 9 bit signed integer [-256, 255]
 		function bitbuffer.writei9(b: buffer, offset: number, value: number)
 			bitbuffer.writeu9(b, offset, (value + 512) % 512)
 		end
 
-		--- Writes a 10 bit signed integer [-1024, 1023]
+		--- Writes a 10 bit signed integer [-512, 511]
 		function bitbuffer.writei10(b: buffer, offset: number, value: number)
 			bitbuffer.writeu10(b, offset, (value + 1024) % 1024)
 		end
 
-		--- Writes a 11 bit signed integer [-2048, 2047]
+		--- Writes a 11 bit signed integer [-1024, 1023]
 		function bitbuffer.writei11(b: buffer, offset: number, value: number)
 			bitbuffer.writeu11(b, offset, (value + 2048) % 2048)
 		end
 
-		--- Writes a 12 bit signed integer [-4096, 4095]
+		--- Writes a 12 bit signed integer [-2048, 2047]
 		function bitbuffer.writei12(b: buffer, offset: number, value: number)
 			bitbuffer.writeu12(b, offset, (value + 4096) % 4096)
 		end
 
-		--- Writes a 13 bit signed integer [-8192, 8191]
+		--- Writes a 13 bit signed integer [-4096, 4095]
 		function bitbuffer.writei13(b: buffer, offset: number, value: number)
 			bitbuffer.writeu13(b, offset, (value + 8192) % 8192)
 		end
 
-		--- Writes a 14 bit signed integer [-16384, 16383]
+		--- Writes a 14 bit signed integer [-8192, 8191]
 		function bitbuffer.writei14(b: buffer, offset: number, value: number)
 			bitbuffer.writeu14(b, offset, (value + 16384) % 16384)
 		end
 
-		--- Writes a 15 bit signed integer [-32768, 32767]
+		--- Writes a 15 bit signed integer [-16384, 16383]
 		function bitbuffer.writei15(b: buffer, offset: number, value: number)
 			bitbuffer.writeu15(b, offset, (value + 32768) % 32768)
 		end
 
-		--- Writes a 16 bit signed integer [-65536, 65535]
+		--- Writes a 16 bit signed integer [-32768, 32767]
 		function bitbuffer.writei16(b: buffer, offset: number, value: number)
 			if offset % 8 > 0 then
 				bitbuffer.writeu16(b, offset, (value + 65536) % 65536)
@@ -1452,82 +1452,82 @@ do -- int
 			end
 		end
 
-		--- Writes a 17 bit signed integer [-131072, 131071]
+		--- Writes a 17 bit signed integer [-65536, 65535]
 		function bitbuffer.writei17(b: buffer, offset: number, value: number)
 			bitbuffer.writeu17(b, offset, (value + 131072) % 131072)
 		end
 
-		--- Writes a 18 bit signed integer [-262144, 262143]
+		--- Writes a 18 bit signed integer [-131072, 131071]
 		function bitbuffer.writei18(b: buffer, offset: number, value: number)
 			bitbuffer.writeu18(b, offset, (value + 262144) % 262144)
 		end
 
-		--- Writes a 19 bit signed integer [-524288, 524287]
+		--- Writes a 19 bit signed integer [-262144, 262143]
 		function bitbuffer.writei19(b: buffer, offset: number, value: number)
 			bitbuffer.writeu19(b, offset, (value + 524288) % 524288)
 		end
 
-		--- Writes a 20 bit signed integer [-1048576, 1048575]
+		--- Writes a 20 bit signed integer [-524288, 524287]
 		function bitbuffer.writei20(b: buffer, offset: number, value: number)
 			bitbuffer.writeu20(b, offset, (value + 1048576) % 1048576)
 		end
 
-		--- Writes a 21 bit signed integer [-2097152, 2097151]
+		--- Writes a 21 bit signed integer [-1048576, 1048575]
 		function bitbuffer.writei21(b: buffer, offset: number, value: number)
 			bitbuffer.writeu21(b, offset, (value + 2097152) % 2097152)
 		end
 
-		--- Writes a 22 bit signed integer [-4194304, 4194303]
+		--- Writes a 22 bit signed integer [-2097152, 2097151]
 		function bitbuffer.writei22(b: buffer, offset: number, value: number)
 			bitbuffer.writeu22(b, offset, (value + 4194304) % 4194304)
 		end
 
-		--- Writes a 23 bit signed integer [-8388608, 8388607]
+		--- Writes a 23 bit signed integer [-4194304, 4194303]
 		function bitbuffer.writei23(b: buffer, offset: number, value: number)
 			bitbuffer.writeu23(b, offset, (value + 8388608) % 8388608)
 		end
 
-		--- Writes a 24 bit signed integer [-16777216, 16777215]
+		--- Writes a 24 bit signed integer [-8388608, 8388607]
 		function bitbuffer.writei24(b: buffer, offset: number, value: number)
 			bitbuffer.writeu24(b, offset, (value + 16777216) % 16777216)
 		end
 
-		--- Writes a 25 bit signed integer [-33554432, 33554431]
+		--- Writes a 25 bit signed integer [-16777216, 16777215]
 		function bitbuffer.writei25(b: buffer, offset: number, value: number)
 			bitbuffer.writeu25(b, offset, (value + 33554432) % 33554432)
 		end
 
-		--- Writes a 26 bit signed integer [-67108864, 67108863]
+		--- Writes a 26 bit signed integer [-33554432, 33554431]
 		function bitbuffer.writei26(b: buffer, offset: number, value: number)
 			bitbuffer.writeu26(b, offset, (value + 67108864) % 67108864)
 		end
 
-		--- Writes a 27 bit signed integer [-134217728, 134217727]
+		--- Writes a 27 bit signed integer [-67108864, 67108863]
 		function bitbuffer.writei27(b: buffer, offset: number, value: number)
 			bitbuffer.writeu27(b, offset, (value + 134217728) % 134217728)
 		end
 
-		--- Writes a 28 bit signed integer [-268435456, 268435455]
+		--- Writes a 28 bit signed integer [-134217728, 134217727]
 		function bitbuffer.writei28(b: buffer, offset: number, value: number)
 			bitbuffer.writeu28(b, offset, (value + 268435456) % 268435456)
 		end
 
-		--- Writes a 29 bit signed integer [-536870912, 536870911]
+		--- Writes a 29 bit signed integer [-268435456, 268435455]
 		function bitbuffer.writei29(b: buffer, offset: number, value: number)
 			bitbuffer.writeu29(b, offset, (value + 536870912) % 536870912)
 		end
 
-		--- Writes a 30 bit signed integer [-1073741824, 1073741823]
+		--- Writes a 30 bit signed integer [-536870912, 536870911]
 		function bitbuffer.writei30(b: buffer, offset: number, value: number)
 			bitbuffer.writeu30(b, offset, (value + 1073741824) % 1073741824)
 		end
 
-		--- Writes a 31 bit signed integer [-2147483648, 2147483647]
+		--- Writes a 31 bit signed integer [-1073741824, 1073741823]
 		function bitbuffer.writei31(b: buffer, offset: number, value: number)
 			bitbuffer.writeu31(b, offset, (value + 2147483648) % 2147483648)
 		end
 
-		--- Writes a 32 bit signed integer [-4294967296, 4294967295]
+		--- Writes a 32 bit signed integer [-2147483648, 2147483647]
 		function bitbuffer.writei32(b: buffer, offset: number, value: number)
 			if offset % 8 > 0 then
 				bitbuffer.writeu32(b, offset, (value + 4294967296) % 4294967296)
@@ -1536,365 +1536,365 @@ do -- int
 			end
 		end
 
-		--- Writes a 33 bit signed integer [-8589934592, 8589934591]
+		--- Writes a 33 bit signed integer [-4294967296, 4294967295]
 		function bitbuffer.writei33(b: buffer, offset: number, value: number)
 			bitbuffer.writeu33(b, offset, (value + 8589934592) % 8589934592)
 		end
 
-		--- Writes a 34 bit signed integer [-17179869184, 17179869183]
+		--- Writes a 34 bit signed integer [-8589934592, 8589934591]
 		function bitbuffer.writei34(b: buffer, offset: number, value: number)
 			bitbuffer.writeu34(b, offset, (value + 17179869184) % 17179869184)
 		end
 
-		--- Writes a 35 bit signed integer [-34359738368, 34359738367]
+		--- Writes a 35 bit signed integer [-17179869184, 17179869183]
 		function bitbuffer.writei35(b: buffer, offset: number, value: number)
 			bitbuffer.writeu35(b, offset, (value + 34359738368) % 34359738368)
 		end
 
-		--- Writes a 36 bit signed integer [-68719476736, 68719476735]
+		--- Writes a 36 bit signed integer [-34359738368, 34359738367]
 		function bitbuffer.writei36(b: buffer, offset: number, value: number)
 			bitbuffer.writeu36(b, offset, (value + 68719476736) % 68719476736)
 		end
 
-		--- Writes a 37 bit signed integer [-137438953472, 137438953471]
+		--- Writes a 37 bit signed integer [-68719476736, 68719476735]
 		function bitbuffer.writei37(b: buffer, offset: number, value: number)
 			bitbuffer.writeu37(b, offset, (value + 137438953472) % 137438953472)
 		end
 
-		--- Writes a 38 bit signed integer [-274877906944, 274877906943]
+		--- Writes a 38 bit signed integer [-137438953472, 137438953471]
 		function bitbuffer.writei38(b: buffer, offset: number, value: number)
 			bitbuffer.writeu38(b, offset, (value + 274877906944) % 274877906944)
 		end
 
-		--- Writes a 39 bit signed integer [-549755813888, 549755813887]
+		--- Writes a 39 bit signed integer [-274877906944, 274877906943]
 		function bitbuffer.writei39(b: buffer, offset: number, value: number)
 			bitbuffer.writeu39(b, offset, (value + 549755813888) % 549755813888)
 		end
 
-		--- Writes a 40 bit signed integer [-1099511627776, 1099511627775]
+		--- Writes a 40 bit signed integer [-549755813888, 549755813887]
 		function bitbuffer.writei40(b: buffer, offset: number, value: number)
 			bitbuffer.writeu40(b, offset, (value + 1099511627776) % 1099511627776)
 		end
 
-		--- Writes a 41 bit signed integer [-2199023255552, 2199023255551]
+		--- Writes a 41 bit signed integer [-1099511627776, 1099511627775]
 		function bitbuffer.writei41(b: buffer, offset: number, value: number)
 			bitbuffer.writeu41(b, offset, (value + 2199023255552) % 2199023255552)
 		end
 
-		--- Writes a 42 bit signed integer [-4398046511104, 4398046511103]
+		--- Writes a 42 bit signed integer [-2199023255552, 2199023255551]
 		function bitbuffer.writei42(b: buffer, offset: number, value: number)
 			bitbuffer.writeu42(b, offset, (value + 4398046511104) % 4398046511104)
 		end
 
-		--- Writes a 43 bit signed integer [-8796093022208, 8796093022207]
+		--- Writes a 43 bit signed integer [-4398046511104, 4398046511103]
 		function bitbuffer.writei43(b: buffer, offset: number, value: number)
 			bitbuffer.writeu43(b, offset, (value + 8796093022208) % 8796093022208)
 		end
 
-		--- Writes a 44 bit signed integer [-17592186044416, 17592186044415]
+		--- Writes a 44 bit signed integer [-8796093022208, 8796093022207]
 		function bitbuffer.writei44(b: buffer, offset: number, value: number)
 			bitbuffer.writeu44(b, offset, (value + 17592186044416) % 17592186044416)
 		end
 
-		--- Writes a 45 bit signed integer [-35184372088832, 35184372088831]
+		--- Writes a 45 bit signed integer [-17592186044416, 17592186044415]
 		function bitbuffer.writei45(b: buffer, offset: number, value: number)
 			bitbuffer.writeu45(b, offset, (value + 35184372088832) % 35184372088832)
 		end
 
-		--- Writes a 46 bit signed integer [-70368744177664, 70368744177663]
+		--- Writes a 46 bit signed integer [-35184372088832, 35184372088831]
 		function bitbuffer.writei46(b: buffer, offset: number, value: number)
 			bitbuffer.writeu46(b, offset, (value + 70368744177664) % 70368744177664)
 		end
 
-		--- Writes a 47 bit signed integer [-140737488355328, 140737488355327]
+		--- Writes a 47 bit signed integer [-70368744177664, 70368744177663]
 		function bitbuffer.writei47(b: buffer, offset: number, value: number)
 			bitbuffer.writeu47(b, offset, (value + 140737488355328) % 140737488355328)
 		end
 
-		--- Writes a 48 bit signed integer [-281474976710656, 281474976710655]
+		--- Writes a 48 bit signed integer [-140737488355328, 140737488355327]
 		function bitbuffer.writei48(b: buffer, offset: number, value: number)
 			bitbuffer.writeu48(b, offset, (value + 281474976710656) % 281474976710656)
 		end
 
-		--- Writes a 49 bit signed integer [-562949953421312, 562949953421311]
+		--- Writes a 49 bit signed integer [-281474976710656, 281474976710655]
 		function bitbuffer.writei49(b: buffer, offset: number, value: number)
 			bitbuffer.writeu49(b, offset, (value + 562949953421312) % 562949953421312)
 		end
 
-		--- Writes a 50 bit signed integer [-1125899906842624, 1125899906842623]
+		--- Writes a 50 bit signed integer [-562949953421312, 562949953421311]
 		function bitbuffer.writei50(b: buffer, offset: number, value: number)
 			bitbuffer.writeu50(b, offset, (value + 1125899906842624) % 1125899906842624)
 		end
 
-		--- Writes a 51 bit signed integer [-2251799813685248, 2251799813685247]
+		--- Writes a 51 bit signed integer [-1125899906842624, 1125899906842623]
 		function bitbuffer.writei51(b: buffer, offset: number, value: number)
 			bitbuffer.writeu51(b, offset, (value + 2251799813685248) % 2251799813685248)
 		end
 
-		--- Writes a 52 bit signed integer [-4503599627370496, 4503599627370495]
+		--- Writes a 52 bit signed integer [-2251799813685248, 2251799813685247]
 		function bitbuffer.writei52(b: buffer, offset: number, value: number)
 			bitbuffer.writeu52(b, offset, (value + 4503599627370496) % 4503599627370496)
 		end
 	end
 
 	do -- read
-		--- Reads a 2 bit signed integer [-4, 3]
+		--- Reads a 2 bit signed integer [-2, 1]
 		function bitbuffer.readi2(b: buffer, offset: number): number
 			return ( bitbuffer.readu2(b, offset) + 2 ) % 4 - 2
 		end
 
-		--- Reads a 3 bit signed integer [-8, 7]
+		--- Reads a 3 bit signed integer [-4, 3]
 		function bitbuffer.readi3(b: buffer, offset: number): number
 			return ( bitbuffer.readu3(b, offset) + 4 ) % 8 - 4
 		end
 
-		--- Reads a 4 bit signed integer [-16, 15]
+		--- Reads a 4 bit signed integer [-8, 7]
 		function bitbuffer.readi4(b: buffer, offset: number): number
 			return ( bitbuffer.readu4(b, offset) + 8 ) % 16 - 8
 		end
 
-		--- Reads a 5 bit signed integer [-32, 31]
+		--- Reads a 5 bit signed integer [-16, 15]
 		function bitbuffer.readi5(b: buffer, offset: number): number
 			return ( bitbuffer.readu5(b, offset) + 16 ) % 32 - 16
 		end
 
-		--- Reads a 6 bit signed integer [-64, 63]
+		--- Reads a 6 bit signed integer [-32, 31]
 		function bitbuffer.readi6(b: buffer, offset: number): number
 			return ( bitbuffer.readu6(b, offset) + 32 ) % 64 - 32
 		end
 
-		--- Reads a 7 bit signed integer [-128, 127]
+		--- Reads a 7 bit signed integer [-64, 63]
 		function bitbuffer.readi7(b: buffer, offset: number): number
 			return ( bitbuffer.readu7(b, offset) + 64 ) % 128 - 64
 		end
 
-		--- Reads a 8 bit signed integer [-256, 255]
+		--- Reads a 8 bit signed integer [-128, 127]
 		function bitbuffer.readi8(b: buffer, offset: number): number
 			return if offset % 8 > 0
 				then ( bitbuffer.readu8(b, offset) + 128 ) % 256 - 128
 				else readi8(b, offset // 8)
 		end
 
-		--- Reads a 9 bit signed integer [-512, 511]
+		--- Reads a 9 bit signed integer [-256, 255]
 		function bitbuffer.readi9(b: buffer, offset: number): number
 			return ( bitbuffer.readu9(b, offset) + 256 ) % 512 - 256
 		end
 
-		--- Reads a 10 bit signed integer [-1024, 1023]
+		--- Reads a 10 bit signed integer [-512, 511]
 		function bitbuffer.readi10(b: buffer, offset: number): number
 			return ( bitbuffer.readu10(b, offset) + 512 ) % 1024 - 512
 		end
 
-		--- Reads a 11 bit signed integer [-2048, 2047]
+		--- Reads a 11 bit signed integer [-1024, 1023]
 		function bitbuffer.readi11(b: buffer, offset: number): number
 			return ( bitbuffer.readu11(b, offset) + 1024 ) % 2048 - 1024
 		end
 
-		--- Reads a 12 bit signed integer [-4096, 4095]
+		--- Reads a 12 bit signed integer [-2048, 2047]
 		function bitbuffer.readi12(b: buffer, offset: number): number
 			return ( bitbuffer.readu12(b, offset) + 2048 ) % 4096 - 2048
 		end
 
-		--- Reads a 13 bit signed integer [-8192, 8191]
+		--- Reads a 13 bit signed integer [-4096, 4095]
 		function bitbuffer.readi13(b: buffer, offset: number): number
 			return ( bitbuffer.readu13(b, offset) + 4096 ) % 8192 - 4096
 		end
 
-		--- Reads a 14 bit signed integer [-16384, 16383]
+		--- Reads a 14 bit signed integer [-8192, 8191]
 		function bitbuffer.readi14(b: buffer, offset: number): number
 			return ( bitbuffer.readu14(b, offset) + 8192 ) % 16384 - 8192
 		end
 
-		--- Reads a 15 bit signed integer [-32768, 32767]
+		--- Reads a 15 bit signed integer [-16384, 16383]
 		function bitbuffer.readi15(b: buffer, offset: number): number
 			return ( bitbuffer.readu15(b, offset) + 16384 ) % 32768 - 16384
 		end
 
-		--- Reads a 16 bit signed integer [-65536, 65535]
+		--- Reads a 16 bit signed integer [-32768, 32767]
 		function bitbuffer.readi16(b: buffer, offset: number): number
 			return if offset % 8 > 0
 				then ( bitbuffer.readu16(b, offset) + 32768 ) % 65536 - 32768
 				else readi16(b, offset // 8)
 		end
 
-		--- Reads a 17 bit signed integer [-131072, 131071]
+		--- Reads a 17 bit signed integer [-65536, 65535]
 		function bitbuffer.readi17(b: buffer, offset: number): number
 			return ( bitbuffer.readu17(b, offset) + 65536 ) % 131072 - 65536
 		end
 
-		--- Reads a 18 bit signed integer [-262144, 262143]
+		--- Reads a 18 bit signed integer [-131072, 131071]
 		function bitbuffer.readi18(b: buffer, offset: number): number
 			return ( bitbuffer.readu18(b, offset) + 131072 ) % 262144 - 131072
 		end
 
-		--- Reads a 19 bit signed integer [-524288, 524287]
+		--- Reads a 19 bit signed integer [-262144, 262143]
 		function bitbuffer.readi19(b: buffer, offset: number): number
 			return ( bitbuffer.readu19(b, offset) + 262144 ) % 524288 - 262144
 		end
 
-		--- Reads a 20 bit signed integer [-1048576, 1048575]
+		--- Reads a 20 bit signed integer [-524288, 524287]
 		function bitbuffer.readi20(b: buffer, offset: number): number
 			return ( bitbuffer.readu20(b, offset) + 524288 ) % 1048576 - 524288
 		end
 
-		--- Reads a 21 bit signed integer [-2097152, 2097151]
+		--- Reads a 21 bit signed integer [-1048576, 1048575]
 		function bitbuffer.readi21(b: buffer, offset: number): number
 			return ( bitbuffer.readu21(b, offset) + 1048576 ) % 2097152 - 1048576
 		end
 
-		--- Reads a 22 bit signed integer [-4194304, 4194303]
+		--- Reads a 22 bit signed integer [-2097152, 2097151]
 		function bitbuffer.readi22(b: buffer, offset: number): number
 			return ( bitbuffer.readu22(b, offset) + 2097152 ) % 4194304 - 2097152
 		end
 
-		--- Reads a 23 bit signed integer [-8388608, 8388607]
+		--- Reads a 23 bit signed integer [-4194304, 4194303]
 		function bitbuffer.readi23(b: buffer, offset: number): number
 			return ( bitbuffer.readu23(b, offset) + 4194304 ) % 8388608 - 4194304
 		end
 
-		--- Reads a 24 bit signed integer [-16777216, 16777215]
+		--- Reads a 24 bit signed integer [-8388608, 8388607]
 		function bitbuffer.readi24(b: buffer, offset: number): number
 			return ( bitbuffer.readu24(b, offset) + 8388608 ) % 16777216 - 8388608
 		end
 
-		--- Reads a 25 bit signed integer [-33554432, 33554431]
+		--- Reads a 25 bit signed integer [-16777216, 16777215]
 		function bitbuffer.readi25(b: buffer, offset: number): number
 			return ( bitbuffer.readu25(b, offset) + 16777216 ) % 33554432 - 16777216
 		end
 
-		--- Reads a 26 bit signed integer [-67108864, 67108863]
+		--- Reads a 26 bit signed integer [-33554432, 33554431]
 		function bitbuffer.readi26(b: buffer, offset: number): number
 			return ( bitbuffer.readu26(b, offset) + 33554432 ) % 67108864 - 33554432
 		end
 
-		--- Reads a 27 bit signed integer [-134217728, 134217727]
+		--- Reads a 27 bit signed integer [-67108864, 67108863]
 		function bitbuffer.readi27(b: buffer, offset: number): number
 			return ( bitbuffer.readu27(b, offset) + 67108864 ) % 134217728 - 67108864
 		end
 
-		--- Reads a 28 bit signed integer [-268435456, 268435455]
+		--- Reads a 28 bit signed integer [-134217728, 134217727]
 		function bitbuffer.readi28(b: buffer, offset: number): number
 			return ( bitbuffer.readu28(b, offset) + 134217728 ) % 268435456 - 134217728
 		end
 
-		--- Reads a 29 bit signed integer [-536870912, 536870911]
+		--- Reads a 29 bit signed integer [-268435456, 268435455]
 		function bitbuffer.readi29(b: buffer, offset: number): number
 			return ( bitbuffer.readu29(b, offset) + 268435456 ) % 536870912 - 268435456
 		end
 
-		--- Reads a 30 bit signed integer [-1073741824, 1073741823]
+		--- Reads a 30 bit signed integer [-536870912, 536870911]
 		function bitbuffer.readi30(b: buffer, offset: number): number
 			return ( bitbuffer.readu30(b, offset) + 536870912 ) % 1073741824 - 536870912
 		end
 
-		--- Reads a 31 bit signed integer [-2147483648, 2147483647]
+		--- Reads a 31 bit signed integer [-1073741824, 1073741823]
 		function bitbuffer.readi31(b: buffer, offset: number): number
 			return ( bitbuffer.readu31(b, offset) + 1073741824 ) % 2147483648 - 1073741824
 		end
 
-		--- Reads a 32 bit signed integer [-4294967296, 4294967295]
+		--- Reads a 32 bit signed integer [-2147483648, 2147483647]
 		function bitbuffer.readi32(b: buffer, offset: number): number
 			return if offset % 8 > 0
 				then ( bitbuffer.readu32(b, offset) + 2147483648 ) % 4294967296 - 2147483648
 				else readi32(b, offset // 8)
 		end
 
-		--- Reads a 33 bit signed integer [-8589934592, 8589934591]
+		--- Reads a 33 bit signed integer [-4294967296, 4294967295]
 		function bitbuffer.readi33(b: buffer, offset: number): number
 			return ( bitbuffer.readu33(b, offset) + 4294967296 ) % 8589934592 - 4294967296
 		end
 
-		--- Reads a 34 bit signed integer [-17179869184, 17179869183]
+		--- Reads a 34 bit signed integer [-8589934592, 8589934591]
 		function bitbuffer.readi34(b: buffer, offset: number): number
 			return ( bitbuffer.readu34(b, offset) + 8589934592 ) % 17179869184 - 8589934592
 		end
 
-		--- Reads a 35 bit signed integer [-34359738368, 34359738367]
+		--- Reads a 35 bit signed integer [-17179869184, 17179869183]
 		function bitbuffer.readi35(b: buffer, offset: number): number
 			return ( bitbuffer.readu35(b, offset) + 17179869184 ) % 34359738368 - 17179869184
 		end
 
-		--- Reads a 36 bit signed integer [-68719476736, 68719476735]
+		--- Reads a 36 bit signed integer [-34359738368, 34359738367]
 		function bitbuffer.readi36(b: buffer, offset: number): number
 			return ( bitbuffer.readu36(b, offset) + 34359738368 ) % 68719476736 - 34359738368
 		end
 
-		--- Reads a 37 bit signed integer [-137438953472, 137438953471]
+		--- Reads a 37 bit signed integer [-68719476736, 68719476735]
 		function bitbuffer.readi37(b: buffer, offset: number): number
 			return ( bitbuffer.readu37(b, offset) + 68719476736 ) % 137438953472 - 68719476736
 		end
 
-		--- Reads a 38 bit signed integer [-274877906944, 274877906943]
+		--- Reads a 38 bit signed integer [-137438953472, 137438953471]
 		function bitbuffer.readi38(b: buffer, offset: number): number
 			return ( bitbuffer.readu38(b, offset) + 137438953472 ) % 274877906944 - 137438953472
 		end
 
-		--- Reads a 39 bit signed integer [-549755813888, 549755813887]
+		--- Reads a 39 bit signed integer [-274877906944, 274877906943]
 		function bitbuffer.readi39(b: buffer, offset: number): number
 			return ( bitbuffer.readu39(b, offset) + 274877906944 ) % 549755813888 - 274877906944
 		end
 
-		--- Reads a 40 bit signed integer [-1099511627776, 1099511627775]
+		--- Reads a 40 bit signed integer [-549755813888, 549755813887]
 		function bitbuffer.readi40(b: buffer, offset: number): number
 			return ( bitbuffer.readu40(b, offset) + 549755813888 ) % 1099511627776 - 549755813888
 		end
 
-		--- Reads a 41 bit signed integer [-2199023255552, 2199023255551]
+		--- Reads a 41 bit signed integer [-1099511627776, 1099511627775]
 		function bitbuffer.readi41(b: buffer, offset: number): number
 			return ( bitbuffer.readu41(b, offset) + 1099511627776 ) % 2199023255552 - 1099511627776
 		end
 
-		--- Reads a 42 bit signed integer [-4398046511104, 4398046511103]
+		--- Reads a 42 bit signed integer [-2199023255552, 2199023255551]
 		function bitbuffer.readi42(b: buffer, offset: number): number
 			return ( bitbuffer.readu42(b, offset) + 2199023255552 ) % 4398046511104 - 2199023255552
 		end
 
-		--- Reads a 43 bit signed integer [-8796093022208, 8796093022207]
+		--- Reads a 43 bit signed integer [-4398046511104, 4398046511103]
 		function bitbuffer.readi43(b: buffer, offset: number): number
 			return ( bitbuffer.readu43(b, offset) + 4398046511104 ) % 8796093022208 - 4398046511104
 		end
 
-		--- Reads a 44 bit signed integer [-17592186044416, 17592186044415]
+		--- Reads a 44 bit signed integer [-8796093022208, 8796093022207]
 		function bitbuffer.readi44(b: buffer, offset: number): number
 			return ( bitbuffer.readu44(b, offset) + 8796093022208 ) % 17592186044416 - 8796093022208
 		end
 
-		--- Reads a 45 bit signed integer [-35184372088832, 35184372088831]
+		--- Reads a 45 bit signed integer [-17592186044416, 17592186044415]
 		function bitbuffer.readi45(b: buffer, offset: number): number
 			return ( bitbuffer.readu45(b, offset) + 17592186044416 ) % 35184372088832 - 17592186044416
 		end
 
-		--- Reads a 46 bit signed integer [-70368744177664, 70368744177663]
+		--- Reads a 46 bit signed integer [-35184372088832, 35184372088831]
 		function bitbuffer.readi46(b: buffer, offset: number): number
 			return ( bitbuffer.readu46(b, offset) + 35184372088832 ) % 70368744177664 - 35184372088832
 		end
 
-		--- Reads a 47 bit signed integer [-140737488355328, 140737488355327]
+		--- Reads a 47 bit signed integer [-70368744177664, 70368744177663]
 		function bitbuffer.readi47(b: buffer, offset: number): number
 			return ( bitbuffer.readu47(b, offset) + 70368744177664 ) % 140737488355328 - 70368744177664
 		end
 
-		--- Reads a 48 bit signed integer [-281474976710656, 281474976710655]
+		--- Reads a 48 bit signed integer [-140737488355328, 140737488355327]
 		function bitbuffer.readi48(b: buffer, offset: number): number
 			return ( bitbuffer.readu48(b, offset) + 140737488355328 ) % 281474976710656 - 140737488355328
 		end
 
-		--- Reads a 49 bit signed integer [-562949953421312, 562949953421311]
+		--- Reads a 49 bit signed integer [-281474976710656, 281474976710655]
 		function bitbuffer.readi49(b: buffer, offset: number): number
 			return ( bitbuffer.readu49(b, offset) + 281474976710656 ) % 562949953421312 - 281474976710656
 		end
 
-		--- Reads a 50 bit signed integer [-1125899906842624, 1125899906842623]
+		--- Reads a 50 bit signed integer [-562949953421312, 562949953421311]
 		function bitbuffer.readi50(b: buffer, offset: number): number
 			return ( bitbuffer.readu50(b, offset) + 562949953421312 ) % 1125899906842624 - 562949953421312
 		end
 
-		--- Reads a 51 bit signed integer [-2251799813685248, 2251799813685247]
+		--- Reads a 51 bit signed integer [-1125899906842624, 1125899906842623]
 		function bitbuffer.readi51(b: buffer, offset: number): number
 			return ( bitbuffer.readu51(b, offset) + 1125899906842624 ) % 2251799813685248 - 1125899906842624
 		end
 
-		--- Reads a 52 bit signed integer [-4503599627370496, 4503599627370495]
+		--- Reads a 52 bit signed integer [-2251799813685248, 2251799813685247]
 		function bitbuffer.readi52(b: buffer, offset: number): number
 			return ( bitbuffer.readu52(b, offset) + 2251799813685248 ) % 4503599627370496 - 2251799813685248
 		end
