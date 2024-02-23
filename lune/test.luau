@@ -129,7 +129,7 @@ do -- fill
 					end
 
 					if overhang > 0 then
-						local chunk = bitbuffer.readu(b, offset + endOffset, overhang)
+						local chunk = bitbuffer.readu[overhang](b, offset + endOffset)
 						local targetValue = value % 2 ^ overhang
 
 						if chunk ~= targetValue then
@@ -171,8 +171,9 @@ do -- copy
 					end
 
 					if overhang > 0 then
-						local sourceChunk = bitbuffer.readu(source, sourceOffset + endOffset, overhang)
-						local targetChunk = bitbuffer.readu(b, targetOffset + endOffset, overhang)
+						local readOverhang = bitbuffer.readu[overhang]
+						local sourceChunk = readOverhang(source, sourceOffset + endOffset)
+						local targetChunk = readOverhang(b, targetOffset + endOffset)
 						if sourceChunk ~= targetChunk then
 							error(`{sourceChunk} ~= {targetChunk} (overhang, {endOffset}, {count})`)
 						end
