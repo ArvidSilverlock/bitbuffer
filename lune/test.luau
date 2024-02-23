@@ -16,8 +16,8 @@ local function test(name: string, read, write, round)
 	return function(value: number, ...: any)
 		local rounded = if round then round(value) else value
 		for offset = 0, 7 do
-			write(b, offset, rounded, ...)
-			local readOutput = read(b, offset, ...)
+			write(b, 0, offset, rounded, ...)
+			local readOutput = read(b, 0, offset, ...)
 			if readOutput ~= rounded then
 				error(`read/write {name} failed on offset {offset} for the value {rounded} (got {readOutput})`)
 			end
@@ -43,7 +43,7 @@ output:insert("┌────────────┬───┐")
 do -- uints and ints
 	local success, response = pcall(function()
 		for width = 1, 53 do
-			local testUInt = test(`u{width}`, bitbuffer[`readu{width}`], bitbuffer[`writeu{width}`], math.round)
+			local testUInt = test(`u{width}`, bitbuffer.readu[width], bitbuffer.writeu[width], math.round)
 			local uintMax = 2 ^ width - 1
 
 			if width == 1 or width == 53 then
@@ -51,7 +51,7 @@ do -- uints and ints
 					testUInt(random(0, uintMax))
 				end
 			else
-				local testInt = test(`i{width}`, bitbuffer[`readi{width}`], bitbuffer[`writei{width}`], math.round)
+				local testInt = test(`i{width}`, bitbuffer.readi[width], bitbuffer.writei[width], math.round)
 				local intMin = -2 ^ (width - 1)
 				local intMax = -intMin - 1
 
@@ -115,21 +115,21 @@ do -- fill
 	local success, response = pcall(function()
 		for count = 1, 256, 28 do -- not byte aligned to test extra cases
 			for value = 0, 255, 51 do
-				for offset = 0, 7 do
-					bitbuffer.fill(b, offset, value, count)
+				for bit = 0, 7 do
+					bitbuffer.fill(b, 0, bit, value, count)
 
-					local endOffset = count // 8 * 8
-					local overhang = count - endOffset
+					local endOffset = count // 8
+					local overhang = count - endOffset * 8
 
-					for chunkOffset = 0, endOffset - 8, 8 do
-						local chunk = bitbuffer.readu8(b, offset + chunkOffset)
+					for chunkOffset = 0, endOffset - 1 do
+						local chunk = bitbuffer.readu8(b, chunkOffset, bit)
 						if chunk ~= value then
 							error(`{chunk} ~= {value} ({count})`)
 						end
 					end
 
 					if overhang > 0 then
-						local chunk = bitbuffer.readu[overhang](b, offset + endOffset)
+						local chunk = bitbuffer.readu[overhang](b, endOffset, bit)
 						local targetValue = value % 2 ^ overhang
 
 						if chunk ~= targetValue then
@@ -157,25 +157,28 @@ do -- copy
 		for count = 1, 120 do
 			for sourceOffset = 0, 7 do
 				for targetOffset = 0, 7 do
-					bitbuffer.copy(b, targetOffset, source, sourceOffset, count)
+					buffer.fill(b, 0, 0)
+					bitbuffer.copy(b, 0, targetOffset, source, 0, sourceOffset, count)
 
-					local endOffset = count // 8 * 8
-					local overhang = count - endOffset
+					local endOffset = count // 8
+					local overhang = count - endOffset * 8
 
-					for chunkOffset = 0, endOffset - 8, 8 do
-						local sourceChunk = bitbuffer.readu8(source, sourceOffset + chunkOffset)
-						local targetChunk = bitbuffer.readu8(b, targetOffset + chunkOffset)
+					for chunkOffset = 0, endOffset - 1 do
+						local sourceChunk = bitbuffer.readu8(source, chunkOffset, sourceOffset)
+						local targetChunk = bitbuffer.readu8(b, chunkOffset, targetOffset)
 						if sourceChunk ~= targetChunk then
-							error(`{sourceChunk} ~= {targetChunk} ({chunkOffset}, {count})`)
+							error(
+								`{sourceChunk} ~= {targetChunk} ({count}, {sourceOffset}, {targetOffset}, {chunkOffset})`
+							)
 						end
 					end
 
 					if overhang > 0 then
 						local readOverhang = bitbuffer.readu[overhang]
-						local sourceChunk = readOverhang(source, sourceOffset + endOffset)
-						local targetChunk = readOverhang(b, targetOffset + endOffset)
+						local sourceChunk = readOverhang(source, endOffset, sourceOffset)
+						local targetChunk = readOverhang(b, endOffset, targetOffset)
 						if sourceChunk ~= targetChunk then
-							error(`{sourceChunk} ~= {targetChunk} (overhang, {endOffset}, {count})`)
+							error(`{sourceChunk} ~= {targetChunk} (overhang, {count}, {sourceOffset}, {targetOffset})`)
 						end
 					end
 				end
