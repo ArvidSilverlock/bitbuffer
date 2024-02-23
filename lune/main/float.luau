@@ -22,15 +22,17 @@ local function generateRead()
 		local exponentBias = 2 ^ (exponentWidth - 1) - 2
 
 		if width == 32 or width == 64 then
-			body:Push("\tif offset % 8 == 0 then")
-			body:Push("\t\treturn buffer.readf", width, "(b, offset // 8)")
+			body:Push("\tif bit == 0 then")
+			body:Push("\t\treturn buffer.readf", width, "(b, byte)")
 			body:Push("\tend\n")
 		end
 
 		-- Read each component
-		body:Push("local mantissa = bitbuffer.readu", mantissaWidth, "(b, offset)")
-		body:Push("local exponent = bitbuffer.readu", exponentWidth, "(b, offset + ", mantissaWidth, ")")
-		body:Push("local sign = bitbuffer.readu1(b, offset + ", mantissaWidth + exponentWidth, ") == 1\n")
+		body:Push("local mantissa = bitbuffer.readu", mantissaWidth, "(b, byte, bit)")
+		body:Push("local offset = byte * 8 + bit + ", mantissaWidth)
+		body:Push("local exponent = bitbuffer.readu", exponentWidth, "(b, offset // 8, offset % 8)")
+		body:Push("offset += ", exponentWidth)
+		body:Push("local sign = bitbuffer.readu1(b, offset // 8, offset % 8) == 1\n")
 
 		-- Handle infinity
 		body:Push("if mantissa == 0 and exponent == ", exponentMax, " then")
@@ -57,7 +59,7 @@ local function generateRead()
 		body:Indent()
 
 		body:Insert(1, "--- Reads a ", componentWidths.name)
-		body:Insert(2, "function bitbuffer.readf", width, "(b: buffer, offset: number): number")
+		body:Insert(2, "function bitbuffer.readf", width, "(b: buffer, byte: number, bit: number): number")
 
 		body:Push("end")
 
@@ -80,8 +82,8 @@ local function generateWrite()
 
 		-- Handle byte aligned cases when applicable
 		if width == 32 or width == 64 then
-			body:Push("if offset % 8 == 0 then")
-			body:Push("\tbuffer.writef", width, "(b, offset // 8, value)")
+			body:Push("if bit == 0 then")
+			body:Push("\tbuffer.writef", width, "(b, byte, value)")
 			body:Push("\treturn")
 			body:Push("end\n")
 		end
@@ -126,12 +128,12 @@ local function generateWrite()
 		-- If we can utilise a single write call, do so
 		if width ~= 64 then
 			local hexExponent = tohex(2 ^ mantissaWidth)
-			body:Push("bitbuffer.writeu", width, "(b, offset, mantissa % ", hexExponent)
+			body:Push("bitbuffer.writeu", width, "(b, byte, bit, mantissa % ", hexExponent)
 			body:Push("\t+ exponent * ", hexExponent)
 			body:Push("\t+ sign)")
 		else
-			body:Push("bitbuffer.writeu32(b, offset, mantissa % ", tohex(2 ^ 32), ")")
-			body:Push("bitbuffer.writeu32(b, offset + 32, mantissa // ", tohex(2 ^ 32), " % ", tohex(2 ^ 20))
+			body:Push("bitbuffer.writeu32(b, byte, bit, mantissa % ", tohex(2 ^ 32), ")")
+			body:Push("bitbuffer.writeu32(b, byte + 4, bit, mantissa // ", tohex(2 ^ 32), " % ", tohex(2 ^ 20))
 			body:Push("\t+ exponent * ", tohex(2 ^ 20))
 			body:Push("\t+ sign)")
 		end
@@ -139,7 +141,7 @@ local function generateWrite()
 		body:Indent()
 
 		body:Insert(1, "--- Writes a ", floatData.name)
-		body:Insert(2, "function bitbuffer.writef", width, "(b: buffer, offset: number, value: number)")
+		body:Insert(2, "function bitbuffer.writef", width, "(b: buffer, byte: number, bit: number, value: number)")
 
 		body:Push("end")
 

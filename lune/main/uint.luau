@@ -170,11 +170,10 @@ local function generateRead()
 			then tostring(body):gsub("^return ", "")
 			else unalignedCase or alignedCase
 
-		body:Insert(1, "local byte, bit = offset // 8, offset % 8")
 		body:Indent()
 
 		body:Insert(1, "--- Writes a ", width, " bit unsigned integer [0, ", 2 ^ width - 1, "]")
-		body:Insert(2, "function bitbuffer.readu", width, "(b: buffer, offset: number): number")
+		body:Insert(2, "function bitbuffer.readu", width, "(b: buffer, byte: number, bit: number): number")
 		body:Push("end")
 
 		table.insert(output, tostring(body))
@@ -202,11 +201,10 @@ local function generateWrite()
 
 		writeCalls[width] = if bitThreshold > 0 then tostring(body) else unalignedCase or alignedCase
 
-		body:Insert(1, "local byte, bit = offset // 8, offset % 8")
 		body:Indent()
 
 		body:Insert(1, "--- Writes a ", width, " bit unsigned integer [0, ", 2 ^ width - 1, "]")
-		body:Insert(2, "function bitbuffer.writeu", width, "(b: buffer, offset: number, value: number)")
+		body:Insert(2, "function bitbuffer.writeu", width, "(b: buffer, byte: number, bit: number, value: number)")
 		body:Push("end")
 
 		table.insert(output, tostring(body))

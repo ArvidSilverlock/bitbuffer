@@ -27,19 +27,19 @@ local function generateRead()
 		local a, b = 2 ^ width, 2 ^ (width - 1)
 
 		local alignedCallback = BUILT_IN_READ[width]
-		local unalignedCallback = `( bitbuffer.readu{width}(b, offset) + {b} ) % {a} - {b}`
+		local unalignedCallback = `( bitbuffer.readu{width}(b, byte, bit) + {b} ) % {a} - {b}`
 
 		if alignedCallback then
-			body:Push("return if offset % 8 > 0")
+			body:Push("return if bit > 0")
 			body:Push("\tthen ", unalignedCallback)
-			body:Push("\telse ", alignedCallback, "(b, offset // 8)")
+			body:Push("\telse ", alignedCallback, "(b, byte)")
 		else
 			body:Push("return ", unalignedCallback)
 		end
 
 		body:Indent()
 		body:Insert(1, "--- Reads a ", width, " bit signed integer [", -b, ", ", b - 1, "]")
-		body:Insert(2, "function bitbuffer.readi", width, "(b: buffer, offset: number): number")
+		body:Insert(2, "function bitbuffer.readi", width, "(b: buffer, byte: number, bit: number): number")
 		body:Push("end")
 
 		table.insert(output, tostring(body))
@@ -54,13 +54,13 @@ local function generateWrite()
 		local a, b = 2 ^ width, 2 ^ (width - 1)
 
 		local alignedCallback = BUILT_IN_WRITE[width]
-		local unalignedCallback = `bitbuffer.writeu{width}(b, offset, (value + {a}) % {a})`
+		local unalignedCallback = `bitbuffer.writeu{width}(b, byte, bit, (value + {a}) % {a})`
 
 		if alignedCallback then
-			body:Push("if offset % 8 > 0 then")
+			body:Push("if bit > 0 then")
 			body:Push("\t", unalignedCallback)
 			body:Push("else")
-			body:Push("\t", alignedCallback, "(b, offset // 8, value)")
+			body:Push("\t", alignedCallback, "(b, byte, value)")
 			body:Push("end")
 		else
 			body:Push(unalignedCallback)
@@ -68,7 +68,7 @@ local function generateWrite()
 
 		body:Indent()
 		body:Insert(1, "--- Writes a ", width, " bit signed integer [", -b, ", ", b - 1, "]")
-		body:Insert(2, "function bitbuffer.writei", width, "(b: buffer, offset: number, value: number)")
+		body:Insert(2, "function bitbuffer.writei", width, "(b: buffer, byte: number, bit: number, value: number)")
 		body:Push("end")
 
 		table.insert(output, tostring(body))
