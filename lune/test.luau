@@ -82,13 +82,14 @@ for _, testPath in getFiles("lune/tests") do
 	local testFunction = require(testPath:gsub("^lune/", ""))
 
 	local success, response = pcall(testFunction, b, bitbuffer, test, testbase, random, randomString, TEST_COUNT)
-	table.insert(responses, { name = testName, status = success, response = response or "" })
+	local formattedResponse = if response
+		then response:gsub('%[string ".*/bitbuffer/(.*)"%]:(%d+): (.+)', "%1 (line %2): %3")
+		else ""
+
+	table.insert(responses, { name = testName, status = success, response = formattedResponse })
 
 	maxNameLength = math.max(#testName, maxNameLength)
-	if response then
-		maxResponseLength = math.max(#response, maxResponseLength)
-		print(#response)
-	end
+	maxResponseLength = math.max(#formattedResponse, maxResponseLength)
 end
 
 local preLine = if maxResponseLength > 0
