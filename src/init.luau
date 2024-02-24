@@ -2439,6 +2439,16 @@ do -- editors
 			end
 		end
 
+		function Writer:SetOffset(byte: number, bit: number?)
+			if bit then
+				self._byte = byte
+				self._bit = bit
+			else
+				self._byte = byte // 8
+				self._bit = byte % 8
+			end
+		end
+
 		function Writer:Align()
 			if self._bit > 0 then
 				self._byte += 1
@@ -2977,14 +2987,14 @@ do -- editors
 		end
 
 		function Writer:NumberSequence(value: NumberSequence)
-			self:UInt(#value.Keypoints, 5) -- max length of 20, tested
+			self:UInt5(#value.Keypoints) -- max length of 20, tested
 			for _, keypoint in value.Keypoints do
 				self:NumberSequenceKeypoint(keypoint)
 			end
 		end
 
 		function Writer:ColorSequence(value: ColorSequence)
-			self:UInt(#value.Keypoints, 5) -- max length of 20, tested
+			self:UInt5(#value.Keypoints) -- max length of 20, tested
 			for _, keypoint in value.Keypoints do
 				self:ColorSequenceKeypoint(keypoint)
 			end
@@ -3108,6 +3118,16 @@ do -- editors
 				self._bit += bit
 				self._byte += byte + self._bit // 8
 				self._bit %= 8
+			end
+		end
+
+		function Reader:SetOffset(byte: number, bit: number?)
+			if bit then
+				self._byte = byte
+				self._bit = bit
+			else
+				self._byte = byte // 8
+				self._bit = byte % 8
 			end
 		end
 
@@ -3755,7 +3775,7 @@ do -- editors
 		end
 
 		function Reader:NumberSequence(): NumberSequence
-			local length = self:UInt(5) -- max length of 20, tested
+			local length = self:UInt5() -- max length of 20, tested
 			local keypoints = table.create(length)
 
 			for _ = 1, length do
@@ -3767,7 +3787,7 @@ do -- editors
 		end
 
 		function Reader:ColorSequence(): ColorSequence
-			local length = self:UInt(5) -- max length of 20, tested
+			local length = self:UInt5() -- max length of 20, tested
 			local keypoints = table.create(length)
 
 			for _ = 1, length do
