@@ -42,14 +42,14 @@ end]],
 	},
 	NumberSequence = {
 		type = "NumberSequence",
-		callback = [[self:UInt(#value.Keypoints, 5) -- max length of 20, tested
+		callback = [[self:UInt5(#value.Keypoints) -- max length of 20, tested
 for _, keypoint in value.Keypoints do
 	self:NumberSequenceKeypoint(keypoint)
 end]],
 	},
 	ColorSequence = {
 		type = "ColorSequence",
-		callback = [[self:UInt(#value.Keypoints, 5) -- max length of 20, tested
+		callback = [[self:UInt5(#value.Keypoints) -- max length of 20, tested
 for _, keypoint in value.Keypoints do
 	self:ColorSequenceKeypoint(keypoint)
 end]],

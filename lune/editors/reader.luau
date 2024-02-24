@@ -45,7 +45,7 @@ end]],
 	},
 	NumberSequence = {
 		type = "NumberSequence",
-		callback = [[local length = self:UInt(5) -- max length of 20, tested
+		callback = [[local length = self:UInt5() -- max length of 20, tested
 local keypoints = table.create(length)
 	
 for _ = 1, length do
@@ -57,7 +57,7 @@ return NumberSequence.new(keypoints)]],
 	},
 	ColorSequence = {
 		type = "ColorSequence",
-		callback = [[local length = self:UInt(5) -- max length of 20, tested
+		callback = [[local length = self:UInt5() -- max length of 20, tested
 local keypoints = table.create(length)
 	
 for _ = 1, length do
