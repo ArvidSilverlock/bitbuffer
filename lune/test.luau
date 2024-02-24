@@ -83,7 +83,9 @@ for _, testPath in getFiles("lune/tests") do
 
 	local success, response = pcall(testFunction, b, bitbuffer, test, testbase, random, randomString, TEST_COUNT)
 	local formattedResponse = if response
-		then response:gsub('%[string ".*/bitbuffer/(.*)"%]:(%d+): (.+)', "%1 (line %2): %3")
+		then response
+			:gsub('%[string ".*/bitbuffer/(.*)"%]:(%d+): (.+)', "%1 (line %2): %3")
+			:gsub('%[string "lune/test"%]:(%d+): (.+)', "lune/test.luau (line %1): %2")
 		else ""
 
 	table.insert(responses, { name = testName, status = success, response = formattedResponse })
