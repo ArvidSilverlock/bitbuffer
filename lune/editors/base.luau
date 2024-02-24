@@ -10,6 +10,16 @@ function CLASS:IncrementOffset(amount: number)
 	end
 end
 
+function CLASS:SetOffset(byte: number, bit: number?)
+	if bit then
+		self._byte = byte
+		self._bit = bit
+	else
+		self._byte = byte // 8
+		self._bit = byte % 8
+	end
+end
+
 function CLASS:Align()
 	if self._bit > 0 then
 		self._byte += 1
