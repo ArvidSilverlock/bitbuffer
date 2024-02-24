@@ -1,14 +1,12 @@
-local function Int(width: number)
-	return { type = "Int", width = width }
+local function Type(type: string)
+	return function(width: number)
+		return { type = type, width = width }
+	end
 end
-
-local function Float(width: number)
-	return { type = "Float", width = width }
-end
-
-local function Alpha(width: number)
-	return { type = "Alpha", width = width }
-end
+local UInt = Type("UInt")
+local Int = Type("Int")
+local Float = Type("Float")
+local Alpha = Type("Alpha")
 
 return {
 	Vector3 = {
@@ -31,7 +29,7 @@ return {
 
 	BrickColor = {
 		Values = { "Number" },
-		Types = { Number = Int(11) },
+		Types = { Number = UInt(11) },
 	},
 	Color3 = {
 		Values = { "R", "G", "B" },
