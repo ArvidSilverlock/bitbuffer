@@ -62,7 +62,9 @@ end
 
 local function generateType(writeType: "UInt" | "Int" | "Float")
 	local prefix = writeType:sub(1, 1):lower()
-	return function(width: number): string
+	return function(width: number, tsOutput): string
+		tsOutput:Push(writeType, width, ": (value: number) => void;")
+
 		local body = Snippet.new()
 
 		body:Push("function Writer:", writeType, width, "(value: number)")
@@ -78,11 +80,11 @@ local generateUInt = generateType("UInt")
 local generateInt = generateType("Int")
 local generateFloat = generateType("Float")
 
-local function insertSimpleValues(output)
+local function insertSimpleValues(output, tsOutput)
 	for valueType, valueData in VALUE_DATA do
 		local body = Snippet.new()
 
-		local constructor = valueData.Constructor or `{valueType}.new`
+		tsOutput:Push(valueType, ": (value: ", valueType, ") => void;")
 		body:Push("function Writer:", valueType, "(value: ", valueType, ")")
 
 		local variables = {}
@@ -137,33 +139,46 @@ end
 
 return function()
 	local output = {}
+	local tsOutput = Snippet.new()
 
-	table.insert(output, "local Writer = {}\nWriter.__index = Writer")
+	tsOutput:Push("IncrementOffset: (amount: number) => void;")
+	tsOutput:Push("SetOffset: (byte: number, bit?: number) => void;")
+	tsOutput:Push("Align: () => void;")
+	tsOutput:Push("")
 
 	table.insert(output, (getFile("base"):gsub("CLASS", "Writer")))
 
 	for width = 1, 53 do
-		table.insert(output, generateUInt(width))
+		table.insert(output, generateUInt(width, tsOutput))
 	end
+	tsOutput:Push("")
 
 	for width = 2, 52 do
-		table.insert(output, generateInt(width))
+		table.insert(output, generateInt(width, tsOutput))
 	end
+	tsOutput:Push("")
 
-	table.insert(output, generateFloat(32))
-	table.insert(output, generateFloat(64))
+	table.insert(output, generateFloat(16, tsOutput))
+	table.insert(output, generateFloat(32, tsOutput))
+	table.insert(output, generateFloat(64, tsOutput))
+	tsOutput:Push("")
 
 	for name, data in WRITE_CALLBACKS do
 		local body = Snippet.new()
+		tsOutput:Push(name, ": (value: ", data.type, ") => void;")
 		body:Push("function Writer:", name, "(value: ", data.type, ")")
 		body:Push(data.callback):Indent()
 		body:Push("end")
 		table.insert(output, tostring(body))
 	end
 
-	insertSimpleValues(output)
+	insertSimpleValues(output, tsOutput)
 
 	table.insert(output, WRITER_CONSTRUCTOR)
 
-	return output
+	tsOutput:Indent()
+	tsOutput:Insert(1, "declare interface Writer {")
+	tsOutput:Push("}")
+
+	return output, tostring(tsOutput)
 end

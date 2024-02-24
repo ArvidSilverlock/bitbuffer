@@ -75,7 +75,9 @@ end
 
 local function generateType(readType: "UInt" | "Int" | "Float")
 	local prefix = readType:sub(1, 1):lower()
-	return function(width: number): string
+	return function(width: number, tsOutput): string
+		tsOutput:Push(readType, width, ": () => number;")
+
 		local body = Snippet.new()
 
 		body:Push("function Reader:", readType, width, "(): number")
@@ -92,9 +94,11 @@ local generateUInt = generateType("UInt")
 local generateInt = generateType("Int")
 local generateFloat = generateType("Float")
 
-local function insertSimpleValues(output)
+local function insertSimpleValues(output, tsOutput)
 	for valueType, valueData in VALUE_DATA do
 		local body = Snippet.new()
+
+		tsOutput:Push(valueType, ": () => ", valueType, ";")
 
 		local constructor = valueData.Constructor or `{valueType}.new`
 		body:Push("function Reader:", valueType, "(): ", valueType)
@@ -153,33 +157,46 @@ end
 
 return function()
 	local output = {}
+	local tsOutput = Snippet.new()
 
-	table.insert(output, "local Reader = {}\nReader.__index = Reader")
+	tsOutput:Push("IncrementOffset: (amount: number) => void;")
+	tsOutput:Push("SetOffset: (byte: number, bit?: number) => void;")
+	tsOutput:Push("Align: () => void;")
+	tsOutput:Push("")
 
 	table.insert(output, (getFile("base"):gsub("CLASS", "Reader")))
 
 	for width = 1, 53 do
-		table.insert(output, generateUInt(width))
+		table.insert(output, generateUInt(width, tsOutput))
 	end
+	tsOutput:Push("")
 
 	for width = 2, 52 do
-		table.insert(output, generateInt(width))
+		table.insert(output, generateInt(width, tsOutput))
 	end
+	tsOutput:Push("")
 
-	table.insert(output, generateFloat(32))
-	table.insert(output, generateFloat(64))
+	table.insert(output, generateFloat(16, tsOutput))
+	table.insert(output, generateFloat(32, tsOutput))
+	table.insert(output, generateFloat(64, tsOutput))
+	tsOutput:Push("")
 
 	for name, data in READ_CALLBACKS do
 		local body = Snippet.new()
+		tsOutput:Push(name, ": () => ", data.type, ";")
 		body:Push("function Reader:", name, "(): ", data.type)
 		body:Push(data.callback):Indent()
 		body:Push("end")
 		table.insert(output, tostring(body))
 	end
 
-	insertSimpleValues(output)
+	insertSimpleValues(output, tsOutput)
 
 	table.insert(output, READER_CONSTRUCTOR)
 
-	return output
+	tsOutput:Indent()
+	tsOutput:Insert(1, "declare interface Reader {")
+	tsOutput:Push("}")
+
+	return output, tostring(tsOutput)
 end
