@@ -1,35 +1,90 @@
+local Snippet = require("../Snippet.luau")
+local fs = require("@lune/fs")
+
 local VALUE_DATA = require("./values.luau")
 
 local READER_CONSTRUCTOR = [[function bitbuffer.reader(b: buffer)
 	return setmetatable({
 		_buffer = b,
-		_offset = 0
+		_byte = 0,
+		_bit = 0,
 	}, Reader)
 end]]
 
-local UINT_FORMAT = `bitbuffer.readu%d(self._buffer, self._offset)`
-local INT_FORMAT = `bitbuffer.readi%d(self._buffer, self._offset)`
-local FLOAT_FORMAT = `bitbuffer.readf%d(self._buffer, self._offset)`
-local ALPHA_FORMAT = "bitbuffer.readu%d(self._buffer, self._offset) / %d"
-
-local numberFormats = {
-	UInt = UINT_FORMAT,
-	Int = INT_FORMAT,
-	Float = FLOAT_FORMAT,
+local READ_CALLBACKS = {
+	Boolean = {
+		type = "boolean",
+		callback = [[local value = bitbuffer.readu1(self._buffer, self._byte, self._bit) == 1
+self:IncrementOffset(1)
+return value]],
+	},
+	CFrame = {
+		type = "CFrame",
+		callback = [[local specialCase = self:UInt5()
+local position = self:Vector3()
+	
+if specialCase == 0 then
+	local axisAngle = self:Vector3()
+	return CFrame.fromAxisAngle(axisAngle, axisAngle.Magnitude) + position
+else
+	local specialCase = CFRAME_SPECIAL_CASES[specialCase]
+	return CFrame.fromMatrix(position, specialCase.XVector, specialCase.YVector, specialCase.ZVector)
+end]],
+	},
+	LosslessCFrame = {
+		type = "CFrame",
+		callback = [[local specialCase = self:UInt5()
+local position = self:Vector3()
+	
+if specialCase == 0 then
+	return CFrame.fromMatrix(position, self:Vector3(), self:Vector3(), self:Vector3())
+else
+	local specialCase = CFRAME_SPECIAL_CASES[specialCase]
+	return CFrame.fromMatrix(position, specialCase.XVector, specialCase.YVector, specialCase.ZVector)
+end]],
+	},
+	NumberSequence = {
+		type = "NumberSequence",
+		callback = [[local length = self:UInt(5) -- max length of 20, tested
+local keypoints = table.create(length)
+	
+for _ = 1, length do
+	local keypoint = self:NumberSequenceKeypoint()
+	table.insert(keypoints, keypoint)
+end
+	
+return NumberSequence.new(keypoints)]],
+	},
+	ColorSequence = {
+		type = "ColorSequence",
+		callback = [[local length = self:UInt(5) -- max length of 20, tested
+local keypoints = table.create(length)
+	
+for _ = 1, length do
+	local keypoint = self:ColorSequenceKeypoint()
+	table.insert(keypoints, keypoint)
+end
+	
+return ColorSequence.new(keypoints)]],
+	},
 }
 
+local function getFile(fileName: string)
+	return (fs.readFile(`lune/editors/{fileName}.luau`):gsub("\n$", ""))
+end
+
 local function generateType(readType: "UInt" | "Int" | "Float")
-	local format = numberFormats[readType]
+	local prefix = readType:sub(1, 1):lower()
 	return function(width: number): string
-		local body = {}
+		local body = Snippet.new()
 
-		table.insert(body, `function Reader:{readType}{width}(): number`)
-		table.insert(body, `\tlocal value = {format:format(width)}`)
-		table.insert(body, `\tself:IncrementOffset({width})`)
-		table.insert(body, `\treturn value`)
-		table.insert(body, "end")
+		body:Push("function Reader:", readType, width, "(): number")
+		body:Push("\tlocal value = bitbuffer.read", prefix, width, "(self._buffer, self._byte, self._bit)")
+		body:Push("\tself:IncrementOffset(", width, ")")
+		body:Push("\treturn value")
+		body:Push("end")
 
-		return table.concat(body, "\n")
+		return tostring(body)
 	end
 end
 
@@ -39,10 +94,10 @@ local generateFloat = generateType("Float")
 
 local function insertSimpleValues(output)
 	for valueType, valueData in VALUE_DATA do
-		local body = {}
+		local body = Snippet.new()
 
 		local constructor = valueData.Constructor or `{valueType}.new`
-		table.insert(body, `function Reader:{valueType}(): {valueType}`)
+		body:Push("function Reader:", valueType, "(): ", valueType)
 
 		local variables = {}
 
@@ -53,19 +108,29 @@ local function insertSimpleValues(output)
 			local variableName = value:gsub("^%u", string.lower)
 			table.insert(variables, variableName)
 
+			local currentOffset
 			local line
-			local currentOffset = if offset > 0 then `self._offset + {offset}` else "self._offset"
+
+			if offset == 0 then
+				currentOffset = "self._byte, self._bit"
+			elseif offset % 8 == 0 then
+				currentOffset = `self._byte + {offset // 8}, self._bit`
+			else
+				body:Push("\tself:IncrementOffset(", offset, ")")
+				offset = 0
+				currentOffset = "self._byte, self._bit"
+			end
 
 			if type(data) == "string" then
 				if offset > 0 then
-					table.insert(body, `\tself:IncrementOffset({offset})`)
+					body:Push("\tself:IncrementOffset(", offset, ")")
 					offset = 0
 				end
 				line = `self:{data}()`
 			elseif data.type == "Alpha" then
 				line = `bitbuffer.readu{data.width}(self._buffer, {currentOffset}) / {2 ^ data.width - 1}`
 				offset += data.width
-			elseif numberFormats[data.type] then
+			else
 				local prefix = data.type:sub(1, 1):lower()
 				line = `bitbuffer.read{prefix}{data.width}(self._buffer, {currentOffset})`
 				offset += data.width
@@ -82,7 +147,7 @@ local function insertSimpleValues(output)
 		table.insert(body, `\treturn {constructor}({table.concat(variables, ", ")})`)
 		table.insert(body, "end")
 
-		table.insert(output, table.concat(body, "\n"))
+		table.insert(output, tostring(body))
 	end
 end
 
@@ -90,6 +155,8 @@ return function()
 	local output = {}
 
 	table.insert(output, "local Reader = {}\nReader.__index = Reader")
+
+	table.insert(output, (getFile("base"):gsub("CLASS", "Reader")))
 
 	for width = 1, 53 do
 		table.insert(output, generateUInt(width))
@@ -101,6 +168,14 @@ return function()
 
 	table.insert(output, generateFloat(32))
 	table.insert(output, generateFloat(64))
+
+	for name, data in READ_CALLBACKS do
+		local body = Snippet.new()
+		body:Push("function Reader:", name, "(): ", data.type)
+		body:Push(data.callback):Indent()
+		body:Push("end")
+		table.insert(output, tostring(body))
+	end
 
 	insertSimpleValues(output)
 
