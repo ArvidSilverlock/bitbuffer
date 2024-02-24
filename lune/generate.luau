@@ -2,8 +2,9 @@ local process = require("@lune/process")
 local fs = require("@lune/fs")
 
 local output = {}
+local tsOutput = {}
 
--- stylua: ignore
+-- stylua: ignore start
 table.insert(output, [[--!native
 --!optimize 2
 --!strict
@@ -34,42 +35,38 @@ local bit32_extract = bit32.extract
 --- @class bitbuffer
 local bitbuffer = {}]])
 
-local function addSection(name, section, outputTable)
-	local str = if type(section) == "function" then table.concat(section(addSection), "\n\n") else tostring(section)
-	table.insert(outputTable or output, `do -- {name}\n\t{str:gsub("\n\t*", "%1\t")}\nend`)
-end
+table.insert(tsOutput, [[type write<T> = (b: buffer, byte: number, bit: number, value: T) => void
+type read<T> = (b: buffer, byte: number, bit: number) => T]])
+-- stylua: ignore end
 
-local function writeMain()
-	local main = require("./main/init.luau")
-	addSection("uint", main.uint)
-	addSection("int", main.int)
-	addSection("float", main.float)
-	addSection("string", main.string)
-	addSection("other", main.other)
-end
-
-if process.args[1] then
-	for _, argument in process.args do
-		if argument == "main" then
-			writeMain()
-		else
-			local callback = require(`./{argument}/init.luau`)
-			addSection(argument, callback)
-		end
+local function addSection(name, section, outputTable, ...)
+	local luauString, tsString
+	if type(section) == "function" then
+		luauString, tsString = section(addSection, ...)
+		luauString = table.concat(luauString, "\n\n")
+	else
+		luauString = tostring(section)
 	end
-else
-	local baseconversion = require("./baseconversion/init.luau")
-	local editors = require("./editors/init.luau")
 
-	writeMain()
-
-	addSection("base conversion", baseconversion)
-	addSection("editors", editors)
+	table.insert(outputTable or output, `do -- {name}\n\t{luauString:gsub("\n\t*", "%1\t")}\nend`)
+	if tsString then
+		table.insert(tsOutput, tsString)
+	end
 end
+
+local editors = require("./editors/init.luau")
+local main = require("./bitbuffer/init.luau")
+
+addSection("bitbuffer", main)
+addSection("editors", editors)
 
 table.insert(output, "return bitbuffer")
+table.insert(tsOutput, "declare const bitbuffer: bitbuffer;\nexport = bitbuffer")
 
-local source = table.concat(output, "\n\n"):gsub("\n%s+\n", "\n\n")
-fs.writeFile("./src/init.luau", source)
+local luauSource = table.concat(output, "\n\n"):gsub("\n%s+\n", "\n\n")
+fs.writeFile("./src/init.luau", luauSource)
+
+local tsSource = table.concat(tsOutput, "\n\n"):gsub("\n%s+\n", "\n\n")
+fs.writeFile("./src/index.d.ts", tsSource)
 
 require("./test.luau")
