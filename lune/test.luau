@@ -1,15 +1,23 @@
 local bitbuffer = require("../src/init.luau")
+local fs = require("@lune/fs")
+
 local b = buffer.create(512)
 
-local GENERAL_SCALE = 128
-
-local ICONS = {
-	[true] = "✓",
-	[false] = "✗",
-}
+local TEST_COUNT = 128
 
 local function random(min: number, max: number): number
 	return math.random() * (max - min) + min
+end
+
+local function randomString(): (string, number)
+	local length = math.random(1, 256)
+	local str = buffer.create(length)
+
+	for offset = 0, length - 1 do
+		buffer.writeu8(str, offset, math.random(0, 255))
+	end
+
+	return buffer.tostring(str), length
 end
 
 local function test(name: string, read, write, round)
@@ -25,219 +33,91 @@ local function test(name: string, read, write, round)
 	end
 end
 
-local function generateString(): (string, number)
-	local length = math.random(1, 256)
-	local str = buffer.create(length)
+local function testbase(tobase, frombase, testTable: { [string]: string })
+	local function executeTest(input: string, correctEncoded: string?)
+		local encoded = tobase(buffer.fromstring(input))
+		local decoded = buffer.tostring(frombase(encoded))
 
-	for offset = 0, length - 1 do
-		buffer.writeu8(str, offset, math.random(0, 255))
+		assert(decoded == input, `'{encoded}' failed to decode into '{input}' (got '{decoded}')`)
+		if encoded then
+			assert(encoded == encoded, `'{input}' failed to encode into '{correctEncoded}' (got '{encoded}')`)
+		end
 	end
 
-	return buffer.tostring(str), length
-end
-
-local output = setmetatable({}, { __index = table })
-
-output:insert("┌────────────┬───┐")
-
-do -- uints and ints
-	local success, response = pcall(function()
-		for width = 1, 53 do
-			local testUInt = test(`u{width}`, bitbuffer.readu[width], bitbuffer.writeu[width], math.round)
-			local uintMax = 2 ^ width - 1
-
-			if width == 1 or width == 53 then
-				for _ = 1, GENERAL_SCALE do
-					testUInt(random(0, uintMax))
-				end
-			else
-				local testInt = test(`i{width}`, bitbuffer.readi[width], bitbuffer.writei[width], math.round)
-				local intMin = -2 ^ (width - 1)
-				local intMax = -intMin - 1
-
-				for _ = 1, GENERAL_SCALE do
-					testUInt(random(0, uintMax))
-					testInt(random(intMin, intMax))
-				end
-			end
-		end
-	end)
-
-	if not success then
-		warn(response)
-	end
-	output:insert(`│ uints/ints │ {ICONS[success]} │`)
-end
-
-do -- floats
-	local success, response = pcall(function()
-		local testf16 = test("f16", bitbuffer.readf16, bitbuffer.writef16, function(value)
-			local interval = 2 ^ (math.floor(math.log(math.abs(value), 2)) - 10)
-			return math.floor(value / interval) * interval
-		end)
-
-		local testf32 = test("f32", bitbuffer.readf32, bitbuffer.writef32, function(value)
-			local interval = 2 ^ (math.floor(math.log(math.abs(value), 2)) - 23)
-			return math.floor(value / interval) * interval
-		end)
-
-		local testf64 = test("f64", bitbuffer.readf64, bitbuffer.writef64)
-
-		for _ = 1, GENERAL_SCALE do
-			local value = random(-GENERAL_SCALE, GENERAL_SCALE)
-			testf16(value)
-			testf32(value)
-			testf64(value)
-		end
-	end)
-
-	if not success then
-		warn(response)
-	end
-	output:insert(`│ floats     │ {ICONS[success]} │`)
-end
-
-do -- strings
-	local success, response = pcall(function()
-		local teststring = test("string", bitbuffer.readstring, bitbuffer.writestring)
-		for _ = 1, GENERAL_SCALE do
-			teststring(generateString())
-		end
-	end)
-
-	if not success then
-		warn(response)
-	end
-	output:insert(`│ strings    │ {ICONS[success]} │`)
-end
-
-do -- fill
-	local success, response = pcall(function()
-		for count = 1, 256, 28 do -- not byte aligned to test extra cases
-			for value = 0, 255, 51 do
-				for bit = 0, 7 do
-					bitbuffer.fill(b, 0, bit, value, count)
-
-					local endOffset = count // 8
-					local overhang = count - endOffset * 8
-
-					for chunkOffset = 0, endOffset - 1 do
-						local chunk = bitbuffer.readu8(b, chunkOffset, bit)
-						if chunk ~= value then
-							error(`{chunk} ~= {value} ({count})`)
-						end
-					end
-
-					if overhang > 0 then
-						local chunk = bitbuffer.readu[overhang](b, endOffset, bit)
-						local targetValue = value % 2 ^ overhang
-
-						if chunk ~= targetValue then
-							error(`{chunk} ~= {targetValue} ({count})`)
-						end
-					end
-				end
-			end
-		end
-	end)
-
-	if not success then
-		warn(response)
-	end
-	output:insert(`│ fill       │ {ICONS[success]} │`)
-end
-
-do -- copy
-	local success, response = pcall(function()
-		local source = buffer.create(16)
-		for offset = 0, 15 do
-			buffer.writeu8(source, offset, math.random(0, 255))
-		end
-
-		for count = 1, 120 do
-			for sourceOffset = 0, 7 do
-				for targetOffset = 0, 7 do
-					buffer.fill(b, 0, 0)
-					bitbuffer.copy(b, 0, targetOffset, source, 0, sourceOffset, count)
-
-					local endOffset = count // 8
-					local overhang = count - endOffset * 8
-
-					for chunkOffset = 0, endOffset - 1 do
-						local sourceChunk = bitbuffer.readu8(source, chunkOffset, sourceOffset)
-						local targetChunk = bitbuffer.readu8(b, chunkOffset, targetOffset)
-						if sourceChunk ~= targetChunk then
-							error(
-								`{sourceChunk} ~= {targetChunk} ({count}, {sourceOffset}, {targetOffset}, {chunkOffset})`
-							)
-						end
-					end
-
-					if overhang > 0 then
-						local readOverhang = bitbuffer.readu[overhang]
-						local sourceChunk = readOverhang(source, endOffset, sourceOffset)
-						local targetChunk = readOverhang(b, endOffset, targetOffset)
-						if sourceChunk ~= targetChunk then
-							error(`{sourceChunk} ~= {targetChunk} (overhang, {count}, {sourceOffset}, {targetOffset})`)
-						end
-					end
-				end
-			end
-		end
-	end)
-
-	if not success then
-		warn(response)
-	end
-	output:insert(`│ copy       │ {ICONS[success]} │`)
-end
-
-do -- bases
-	local function testbase(tobase, frombase, testTable: { [string]: string })
-		local function executeTest(input: string, correctEncoded: string?)
-			local encoded = tobase(buffer.fromstring(input))
-			local decoded = buffer.tostring(frombase(encoded))
-
-			assert(decoded == input, `'{encoded}' failed to decode into '{input}' (got '{decoded}')`)
-			if encoded then
-				assert(encoded == encoded, `'{input}' failed to encode into '{correctEncoded}' (got '{encoded}')`)
-			end
-		end
-
-		local success, response = pcall(function()
-			for correct, encoded in testTable do
-				executeTest(correct, encoded)
-			end
-
-			for _ = 1, GENERAL_SCALE do
-				local str = generateString()
-				executeTest(str)
-			end
-		end)
-
-		if not success then
-			warn(response)
-		end
-
-		return success
+	for correct, encoded in testTable do
+		executeTest(correct, encoded)
 	end
 
-	local success = testbase(bitbuffer.tobinary, bitbuffer.frombinary, {})
-	output:insert(`│ binary     │ {ICONS[success]} │`)
-
-	local success = testbase(bitbuffer.tohexadecimal, bitbuffer.fromhexadecimal, {})
-	output:insert(`│ hex        │ {ICONS[success]} │`)
-
-	local success = testbase(bitbuffer.tobase64, bitbuffer.frombase64, {
-		["The quick brown fox jumps over the lazy dog."] = "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZy4=",
-		["foobar"] = "Zm9vYmFy",
-		["glaggle"] = "Z2xhZ2dsZQ==",
-		["a"] = "YQ==",
-		["ab"] = "YWI=",
-	})
-	output:insert(`│ base64     │ {ICONS[success]} │`)
+	for _ = 1, TEST_COUNT do
+		local str = randomString()
+		executeTest(str)
+	end
 end
 
-output:insert("└────────────┴───┘")
+local function getFiles(directory, output)
+	output = output or {}
+	for _, name in fs.readDir(directory) do
+		local path = `{directory}/{name}`
+		if fs.isFile(path) then
+			table.insert(output, path)
+		else
+			getFiles(path, output)
+		end
+	end
 
-print(output:concat("\n"))
+	return output
+end
+
+local responses = {}
+
+local maxNameLength = 0
+local maxResponseLength = 0
+
+for _, testPath in getFiles("lune/tests") do
+	local testName = testPath:match("([%w_]+)%.luau$")
+	if not testName then
+		continue
+	end
+
+	local testFunction = require(testPath:gsub("^lune/", ""))
+
+	local success, response = pcall(testFunction, b, bitbuffer, test, testbase, random, randomString, TEST_COUNT)
+	table.insert(responses, { name = testName, status = success, response = response or "" })
+
+	maxNameLength = math.max(#testName, maxNameLength)
+	if response then
+		maxResponseLength = math.max(#response, maxResponseLength)
+		print(#response)
+	end
+end
+
+local preLine = if maxResponseLength > 0
+	then `┌─{string.rep("─", maxNameLength)}─┬─{string.rep("─", maxResponseLength)}─┬───┐`
+	else `┌─{string.rep("─", maxNameLength)}─┬───┐`
+
+local postLine = if maxResponseLength > 0
+	then `└─{string.rep("─", maxNameLength)}─┴─{string.rep("─", maxResponseLength)}─┴───┘`
+	else `└─{string.rep("─", maxNameLength)}─┴───┘`
+
+local output = {}
+
+table.insert(output, preLine)
+for _, response in responses do
+	local formattedLine
+
+	local namePadding = string.rep(" ", maxNameLength - #response.name)
+	local statusIcon = if response.status then "✓" else "✗"
+
+	-- Would've used `string.format`, but this doesn't work for large amounts of padding (i.e., 100 characters or so)
+	if maxResponseLength > 0 then
+		local responsePadding = string.rep(" ", maxResponseLength - #response.response)
+		formattedLine = `│ {response.name}{namePadding} │ {response.response}{responsePadding} │ {statusIcon} │`
+	else
+		formattedLine = `│ {response.name}{namePadding} │ {statusIcon} │`
+	end
+
+	table.insert(output, formattedLine)
+end
+table.insert(output, postLine)
+
+print(table.concat(output, "\n"))
