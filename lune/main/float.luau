@@ -22,9 +22,9 @@ local function generateRead()
 		local exponentBias = 2 ^ (exponentWidth - 1) - 2
 
 		if width == 32 or width == 64 then
-			body:Push("\tif bit == 0 then")
-			body:Push("\t\treturn buffer.readf", width, "(b, byte)")
-			body:Push("\tend\n")
+			body:Push("if bit == 0 then")
+			body:Push("\treturn buffer.readf", width, "(b, byte)")
+			body:Push("end\n")
 		end
 
 		-- Read each component
