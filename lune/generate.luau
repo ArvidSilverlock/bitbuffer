@@ -48,7 +48,9 @@ local function addSection(name, section, outputTable, ...)
 		luauString = tostring(section)
 	end
 
-	table.insert(outputTable or output, `do -- {name}\n\t{luauString:gsub("\n\t*", "%1\t")}\nend`)
+	local formatted = if name then `do -- {name}\n\t{luauString:gsub("\n\t*", "%1\t")}\nend` else luauString
+	table.insert(outputTable or output, formatted)
+
 	if tsString then
 		table.insert(tsOutput, tsString)
 	end
@@ -57,7 +59,7 @@ end
 local editors = require("./editors/init.luau")
 local main = require("./bitbuffer/init.luau")
 
-addSection("bitbuffer", main)
+addSection(nil, main)
 addSection("editors", editors)
 
 table.insert(output, "return bitbuffer")
