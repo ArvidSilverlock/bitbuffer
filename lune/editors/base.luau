@@ -1,3 +1,6 @@
+local CLASS = {}
+CLASS.__index = CLASS
+
 function CLASS:IncrementOffset(amount: number)
 	local byte, bit = amount // 8, amount % 8
 
