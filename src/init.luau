@@ -2976,6 +2976,11 @@ do -- editors
 			self:IncrementOffset(52)
 		end
 
+		function Writer:Float16(value: number)
+			bitbuffer.writef16(self._buffer, self._byte, self._bit, value)
+			self:IncrementOffset(16)
+		end
+
 		function Writer:Float32(value: number)
 			bitbuffer.writef32(self._buffer, self._byte, self._bit, value)
 			self:IncrementOffset(32)
@@ -3759,6 +3764,12 @@ do -- editors
 		function Reader:Int52(): number
 			local value = bitbuffer.readi52(self._buffer, self._byte, self._bit)
 			self:IncrementOffset(52)
+			return value
+		end
+
+		function Reader:Float16(): number
+			local value = bitbuffer.readf16(self._buffer, self._byte, self._bit)
+			self:IncrementOffset(16)
 			return value
 		end
 
