@@ -1893,19 +1893,19 @@ do -- float
 	do -- read
 		--- Reads a Half-precision IEEE 754 number
 		function bitbuffer.readf16(b: buffer, byte: number, bit: number): number
-			local mantissa = bitbuffer.readu10(b, byte, bit)
-			local offset = byte * 8 + bit + 10
-			local exponent = bitbuffer.readu5(b, offset // 8, offset % 8)
-			offset += 5
-			local sign = bitbuffer.readu1(b, offset // 8, offset % 8) == 1
+			local uintForm = bitbuffer.readu16(b, byte, bit)
+			local mantissa_exponent = uintForm % 0x8000
 
-			if mantissa == 0 and exponent == 0b11111 then
-				return if sign then -math.huge else math.huge
-			elseif mantissa == 1 and exponent == 0b11111 then
+			if mantissa_exponent == 0b11111_0000000000 then
+				return if uintForm // 0x8000 == 1 then -math.huge else math.huge
+			elseif mantissa_exponent == 0b11111_0000000001 then
 				return 0 / 0
-			elseif mantissa == 0 and exponent == 0 then
+			elseif mantissa_exponent == 0b00000_0000000000 then
 				return 0
 			else
+			local mantissa = mantissa_exponent % 0x400
+			local exponent = mantissa_exponent // 0x400
+			local sign = uintForm // 0x8000 == 1
 				mantissa = if exponent == 0
 					then mantissa / 0x400
 					else mantissa / 0x800 + 0.5
@@ -1921,19 +1921,19 @@ do -- float
 				return buffer.readf32(b, byte)
 			end
 
-			local mantissa = bitbuffer.readu23(b, byte, bit)
-			local offset = byte * 8 + bit + 23
-			local exponent = bitbuffer.readu8(b, offset // 8, offset % 8)
-			offset += 8
-			local sign = bitbuffer.readu1(b, offset // 8, offset % 8) == 1
+			local uintForm = bitbuffer.readu32(b, byte, bit)
+			local mantissa_exponent = uintForm % 0x80000000
 
-			if mantissa == 0 and exponent == 0b11111111 then
-				return if sign then -math.huge else math.huge
-			elseif mantissa == 1 and exponent == 0b11111111 then
+			if mantissa_exponent == 0b11111111_00000000000000000000000 then
+				return if uintForm // 0x80000000 == 1 then -math.huge else math.huge
+			elseif mantissa_exponent == 0b11111111_00000000000000000000001 then
 				return 0 / 0
-			elseif mantissa == 0 and exponent == 0 then
+			elseif mantissa_exponent == 0b00000000_00000000000000000000000 then
 				return 0
 			else
+			local mantissa = mantissa_exponent % 0x800000
+			local exponent = mantissa_exponent // 0x800000
+			local sign = uintForm // 0x80000000 == 1
 				mantissa = if exponent == 0
 					then mantissa / 0x800000
 					else mantissa / 0x1000000 + 0.5
@@ -1955,9 +1955,9 @@ do -- float
 			offset += 11
 			local sign = bitbuffer.readu1(b, offset // 8, offset % 8) == 1
 
-			if mantissa == 0 and exponent == 0b11111111111 then
+			if mantissa == 0 and exponent == 11111111111 then
 				return if sign then -math.huge else math.huge
-			elseif mantissa == 1 and exponent == 0b11111111111 then
+			elseif mantissa == 1 and exponent == 11111111111 then
 				return 0 / 0
 			elseif mantissa == 0 and exponent == 0 then
 				return 0
@@ -3059,8 +3059,8 @@ do -- editors
 		end
 
 		function Writer:UDim2(value: UDim2)
-			self:UDim(value.Scale)
-			self:UDim(value.Offset)
+			self:UDim(value.X)
+			self:UDim(value.Y)
 		end
 
 		function Writer:NumberSequenceKeypoint(value: NumberSequenceKeypoint)
@@ -3879,10 +3879,10 @@ do -- editors
 		end
 
 		function Reader:UDim2(): UDim2
-			local scale = self:UDim()
-			local offset = self:UDim()
+			local x = self:UDim()
+			local y = self:UDim()
 
-			return UDim2.new(scale, offset)
+			return UDim2.new(x, y)
 		end
 
 		function Reader:NumberSequenceKeypoint(): NumberSequenceKeypoint
