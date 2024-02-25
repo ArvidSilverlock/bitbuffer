@@ -13,6 +13,7 @@ Can be installed with wally using `arvidsilverlock/bitbuffer@latest`
 0.1.0 was taken due to mistakes made early into development.
 
 I'm unsure whether the `index.d.ts` file is entirely functional, other than that, I'm fairly sure all other features should work as intended(?).
+Note that this version doesn't include the `Reader:String()` and `Writer:String()` functions, as these are missing due to an oversight.
 
 Changes since the previous version include:
 - Swapping the combined byte/bit `offset` into a separate one, to allow for more optimizations on the user end.
