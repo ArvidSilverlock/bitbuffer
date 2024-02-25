@@ -224,7 +224,7 @@ if UDim then
 	}
 
 	if UDim2 then
-		tests.BrickColor = {
+		tests.UDim2 = {
 			generate = function()
 				return UDim2.new(generateUDim(), generateUDim())
 			end,
