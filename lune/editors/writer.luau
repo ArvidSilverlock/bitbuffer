@@ -12,6 +12,12 @@ local WRITER_CONSTRUCTOR = [[function bitbuffer.writer(b: buffer)
 end]]
 
 local WRITE_CALLBACKS = {
+	String = {
+		type = "string",
+		callback = [[bitbuffer.writeu32(self._buffer, self._byte, self._bit, #value)
+bitbuffer.writestring(self._buffer, self._byte + 4, self._bit, value)
+self:IncrementOffset(32 + #value * 8)]],
+	},
 	Boolean = {
 		type = "boolean",
 		callback = [[bitbuffer.writeu1(self._buffer, self._byte, self._bit, if value then 1 else 0)

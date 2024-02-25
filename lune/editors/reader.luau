@@ -12,6 +12,13 @@ local READER_CONSTRUCTOR = [[function bitbuffer.reader(b: buffer)
 end]]
 
 local READ_CALLBACKS = {
+	String = {
+		type = "string",
+		callback = [[local length = bitbuffer.readu32(self._buffer, self._byte, self._bit)
+local value = bitbuffer.readstring(self._buffer, self._byte + 4, self._bit, length)
+self:IncrementOffset(32 + length * 8)
+return value]],
+	},
 	Boolean = {
 		type = "boolean",
 		callback = [[local value = bitbuffer.readu1(self._buffer, self._byte, self._bit) == 1
