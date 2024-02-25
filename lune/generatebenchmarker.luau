@@ -8,7 +8,7 @@ output:Push("--!optimize 2")
 output:Push("")
 
 output:Push("local TEST_BUFFER = buffer.create(16)")
-output:Push("local TEST_COUNT = 10000")
+output:Push("local TEST_COUNT = 100_000")
 output:Push("")
 
 output:Push("local bitbuffer = require(workspace.ModuleScript)")
