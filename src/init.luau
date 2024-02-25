@@ -2991,6 +2991,12 @@ do -- editors
 			self:IncrementOffset(64)
 		end
 
+		function Writer:String(value: string)
+			bitbuffer.writeu32(self._buffer, self._byte, self._bit, #value)
+			bitbuffer.writestring(self._buffer, self._byte + 4, self._bit, value)
+			self:IncrementOffset(32 + #value * 8)
+		end
+
 		function Writer:NumberSequence(value: NumberSequence)
 			self:UInt5(#value.Keypoints) -- max length of 20, tested
 			for _, keypoint in value.Keypoints do
@@ -3782,6 +3788,13 @@ do -- editors
 		function Reader:Float64(): number
 			local value = bitbuffer.readf64(self._buffer, self._byte, self._bit)
 			self:IncrementOffset(64)
+			return value
+		end
+
+		function Reader:String(): string
+			local length = bitbuffer.readu32(self._buffer, self._byte, self._bit)
+			local value = bitbuffer.readstring(self._buffer, self._byte + 4, self._bit, length)
+			self:IncrementOffset(32 + length * 8)
 			return value
 		end
 

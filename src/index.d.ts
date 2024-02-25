@@ -371,6 +371,7 @@ declare interface Writer {
 	Float32: (value: number) => void;
 	Float64: (value: number) => void;
 
+	String: (value: string) => void;
 	NumberSequence: (value: NumberSequence) => void;
 	ColorSequence: (value: ColorSequence) => void;
 	CFrame: (value: CFrame) => void;
@@ -504,6 +505,7 @@ declare interface Reader {
 	Float32: () => number;
 	Float64: () => number;
 
+	String: () => string;
 	NumberSequence: () => NumberSequence;
 	ColorSequence: () => ColorSequence;
 	CFrame: () => CFrame;
