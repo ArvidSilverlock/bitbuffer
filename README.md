@@ -19,3 +19,6 @@ Changes since the previous version include:
 - Swapping the combined byte/bit `offset` into a separate one, to allow for more optimizations on the user end.
 - Addition of `bitbuffer.reader` and `bitbuffer.writer` classes that entirely abstract the lower level functions and handling of offsets.
 - The addition of partial typescript support.
+
+Known issues:
+- `UDim2`s do not function for the `Reader` and `Writer` classes.
