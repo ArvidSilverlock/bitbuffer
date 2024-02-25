@@ -41,8 +41,8 @@ return {
 		Types = { Scale = Float(32), Offset = Int(32) },
 	},
 	UDim2 = {
-		Values = { "Scale", "Offset" },
-		Types = { Scale = "UDim", Offset = "UDim" },
+		Values = { "X", "Y" },
+		Types = { X = "UDim", Y = "UDim" },
 	},
 
 	NumberRange = {
