@@ -1,4 +1,4 @@
-local Snippet = require("../Snippet.luau")
+local Snippet = require("../Snippet/init.luau")
 
 local FLOAT_WIDTHS = {
 	[16] = { mantissa = 10, exponent = 5, name = "Half-precision IEEE 754 number" },
@@ -18,8 +18,12 @@ local function generateRead(addSection, tsOutput)
 
 		local body = Snippet.new()
 
-		local exponentMax = `0b{string.rep("1", exponentWidth)}`
+		local exponentMax = string.rep("1", exponentWidth)
 		local exponentBias = 2 ^ (exponentWidth - 1) - 2
+
+		local infinity = `0b{exponentMax}_{string.rep(0, mantissaWidth)}`
+		local nan = `0b{exponentMax}_{string.rep(0, mantissaWidth - 1)}1`
+		local zero = `0b{string.rep(0, exponentWidth)}_{string.rep(0, mantissaWidth)}`
 
 		if width == 32 or width == 64 then
 			body:Push("if bit == 0 then")
@@ -27,27 +31,50 @@ local function generateRead(addSection, tsOutput)
 			body:Push("end\n")
 		end
 
-		-- Read each component
-		body:Push("local mantissa = bitbuffer.readu", mantissaWidth, "(b, byte, bit)")
-		body:Push("local offset = byte * 8 + bit + ", mantissaWidth)
-		body:Push("local exponent = bitbuffer.readu", exponentWidth, "(b, offset // 8, offset % 8)")
-		body:Push("offset += ", exponentWidth)
-		body:Push("local sign = bitbuffer.readu1(b, offset // 8, offset % 8) == 1\n")
+		if width == 64 then
+			body:Push("local mantissa = bitbuffer.readu", mantissaWidth, "(b, byte, bit)")
+			body:Push("local offset = byte * 8 + bit + ", mantissaWidth)
+			body:Push("local exponent = bitbuffer.readu", exponentWidth, "(b, offset // 8, offset % 8)")
+			body:Push("offset += ", exponentWidth)
+			body:Push("local sign = bitbuffer.readu1(b, offset // 8, offset % 8) == 1\n")
 
-		-- Handle infinity
-		body:Push("if mantissa == 0 and exponent == ", exponentMax, " then")
-		body:Push("\treturn if sign then -math.huge else math.huge")
+			-- Handle infinity
+			body:Push("if mantissa == 0 and exponent == ", exponentMax, " then")
+			body:Push("\treturn if sign then -math.huge else math.huge")
 
-		-- Handle NaN
-		body:Push("elseif mantissa == 1 and exponent == ", exponentMax, " then")
-		body:Push("\treturn 0 / 0")
+			-- Handle NaN
+			body:Push("elseif mantissa == 1 and exponent == ", exponentMax, " then")
+			body:Push("\treturn 0 / 0")
 
-		-- Handle 0
-		body:Push("elseif mantissa == 0 and exponent == 0 then")
-		body:Push("\treturn 0")
+			-- Handle 0
+			body:Push("elseif mantissa == 0 and exponent == 0 then")
+			body:Push("\treturn 0")
 
-		-- Handle everything else
-		body:Push("else")
+			body:Push("else")
+		else
+			body:Push("local uintForm = bitbuffer.readu", width, "(b, byte, bit)")
+			body:Push("local mantissa_exponent = uintForm % ", tohex(2 ^ (width - 1)))
+			body:Push("")
+
+			-- Handle infinity
+			body:Push("if mantissa_exponent == ", infinity, " then")
+			body:Push("\treturn if uintForm // ", tohex(2 ^ (width - 1)), " == 1 then -math.huge else math.huge")
+
+			-- Handle NaN
+			body:Push("elseif mantissa_exponent == ", nan, " then")
+			body:Push("\treturn 0 / 0")
+
+			-- Handle 0
+			body:Push("elseif mantissa_exponent == ", zero, " then")
+			body:Push("\treturn 0")
+
+			-- Handle everything else
+			body:Push("else")
+			body:Push("local mantissa = mantissa_exponent % ", tohex(2 ^ mantissaWidth))
+			body:Push("local exponent = mantissa_exponent // ", tohex(2 ^ mantissaWidth))
+			body:Push("local sign = uintForm // ", tohex(2 ^ (width - 1)), " == 1")
+		end
+
 		body:Push("\tmantissa = if exponent == 0")
 		body:Push("\t\tthen mantissa / ", tohex(2 ^ mantissaWidth))
 		body:Push("\t\telse mantissa / ", tohex(2 ^ (mantissaWidth + 1)), " + 0.5\n")
