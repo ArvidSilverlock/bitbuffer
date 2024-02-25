@@ -1,7 +1,7 @@
 local bitbuffer = require("../src/init.luau")
 local fs = require("@lune/fs")
 
-local b = buffer.create(512)
+local b = buffer.create(2 ^ 16)
 
 local TEST_COUNT = 128
 
