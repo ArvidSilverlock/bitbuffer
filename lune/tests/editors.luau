@@ -64,6 +64,19 @@ tests.Boolean = {
 	end,
 }
 
+tests.String = {
+	generate = function(): string
+		local length = math.random(0, 16)
+		local str = buffer.create(length)
+
+		for offset = 0, length - 1 do
+			buffer.writeu8(str, offset, math.random(0, 255))
+		end
+
+		return buffer.tostring(str)
+	end,
+}
+
 if CFrame then
 	local function generate(): CFrame
 		local position = randomUnitVector() * 1024
