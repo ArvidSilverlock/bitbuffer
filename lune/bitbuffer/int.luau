@@ -1,4 +1,4 @@
-local Snippet = require("../Snippet.luau")
+local Snippet = require("../Snippet/init.luau")
 
 local LOCALISED_FUNCTIONS = [[local readi8 = buffer.readi8
 local readi16 = buffer.readi16

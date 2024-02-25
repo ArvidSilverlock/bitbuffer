@@ -1,4 +1,4 @@
-local Snippet = require("../Snippet.luau")
+local Snippet = require("../Snippet/init.luau")
 local fs = require("@lune/fs")
 
 local VALUE_DATA = require("./values.luau")

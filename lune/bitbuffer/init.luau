@@ -1,4 +1,4 @@
-local Snippet = require("../Snippet.luau")
+local Snippet = require("../Snippet/init.luau")
 
 local uint = require("./uint.luau")
 local int = require("./int.luau")
