@@ -1,5 +1,3 @@
-local Snippet = require("../Snippet/init.luau")
-
 local uint = require("./uint.luau")
 local int = require("./int.luau")
 local float = require("./float.luau")
@@ -7,23 +5,23 @@ local string = require("./string.luau")
 local other = require("./other/init.luau")
 local baseconversion = require("./baseconversion/init.luau")
 
-return function(addSection)
-	local output = {}
-	local tsOutput = Snippet.new()
+return function(luau, typescript)
+	typescript:BlockStart("declare interface bitbuffer {")
 
-	addSection("uint", uint, output, tsOutput)
-	addSection("int", int, output, tsOutput)
-	addSection("float", float, output, tsOutput)
-	addSection("string", string, output, tsOutput)
-	addSection("other", other, output, tsOutput)
-	addSection("base conversion", baseconversion, output, tsOutput)
+	luau:Block("uint", uint, typescript)
+		:Push("")
+		:Block("int", int, typescript)
+		:Push("")
+		:Block("float", float, typescript)
+		:Push("")
+		:Block("string", string, typescript)
+		:Push("")
+		:Block("other", other, typescript)
+		:Push("")
+		:Block("base conversion", baseconversion, typescript)
 
-	tsOutput:Push("reader: (b: buffer) => Reader;")
-	tsOutput:Push("writer: (b: buffer) => Writer;")
+	typescript:Push("reader: (b: buffer) => Reader;")
+	typescript:Push("writer: (b: buffer) => Writer;")
 
-	tsOutput:Indent()
-	tsOutput:Insert(1, "declare interface bitbuffer {")
-	tsOutput:Push("}")
-
-	return output, tostring(tsOutput)
+	typescript:BlockEnd("}")
 end
