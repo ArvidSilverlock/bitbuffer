@@ -36,17 +36,8 @@ local BUFFER_FILL = get("fill")
 ]]
 local BUFFER_COPY = get("copy")
 
-local function create(addSection, tsOutput)
-	local output = {}
-	table.insert(output, CONSTANTS)
-	table.insert(output, BUFFER_FILL)
-	table.insert(output, BUFFER_COPY)
-
-	tsOutput:Push("fill: (b: buffer, byte: number, bit: number, value: number, count?: number) => void;")
-	tsOutput:Push("")
-
-	-- stylua: ignore
-	tsOutput:Push([[copy: (
+local FILL_TYPE = [[fill: (b: buffer, byte: number, bit: number, value: number, count?: number) => void;]]
+local COPY_TYPE = [[copy: (
 	target: buffer,
 	targetByte: number,
 	targetBit: number,
@@ -54,10 +45,21 @@ local function create(addSection, tsOutput)
 	sourceByte?: number,
 	sourceBit?: number,
 	count?: number
-) => void;]])
-	tsOutput:Push("")
+) => void;]]
 
-	return output
+local function create(luau, typescript)
+	-- stylua: ignore start
+	luau:Push(CONSTANTS)
+		:Push("")
+		:Push(BUFFER_FILL)
+		:Push("")
+		:Push(BUFFER_COPY)
+
+	typescript:Push(FILL_TYPE)
+		:Push("")
+		:Push(COPY_TYPE)
+		:Push("")
+	-- stylua: ignore end
 end
 
 return create
