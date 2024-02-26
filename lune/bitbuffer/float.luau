@@ -53,21 +53,21 @@ local function generateRead(luau, typescript)
 
 			luau
 				:Push(`local uintForm = bitbuffer.readu{width}(b, byte, bit)`)
-				:Push(`local mantissa_exponent = uintForm % {tohex(2 ^ (width - 1))}`)
+				:Push(`local exponent_mantissa = uintForm % {tohex(2 ^ (width - 1))}`)
 				:Push("")
 				-- Handle infinity
-				:BlockStart(`if mantissa_exponent == {infinity} then`)
+				:BlockStart(`if exponent_mantissa == {infinity} then`)
 				:Push(`return if uintForm // {tohex(2 ^ (width - 1))} == 1 then -math.huge else math.huge`)
 				-- Handle NaN
-				:BlockMiddle(`elseif mantissa_exponent == {nan} then`)
+				:BlockMiddle(`elseif exponent_mantissa == {nan} then`)
 				:Push("return 0 / 0")
 				-- Handle 0
-				:BlockMiddle(`elseif mantissa_exponent == {zero} then`)
+				:BlockMiddle(`elseif exponent_mantissa == {zero} then`)
 				:Push("return 0")
 				-- Handle everything else
 				:BlockMiddle("else")
-				:Push(`local mantissa = mantissa_exponent % {tohex(2 ^ mantissaWidth)}`)
-				:Push(`local exponent = mantissa_exponent // {tohex(2 ^ mantissaWidth)}`)
+				:Push(`local mantissa = exponent_mantissa % {tohex(2 ^ mantissaWidth)}`)
+				:Push(`local exponent = exponent_mantissa // {tohex(2 ^ mantissaWidth)}`)
 				:Push(`local sign = uintForm // {tohex(2 ^ (width - 1))} == 1`)
 		end
 

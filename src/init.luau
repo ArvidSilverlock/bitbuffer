@@ -1891,17 +1891,17 @@ do -- main
 			--- Reads a half-precision IEEE 754 number
 			function bitbuffer.readf16(b: buffer, byte: number, bit: number): number
 				local uintForm = bitbuffer.readu16(b, byte, bit)
-				local mantissa_exponent = uintForm % 0x8000
+				local exponent_mantissa = uintForm % 0x8000
 
-				if mantissa_exponent == 0b11111_0000000000 then
+				if exponent_mantissa == 0b11111_0000000000 then
 					return if uintForm // 0x8000 == 1 then -math.huge else math.huge
-				elseif mantissa_exponent == 0b11111_0000000001 then
+				elseif exponent_mantissa == 0b11111_0000000001 then
 					return 0 / 0
-				elseif mantissa_exponent == 0b00000_0000000000 then
+				elseif exponent_mantissa == 0b00000_0000000000 then
 					return 0
 				else
-					local mantissa = mantissa_exponent % 0x400
-					local exponent = mantissa_exponent // 0x400
+					local mantissa = exponent_mantissa % 0x400
+					local exponent = exponent_mantissa // 0x400
 					local sign = uintForm // 0x8000 == 1
 					mantissa = if exponent == 0
 						then mantissa / 0x400
@@ -1919,17 +1919,17 @@ do -- main
 				end
 
 				local uintForm = bitbuffer.readu32(b, byte, bit)
-				local mantissa_exponent = uintForm % 0x80000000
+				local exponent_mantissa = uintForm % 0x80000000
 
-				if mantissa_exponent == 0b11111111_00000000000000000000000 then
+				if exponent_mantissa == 0b11111111_00000000000000000000000 then
 					return if uintForm // 0x80000000 == 1 then -math.huge else math.huge
-				elseif mantissa_exponent == 0b11111111_00000000000000000000001 then
+				elseif exponent_mantissa == 0b11111111_00000000000000000000001 then
 					return 0 / 0
-				elseif mantissa_exponent == 0b00000000_00000000000000000000000 then
+				elseif exponent_mantissa == 0b00000000_00000000000000000000000 then
 					return 0
 				else
-					local mantissa = mantissa_exponent % 0x800000
-					local exponent = mantissa_exponent // 0x800000
+					local mantissa = exponent_mantissa % 0x800000
+					local exponent = exponent_mantissa // 0x800000
 					local sign = uintForm // 0x80000000 == 1
 					mantissa = if exponent == 0
 						then mantissa / 0x800000
