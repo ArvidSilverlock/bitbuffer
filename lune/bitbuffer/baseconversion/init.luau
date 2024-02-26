@@ -4,26 +4,28 @@ local function get(fileName: string)
 	return (fs.readFile(`lune/bitbuffer/baseconversion/{fileName}.luau`):gsub("\n$", ""))
 end
 
-local function create(addSection, tsOutput)
-	local output = {}
-	table.insert(output, get("constants"))
-	addSection("binary", get("binary"), output)
-	addSection("hexadecimal", get("hexadecimal"), output)
-	addSection("base64", get("base64"), output)
+local function create(luau, typescript)
+	-- stylua: ignore start
+	luau:Push(get("constants"))
+		:Push("")
+		:Block("binary", get("binary"))
+		:Push("")
+		:Block("hexadecimal", get("hexadecimal"))
+		:Push("")
+		:Block("base64", get("base64"))
+		:Push("")
 
-	tsOutput:Push("tobinary: (b: buffer, separator?: string) => string;")
-	tsOutput:Push("frombinary: (str: string, separator?: string) => buffer;")
-	tsOutput:Push("")
+	typescript:Push("tobinary: (b: buffer, separator?: string) => string;")
+		:Push("frombinary: (str: string, separator?: string) => buffer;")
+		:Push("")
+		:Push("tohexadecimal: (b: buffer, separator?: string) => string;")
+		:Push("fromhexadecimal: (str: string, separator?: string) => buffer;")
+		:Push("")
+		:Push("tobase64: (b: buffer) => string;")
+		:Push("frombase64: (str: string) => buffer;")
+		:Push("")
 
-	tsOutput:Push("tohexadecimal: (b: buffer, separator?: string) => string;")
-	tsOutput:Push("fromhexadecimal: (str: string, separator?: string) => buffer;")
-	tsOutput:Push("")
-
-	tsOutput:Push("tobase64: (b: buffer) => string;")
-	tsOutput:Push("frombase64: (str: string) => buffer;")
-	tsOutput:Push("")
-
-	return output
+	-- stylua: ignore end
 end
 
 return create
