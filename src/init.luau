@@ -1995,7 +1995,7 @@ do -- main
 				buffer.writestring(b, byte, value, count)
 			else
 				local input = buffer.fromstring(value)
-				bitbuffer.copy(b, byte, bit, input, 0, 0, count * 8)
+				bitbuffer.copy(b, byte, bit, input, 0, 0, ( count or #value ) * 8)
 			end
 		end
 	end
