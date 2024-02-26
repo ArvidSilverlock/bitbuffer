@@ -23,5 +23,5 @@ return function(luau, typescript)
 	typescript:Push("reader: (b: buffer) => Reader;")
 	typescript:Push("writer: (b: buffer) => Writer;")
 
-	typescript:BlockEnd("}")
+	typescript:BlockEnd("}"):Push("")
 end
