@@ -198,7 +198,10 @@ local function generateRead(luau, typescript)
 			:BlockEnd()
 			:ConditionalPush(width < 53, "")
 
-		typescript:Push(`/** {comment} */`):Push("readu", width, ": read<number>;")
+		-- stylua: ignore
+		typescript
+			:Push(`/** {comment} */`)
+			:Push("readu", width, ": read<number>;")
 	end
 
 	typescript:Push("")
@@ -230,7 +233,10 @@ local function generateWrite(luau, typescript)
 			:BlockEnd()
 			:ConditionalPush(width < 53, "")
 
-		typescript:Push(`/** {comment} */`):Push("writeu", width, ": write<number>;")
+		-- stylua: ignore
+		typescript
+			:Push(`/** {comment} */`)
+			:Push("writeu", width, ": write<number>;")
 	end
 
 	typescript:Push("")
