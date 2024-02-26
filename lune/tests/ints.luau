@@ -1,5 +1,5 @@
 return function(b, bitbuffer, test, testbase, random, randomString, testCount)
-	for width = 1, 52 do
+	for width = 1, 53 do
 		local testInt = test(`i{width}`, bitbuffer.readi[width], bitbuffer.writei[width], math.round)
 		local intMin = -2 ^ (width - 1)
 		local intMax = -intMin - 1
