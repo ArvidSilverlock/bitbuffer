@@ -28,8 +28,8 @@ type read<T> = (b: buffer, byte: number, bit: number) => T
 local editors = require("./editors/init.luau")
 local main = require("./bitbuffer/init.luau")
 
-main(luau, typescript)
--- editors(luau, typescript)
+luau:Block("main", main, typescript)
+luau:Block("editors", editors, typescript)
 
 luau:Push("return bitbuffer")
 typescript:Push("declare const bitbuffer: bitbuffer;\nexport = bitbuffer")
@@ -37,4 +37,4 @@ typescript:Push("declare const bitbuffer: bitbuffer;\nexport = bitbuffer")
 fs.writeFile("./src/init.luau", tostring(luau))
 fs.writeFile("./src/index.d.ts", tostring(typescript))
 
--- require("./test.luau")
+require("./test.luau")
