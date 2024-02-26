@@ -1,4 +1,3 @@
-local Snippet = require("../Snippet/init.luau")
 local fs = require("@lune/fs")
 
 local VALUE_DATA = require("./values.luau")
@@ -68,17 +67,12 @@ end
 
 local function generateType(writeType: "UInt" | "Int" | "Float")
 	local prefix = writeType:sub(1, 1):lower()
-	return function(width: number, tsOutput): string
-		tsOutput:Push(writeType, width, ": (value: number) => void;")
-
-		local body = Snippet.new()
-
-		body:Push("function Writer:", writeType, width, "(value: number)")
-		body:Push("\tbitbuffer.write", prefix, width, "(self._buffer, self._byte, self._bit, value)")
-		body:Push("\tself:IncrementOffset(", width, ")")
-		body:Push("end")
-
-		return tostring(body)
+	return function(luau, typescript, width: number): string
+		typescript:Push(`{writeType}{width}: (value: number) => void;`)
+		luau:BlockStart(`function Writer:{writeType}{width}(value: number)`)
+			:Push(`bitbuffer.write{prefix}{width}(self._buffer, self._byte, self._bit, value)`)
+			:Push(`self:IncrementOffset({width})`)
+			:BlockEnd()
 	end
 end
 
@@ -86,105 +80,91 @@ local generateUInt = generateType("UInt")
 local generateInt = generateType("Int")
 local generateFloat = generateType("Float")
 
-local function insertSimpleValues(output, tsOutput)
+local function insertSimpleValues(luau, typescript)
 	for valueType, valueData in VALUE_DATA do
-		local body = Snippet.new()
-
-		tsOutput:Push(valueType, ": (value: ", valueType, ") => void;")
-		body:Push("function Writer:", valueType, "(value: ", valueType, ")")
-
-		local variables = {}
+		typescript:Push(`{valueType}: (value: {valueType}) => void;`)
+		luau:BlockStart(`function Writer:{valueType}(value: {valueType})`)
 
 		local offset = 0
 		for _, value in valueData.Values do
 			local data = valueData.Types[value]
 
-			local variableName = `value.{value}`
-
 			local currentOffset
-			local line
-
 			if offset == 0 then
 				currentOffset = "self._byte, self._bit"
 			elseif offset % 8 == 0 then
 				currentOffset = `self._byte + {offset // 8}, self._bit`
 			else
-				body:Push("\tself:IncrementOffset(", offset, ")")
-				offset = 0
+				luau:Push(`self:IncrementOffset({offset})`)
 				currentOffset = "self._byte, self._bit"
+				offset = 0
 			end
 
 			if type(data) == "string" then
 				if offset > 0 then
-					body:Push("\tself:IncrementOffset(", offset, ")")
+					luau:Push(`self:IncrementOffset({offset})`)
 					offset = 0
 				end
-				line = `self:{data}(value.{value})`
+				luau:Push(`self:{data}(value.{value})`)
 			elseif data.type == "Alpha" then
-				line =
-					`bitbuffer.writeu{data.width}(self._buffer, {currentOffset}, math.floor(value.{value} * {2 ^ data.width - 1}))`
+				local roundedValue = `math.floor(value.{value} * {2 ^ data.width - 1})`
+				luau:Push(`bitbuffer.writeu{data.width}(self._buffer, {currentOffset}, {roundedValue})`)
 				offset += data.width
 			else
 				local prefix = data.type:sub(1, 1):lower()
-				line = `bitbuffer.write{prefix}{data.width}(self._buffer, {currentOffset}, value.{value})`
+				luau:Push(`bitbuffer.write{prefix}{data.width}(self._buffer, {currentOffset}, value.{value})`)
 				offset += data.width
 			end
-
-			table.insert(body, `\t{line}`)
 		end
 
-		if offset > 0 then
-			table.insert(body, `\tself:IncrementOffset({offset})`)
-		end
-
-		table.insert(body, "end")
-
-		table.insert(output, tostring(body))
+		-- stylua: ignore
+		luau:ConditionalPush(offset > 0, `self:IncrementOffset({offset})`)
+			:BlockEnd()
+			:Push("")
 	end
 end
 
-return function()
-	local output = {}
-	local tsOutput = Snippet.new()
+return function(luau, typescript)
+	typescript
+		:BlockStart("declare interface Writer {")
+		:Push("IncrementOffset: (amount: number) => void;")
+		:Push("SetOffset: (byte: number, bit?: number) => void;")
+		:Push("Align: () => void;")
+		:Push("")
 
-	tsOutput:Push("IncrementOffset: (amount: number) => void;")
-	tsOutput:Push("SetOffset: (byte: number, bit?: number) => void;")
-	tsOutput:Push("Align: () => void;")
-	tsOutput:Push("")
-
-	table.insert(output, (getFile("base"):gsub("CLASS", "Writer")))
+	luau:Push(getFile("base"):gsub("CLASS", "Writer"), "\n")
 
 	for width = 1, 53 do
-		table.insert(output, generateUInt(width, tsOutput))
+		luau:Call(generateUInt, typescript, width):Push("")
 	end
-	tsOutput:Push("")
+	typescript:Push("")
 
-	for width = 2, 52 do
-		table.insert(output, generateInt(width, tsOutput))
+	for width = 1, 53 do
+		luau:Call(generateInt, typescript, width):Push("")
 	end
-	tsOutput:Push("")
+	typescript:Push("")
 
-	table.insert(output, generateFloat(16, tsOutput))
-	table.insert(output, generateFloat(32, tsOutput))
-	table.insert(output, generateFloat(64, tsOutput))
-	tsOutput:Push("")
+	luau:Call(generateFloat, typescript, 16)
+		:Push("")
+		:Call(generateFloat, typescript, 32)
+		:Push("")
+		:Call(generateFloat, typescript, 64)
+		:Push("")
+
+	typescript:Push("")
 
 	for name, data in WRITE_CALLBACKS do
-		local body = Snippet.new()
-		tsOutput:Push(name, ": (value: ", data.type, ") => void;")
-		body:Push("function Writer:", name, "(value: ", data.type, ")")
-		body:Push(data.callback):Indent()
-		body:Push("end")
-		table.insert(output, tostring(body))
+		typescript:Push(`{name}: (value: {data.type}) => void;`)
+		-- stylua: ignore
+		luau:BlockStart(`function Writer:{name}(value: {data.type})`)
+			:Push(data.callback)
+			:BlockEnd()
+			:Push("")
 	end
 
-	insertSimpleValues(output, tsOutput)
+	-- stylua: ignore
+	luau:Call(insertSimpleValues, typescript)
+		:Push(WRITER_CONSTRUCTOR)
 
-	table.insert(output, WRITER_CONSTRUCTOR)
-
-	tsOutput:Indent()
-	tsOutput:Insert(1, "declare interface Writer {")
-	tsOutput:Push("}")
-
-	return output, tostring(tsOutput)
+	typescript:BlockEnd("}"):Push("")
 end
