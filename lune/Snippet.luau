@@ -54,11 +54,14 @@ function Snippet:ConditionalCall(condition: boolean?, callback: (any, ...any) ->
 	return self
 end
 
-function Snippet:Block(name: string, callback: (...any) -> (), ...)
+function Snippet:Block(name: string, body: string | (...any) -> (), ...: any)
 	self:BlockStart("do -- ", name)
-	callback(self, ...)
+	if type(body) == "string" then
+		self:Push(body, ...)
+	else
+		body(self, ...)
+	end
 	self:BlockEnd()
-	self:Push("")
 	return self
 end
 
