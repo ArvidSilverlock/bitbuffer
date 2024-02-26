@@ -1,54 +1,54 @@
-local Snippet = require("./Snippet/init.luau")
+local Snippet = require("./Snippet.luau")
 local fs = require("@lune/fs")
 
 local output = Snippet.new()
 
-output:Push("--!native")
-output:Push("--!optimize 2")
-output:Push("")
-
-output:Push("local TEST_BUFFER = buffer.create(16)")
-output:Push("local TEST_COUNT = 100_000")
-output:Push("")
-
-output:Push("local bitbuffer = require(workspace.ModuleScript)")
-output:Push("")
-
-output:Push("local uBenchmarks, iBenchmarks, fBenchmarks = {}, {}, {}")
+output
+	:Push("--!native")
+	:Push("--!optimize 2")
+	:Push("")
+	:Push("local TEST_BUFFER = buffer.create(16)")
+	:Push("local TEST_COUNT = 100_000")
+	:Push("")
+	:Push("local bitbuffer = require(workspace.ModuleScript)")
+	:Push("")
+	:Push("local uBenchmarks, iBenchmarks, fBenchmarks = {}, {}, {}")
+	:Push("")
 
 local function benchmarkNumber(numberType: "u" | "i" | "f", width: number)
-	output:Push("do")
+	output:BlockStart("do")
 
 	local times = {}
 	for _, mode in { "read", "write" } do
 		local callbackName = `{mode}{numberType}{width}`
 		local startVariable, endVariable = `{callbackName}StartTime`, `{callbackName}EndTime`
 
-		output:Push(`\tlocal {startVariable} = os.clock()`)
-
-		output:Push(`\tfor _ = 1, TEST_COUNT do`)
-		output:Push("\t\tfor offset = 0, 7 do")
-		output:Push(`\t\t\tbitbuffer.{callbackName}(TEST_BUFFER, 0, offset{if mode == "write" then ", 0" else ""})`)
-		output:Push("\t\tend")
-		output:Push("\tend")
-
-		output:Push(`\tlocal {endVariable} = os.clock()`)
-		output:Push("")
+		output
+			:Push(`local {startVariable} = os.clock()`)
+			:BlockStart("for _ = 1, TEST_COUNT do")
+			:BlockStart("for offset = 0, 7 do")
+			:Push(`bitbuffer.{callbackName}(TEST_BUFFER, 0, offset{if mode == "write" then ", 0" else ""})`)
+			:BlockEnd()
+			:BlockEnd()
+			:Push(`local {endVariable} = os.clock()`)
+			:Push("")
 
 		times[mode] = `( {endVariable} - {startVariable} ) / 8 / TEST_COUNT`
 	end
 
-	output:Push(`\ttable.insert({numberType}Benchmarks, \{ "{width}", {times.read}, {times.write} \})`)
-	output:Push(`\tprint("Benchmarked {numberType}{width}")`)
-	output:Push("\ttask.wait(0.1)")
-	output:Push("end\n")
+	output
+		:Push(`table.insert({numberType}Benchmarks, \{ "{width}", {times.read}, {times.write} \})`)
+		:Push(`print("Benchmarked {numberType}{width}")`)
+		:Push("task.wait(0.1)")
+		:BlockEnd()
+		:Push("")
 end
 
 for width = 1, 53 do
 	benchmarkNumber("u", width)
 end
 
-for width = 2, 52 do
+for width = 1, 53 do
 	benchmarkNumber("i", width)
 end
 
