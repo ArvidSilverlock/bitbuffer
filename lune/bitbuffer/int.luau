@@ -71,13 +71,13 @@ end
 
 local function finalise(luau, typescript)
 	local readLookup, writeLookup = {}, {}
-	for width = 2, 52 do
+	for width = 1, 52 do
 		table.insert(readLookup, `bitbuffer.readi{width}`)
 		table.insert(writeLookup, `bitbuffer.writei{width}`)
 	end
 
-	luau:Push(`bitbuffer.readi = \{ nil :: any, {table.concat(readLookup, ", ")} }`)
-		:Push(`bitbuffer.writei = \{ nil :: any, {table.concat(writeLookup, ", ")} }`)
+	luau:Push(`bitbuffer.readi = \{ {table.concat(readLookup, ", ")} }`)
+		:Push(`bitbuffer.writei = \{ {table.concat(writeLookup, ", ")} }`)
 
 	-- stylua: ignore
 	typescript:Push("readi: Array<read<number>>")
