@@ -31,12 +31,11 @@ local CFRAME_SPECIAL_CASES = if CFrame then {
 local reader = require("./reader.luau")
 local writer = require("./writer.luau")
 
-return function(addSection)
-	local output = {}
-
-	table.insert(output, CFRAME_SPECIAL_CASES)
-	addSection("writer", writer, output)
-	addSection("reader", reader, output)
-
-	return output
+return function(luau, typescript)
+	-- stylua: ignore
+	luau:Push(CFRAME_SPECIAL_CASES)
+		:Push("")
+		:Block("writer", writer, typescript)
+		:Push("")
+		:Block("reader", reader, typescript)
 end

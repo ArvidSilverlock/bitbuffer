@@ -48,24 +48,33 @@ function bitbuffer.copy(
 		bitbuffer.writeu8(target, targetByte, targetBit, value)
 
 		local alignedCount = (count - preWidth) // 8
-		local chunkCount = alignedCount // 3 * 3
+		local chunkCount = alignedCount // 6
 
 		-- Increment the `byte` and `bit` by `preWidth`
 		sourceBit += preWidth
-		sourceByte += sourceBit // 8
-		sourceBit %= 8
-
-		targetByte += 1
-
-		for byteOffset = 0, chunkCount - 1, 3 do
-			local value = bit32_extract(readu32(source, sourceByte + byteOffset), sourceBit, 24)
-			writeu24(target, targetByte + byteOffset, value)
+		if sourceBit >= 8 then
+			sourceByte += 1
+			sourceBit -= 8
 		end
 
-		local overflow = count - preWidth - chunkCount * 8
+		-- `targetBit` is implicitly 0
+		targetByte += 1
+
+		for _ = 1, chunkCount do
+			local value = bit32.extract(buffer.readu32(source, sourceByte), sourceBit, 24)
+				+ bit32.extract(buffer.readu32(source, sourceByte + 3), sourceBit, 24) * 0x1000000
+
+			buffer.writeu32(target, targetByte, value)
+			buffer.writeu16(target, targetByte + 4, value // 0x100000000)
+
+			sourceByte += 6
+			targetByte += 6
+		end
+
+		local overflow = count - preWidth - chunkCount * 48
 		if overflow > 0 then
-			local value = bitbuffer.readu[overflow](source, sourceByte + chunkCount, sourceBit)
-			bitbuffer.writeu[overflow](target, targetByte + chunkCount, 0, value)
+			local value = bitbuffer.readu[overflow](source, sourceByte, sourceBit)
+			bitbuffer.writeu[overflow](target, targetByte, 0, value)
 		end
 	end
 end

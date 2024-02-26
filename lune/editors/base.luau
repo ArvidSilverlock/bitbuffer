@@ -8,8 +8,12 @@ function CLASS:IncrementOffset(amount: number)
 		self._byte += byte
 	else
 		self._bit += bit
-		self._byte += byte + self._bit // 8
-		self._bit %= 8
+		if self._bit >= 8 then
+			self._byte += byte + self._bit // 8
+			self._bit %= 8
+		else
+			self._byte += byte
+		end
 	end
 end
 
