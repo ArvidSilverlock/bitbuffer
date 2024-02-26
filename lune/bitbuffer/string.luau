@@ -3,19 +3,8 @@ function bitbuffer.writestring(b: buffer, byte: number, bit: number, value: stri
 	if bit == 0 then
 		buffer.writestring(b, byte, value, count)
 	else
-		local stringLength = count or #value
-		local chunkMax = stringLength // 6 * 6
-
-		for stringIndex = 1, chunkMax, 6 do
-			local chunk = string.unpack("I6", value, stringIndex)
-			bitbuffer.writeu48(b, byte + (stringIndex - 1), bit, chunk)
-		end
-
-		byte += chunkMax - 1
-		for stringIndex = 1, stringLength - chunkMax do
-			local char = value:byte(chunkMax + stringIndex)
-			bitbuffer.writeu8(b, byte + stringIndex, bit, char)
-		end
+		local input = buffer.fromstring(value)
+		bitbuffer.copy(b, byte, bit, input, 0, 0, count * 8)
 	end
 end]]
 
@@ -26,38 +15,27 @@ local WRITE_STRING = [[--[=[
 
 	Count cannot be larger than the string length.
 ]=]
+local strBuffer = buffer.create(6)
 function bitbuffer.readstring(b: buffer, byte: number, bit: number, count: number): string
 	if bit == 0 then
 		return buffer.readstring(b, byte, count)
 	else
-		local output = table.create((count + 5) // 6)
-		local chunkMax = count // 6 * 6
-
-		for stringIndex = 1, chunkMax, 6 do
-			local chunk = bitbuffer.readu48(b, byte + (stringIndex - 1), bit)
-			table.insert(output, string.pack("I6", chunk))
-		end
-
-		byte += chunkMax - 1
-		for stringIndex = 1, count - chunkMax do
-			local chunk = bitbuffer.readu8(b, byte + stringIndex, bit)
-			table.insert(output, string.char(chunk))
-		end
-
-		return table.concat(output)
+		local output = buffer.create(count)
+		bitbuffer.copy(output, 0, 0, b, byte, bit, count * 8)
+		return buffer.tostring(output)
 	end
 end]]
 
-local function create(addSection, tsOutput)
-	local output = {}
-	table.insert(output, WRITE_STRING)
-	table.insert(output, READ_STRING)
+local function create(luau, typescript)
+	-- stylua: ignore start
+	luau:Push(WRITE_STRING)
+		:Push("")
+		:Push(READ_STRING)
 
-	tsOutput:Push("writestring: write<string>;")
-	tsOutput:Push("readstring: read<string>;")
-	tsOutput:Push("")
-
-	return output
+	typescript:Push("writestring: write<string>;")
+		:Push("readstring: read<string>;")
+		:Push("")
+	-- stylua: ignore end
 end
 
 return create
