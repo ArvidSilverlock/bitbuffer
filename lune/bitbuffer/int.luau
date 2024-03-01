@@ -105,11 +105,9 @@ local function finalise(luau, typescript)
 		:Push("")
 end
 
-local function create(luau, typescript)
+return function(luau, typescript)
 	-- stylua: ignore
 	luau:Block("write", generateWrite, typescript)
 		:Block("read", generateRead, typescript)
 		:Call(finalise, typescript)
 end
-
-return create

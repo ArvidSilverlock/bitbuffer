@@ -47,7 +47,7 @@ local COPY_TYPE = [[copy: (
 	count?: number
 ) => void;]]
 
-local function create(luau, typescript)
+return function(luau, typescript)
 	-- stylua: ignore start
 	luau:Push(CONSTANTS)
 		:Push("")
@@ -61,5 +61,3 @@ local function create(luau, typescript)
 		:Push("")
 	-- stylua: ignore end
 end
-
-return create

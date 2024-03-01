@@ -255,8 +255,6 @@ local function finalise(luau, typescript)
 	typescript:Push("readu: Array<read<number>>"):Push("writeu: Array<write<number>>"):Push("")
 end
 
-local function create(luau, typescript)
+return function(luau, typescript)
 	luau:Block("write", generateWrite, typescript):Block("read", generateRead, typescript):Call(finalise, typescript)
 end
-
-return create

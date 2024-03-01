@@ -25,7 +25,7 @@ function bitbuffer.readstring(b: buffer, byte: number, bit: number, count: numbe
 	end
 end]]
 
-local function create(luau, typescript)
+return function(luau, typescript)
 	-- stylua: ignore start
 	luau:Push(WRITE_STRING)
 		:Push("")
@@ -36,5 +36,3 @@ local function create(luau, typescript)
 		:Push("")
 	-- stylua: ignore end
 end
-
-return create

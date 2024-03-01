@@ -4,7 +4,7 @@ local function get(fileName: string)
 	return (fs.readFile(`lune/bitbuffer/baseconversion/{fileName}.luau`):gsub("\n$", ""))
 end
 
-local function create(luau, typescript)
+return function(luau, typescript)
 	-- stylua: ignore start
 	luau:Push(get("constants"))
 		:Push("")
@@ -27,5 +27,3 @@ local function create(luau, typescript)
 
 	-- stylua: ignore end
 end
-
-return create
