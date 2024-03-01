@@ -1,10 +1,10 @@
 local function indentString(str: string, amount: number): string
 	if str:match("^%s*$") then
 		return ""
-	end -- Omit lines that are entirely whitespace
+	end -- Don't indent lines that are entirely whitespace
 
 	local indent = string.rep("\t", amount)
-	return indent .. str:gsub("\n", "\n" .. indent)
+	return indent .. str:gsub("\n", "\n" .. indent):gsub("\n%s+\n", "\n\n")
 end
 
 local function lineToString(indent: number, ...: any): string
