@@ -79,22 +79,23 @@ byte += 4
 
 The above offset was generated using this function:
 ```lua
-local function pushIncrement(output, width)
+local function generateIncrement(width: number): string
 	local byte, bit = width // 8, width % 8
 	if bit == 0 then
-		output:Push("outgoingByte += ", byte) -- quick and easy, the bit offset remains the same
+		return `byte += {byte}` -- quick and easy, the bit offset remains the same
 	else
-		output:Push(`outgoingBit += {bit}`) -- first we increment the bit
-		output:BlockStart(`if outgoingBit > 7 then`) -- if we should go onto the next byte
-		output:Push(`outgoingByte += {byte + 1}`) -- increment the outgoing byte 1 extra than we would if we didn't go onto the next byte
-		output:Push(if bit == 1 then "outgoingBit = 0" else "outgoingBit -= 8") -- effectively do `%= 8`, but only for values 8-15
-		
-		if byte > 0 then
-			output:BlockMiddle("else")
-			output:Push(`outgoingByte += {byte}`) -- we only need to increment the byte if it's > 0 by default
-		end
-
-		output:BlockEnd()
+		return table.concat({
+			`bit += {bit}`, -- first we increment the bit
+			"if bit > 7 then", -- if we've gone onto the next byte
+			`\tbyte += {byte + 1}`, -- increment the outgoing byte 1 extra than normal
+			if bit == 1
+				then "\tbit = 0" -- `bit` has to be `8`, so we can just set it to 0
+				else "\tbit -= 8", -- effectively do `bit %= 8`
+			if byte > 0
+				then `else\n\tbyte += {byte}` -- only increment the byte if need be
+				else nil,
+			"end"
+		}, "\n")
 	end
 end
 ```
