@@ -36,7 +36,9 @@ offset:IncrementOffset(32)
 
 ## Increment Offset Function
 
-This is my personal favourite, balances speed with maintainability, downside is you have to manually specify the `increment` function, otherwise you have to do `byte, bit = increment(byte, bit, n)`, not too nice.
+This is my personal favourite, balances speed with maintainability. Luau likely even inlines it and optimizes out the `// 8` and `% 8` to make it the same as the one specified below this, if so, this would be, hands down, the best.
+
+Downside is you have to manually specify the `increment` function, otherwise you have to do `byte, bit = increment(byte, bit, n)`, not too nice.
 ```lua
 local byte, bit = 0, 0
 local function incrementOffset(offset: number)
