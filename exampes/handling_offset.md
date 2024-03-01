@@ -44,8 +44,8 @@ local function incrementOffset(offset: number)
 
     bit += offsetBit
     if bit > 7 then
-        byte += bit // 8 + offsetByte
-        bit %= 8
+        byte += offsetByte + 1
+        bit -= 8
     else
         byte += offsetByte
     end
