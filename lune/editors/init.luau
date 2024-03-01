@@ -30,12 +30,17 @@ local CFRAME_SPECIAL_CASES = if CFrame then {
 
 local reader = require("./reader.luau")
 local writer = require("./writer.luau")
+local offset = require("./offset/init.luau")
 
 return function(luau, typescript)
 	-- stylua: ignore
-	luau:Push(CFRAME_SPECIAL_CASES)
+	luau:Block("offset", offset, typescript)
+		:Push("")
+		:BlockStart("do -- reader & writer")
+		:Push(CFRAME_SPECIAL_CASES)
 		:Push("")
 		:Block("writer", writer, typescript)
 		:Push("")
 		:Block("reader", reader, typescript)
+		:BlockEnd()
 end
