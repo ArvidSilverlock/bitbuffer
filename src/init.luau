@@ -1984,9 +1984,9 @@ do -- main
 
 		--[=[
 			Used to write data from a string into the buffer at a specified offset.
-		
+
 			If an optional ‘count’ is specified, only ‘count’ bytes are taken from the string.
-		
+
 			Count cannot be larger than the string length.
 		]=]
 		function bitbuffer.writestring(b: buffer, byte: number, bit: number, value: string, count: number?)
@@ -2004,12 +2004,12 @@ do -- main
 
 		--[=[
 			Sets the `count` bits in the buffer starting at the specified ‘offset’ to the ‘value’.
-		
+
 			If `count` is ‘nil’ or is omitted, all bytes from the specified offset until the end of the buffer are set.
 		]=]
 		function bitbuffer.fill(b: buffer, byte: number, bit: number, value: number, count: number?)
 			local count: number = count or (buffer.len(b) - byte) * 8 - bit
-		
+
 			if bit == 0 and count % 8 == 0 then
 				buffer.fill(b, byte, value, count // 8)
 			elseif count <= 8 then
@@ -2019,22 +2019,22 @@ do -- main
 			else
 				local preWidth = 8 - bit
 				local postWidth = (count + bit) % 8
-		
+
 				local mid = value
 				if value ~= 0 and value ~= 255 then
 					local a = POWERS_OF_TWO[preWidth]
 					mid = (value // a) + (value % a * POWERS_OF_TWO[bit]) -- i.e., ABCDE-FGH -> FGH-ABCDE when `bit` is `3`
 				end
-		
+
 				bitbuffer.writeu8(b, byte, bit, value) -- writing a static width of 8 rather than a variable width of `preWidth` is faster (we overwrite the extra bits written later)
 				byte += 1 -- bit is also 0 now, but we don't need to set it since we no longer use the variable
-		
+
 				local midWidthBytes = (count - preWidth) // 8
 				if midWidthBytes > 0 then
 					buffer.fill(b, byte, mid, midWidthBytes)
 					byte += midWidthBytes
 				end
-		
+
 				if postWidth > 0 then
 					bitbuffer.writeu[postWidth](b, byte, 0, mid)
 				end
@@ -2043,11 +2043,11 @@ do -- main
 
 		--[=[
 			Copy `count` bytes from ‘source’ starting at offset ‘sourceOffset’ into the ‘target’ at ‘targetOffset’.
-		
+
 			Unlike `buffer.copy`, it is not possible for ‘source’ and ‘target’ to be the same and then copy an overlapping region. This may be added in future.
-		
+
 			If ‘sourceOffset’ is nil or is omitted, it defaults to 0.
-		
+
 			If `count` is ‘nil’ or is omitted, the whole ‘source’ data starting from ‘sourceOffset’ is copied.
 		]=]
 		function bitbuffer.copy(
@@ -2062,7 +2062,7 @@ do -- main
 			local count = count or (buffer.len(source) - targetByte) * 8 - targetBit
 			local sourceByte = sourceByte or 0
 			local sourceBit = sourceBit or 0
-		
+
 			if targetBit == 0 and sourceBit == 0 and count % 8 == 0 then
 				buffer.copy(target, targetByte, source, sourceByte, count // 8)
 			elseif count <= 53 then
@@ -2071,49 +2071,49 @@ do -- main
 			elseif targetBit == sourceBit then
 				local preWidth = 8 - targetBit
 				local postWidth = (count + targetBit) % 8
-		
+
 				local value = bitbuffer.readu8(source, sourceByte, sourceBit)
 				bitbuffer.writeu8(target, targetByte, targetBit, value)
-		
+
 				local midWidthBytes = (count - preWidth) // 8
 				if midWidthBytes > 0 then
 					buffer.copy(target, targetByte + 1, source, sourceByte + 1, midWidthBytes)
 				end
-		
+
 				if postWidth > 0 then
 					local value = bitbuffer.readu[postWidth](source, sourceByte + 1 + midWidthBytes, 0)
 					bitbuffer.writeu[postWidth](target, targetByte + 1 + midWidthBytes, 0, value)
 				end
 			else
 				local preWidth = 8 - targetBit
-		
+
 				local value = bitbuffer.readu8(source, sourceByte, sourceBit)
 				bitbuffer.writeu8(target, targetByte, targetBit, value)
-		
+
 				local alignedCount = (count - preWidth) // 8
 				local chunkCount = alignedCount // 6
-		
+
 				-- Increment the `byte` and `bit` by `preWidth`
 				sourceBit += preWidth
 				if sourceBit >= 8 then
 					sourceByte += 1
 					sourceBit -= 8
 				end
-		
+
 				-- `targetBit` is implicitly 0
 				targetByte += 1
-		
+
 				for _ = 1, chunkCount do
 					local value = bit32.extract(buffer.readu32(source, sourceByte), sourceBit, 24)
 						+ bit32.extract(buffer.readu32(source, sourceByte + 3), sourceBit, 24) * 0x1000000
-		
+
 					buffer.writeu32(target, targetByte, value)
 					buffer.writeu16(target, targetByte + 4, value // 0x100000000)
-		
+
 					sourceByte += 6
 					targetByte += 6
 				end
-		
+
 				local overflow = count - preWidth - chunkCount * 48
 				if overflow > 0 then
 					local value = bitbuffer.readu[overflow](source, sourceByte, sourceBit)
@@ -2126,49 +2126,49 @@ do -- main
 	do -- base conversion
 		local NUMBER_TO_BASE64 = buffer.fromstring("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
 		local BASE64_TO_NUMBER = {}
-		
+
 		local CHARACTER_TO_BINARY = {}
 		local BINARY_TO_NUMBER = {}
-		
+
 		local CHARACTER_TO_HEXADECIMAL = {}
 		local HEXADECIMAL_TO_NUMBER = {}
-		
+
 		for index = 0, 255 do
 			local binary = table.create(8)
 			for field = 0, 7 do
 				binary[field + 1] = bit32.extract(index, field, 1)
 			end
-		
+
 			local binaryString = table.concat(binary)
 			local hexadecimalString = string.format("%02x", index)
-		
+
 			local char = string.char(index)
-		
+
 			CHARACTER_TO_BINARY[char] = binaryString
 			BINARY_TO_NUMBER[binaryString] = index
-		
+
 			CHARACTER_TO_HEXADECIMAL[char] = hexadecimalString
 			HEXADECIMAL_TO_NUMBER[hexadecimalString] = index
 		end
-		
+
 		for index = 0, 63 do
 			BASE64_TO_NUMBER[buffer.readu8(NUMBER_TO_BASE64, index)] = index
 		end
-		
+
 		local function baseLookupGenerator(default: { [string]: string })
 			local cache = { [""] = default }
-		
+
 			return function(separator: string): { [string]: string }
 				if cache[separator] then
 					return cache[separator]
 				end
-		
+
 				local lookupTable = {}
 				for index = 0, 255 do
 					local char = string.char(index)
 					lookupTable[char] = default[char] .. separator
 				end
-		
+
 				cache[separator] = lookupTable
 				return lookupTable
 			end
@@ -2176,100 +2176,100 @@ do -- main
 
 		do -- binary
 			local getLookup = baseLookupGenerator(CHARACTER_TO_BINARY)
-			
+
 			--[=[
 				@function tobinary
 				@within bitbuffer
-			
+
 				Returns the buffer data as a 'binary' string, mainly useful for debugging.
-			
+
 				@param b buffer
 				@param separator string -- the separator characters to use between bytes
-				
+
 				@return string
 			]=]
 			function bitbuffer.tobinary(b: buffer, separator: string?): string
 				local separatorLength = if separator then #separator else 0
 				local lookupTable = getLookup(separator or "")
-			
+
 				local str = buffer.tostring(b):gsub(".", lookupTable)
 				return str:sub(1, -1 - separatorLength)
 			end
-			
+
 			--[=[
 				@function frombinary
 				@within bitbuffer
-			
+
 				Creates a buffer initialized to the contents of the 'binary' string.
-			
+
 				@param str string
 				@param separator string -- the separator characters to use between bytes
-			
+
 				@return buffer
 			]=]
 			function bitbuffer.frombinary(str: string, separator: string?)
 				local separatorLength = if separator then #separator else 0
-			
+
 				local codeLength = 8 + separatorLength
 				local b = buffer.create((#str + separatorLength) / codeLength)
-			
+
 				local offset = 0
 				for index = 1, #str, codeLength do
 					local code = str:sub(index, index + 7)
 					buffer.writeu8(b, offset, BINARY_TO_NUMBER[code])
 					offset += 1
 				end
-			
+
 				return b
 			end
 		end
 
 		do -- hexadecimal
 			local getLookup = baseLookupGenerator(CHARACTER_TO_HEXADECIMAL)
-			
+
 			--[=[
 				@function tobinary
 				@within bitbuffer
-			
+
 				Returns the buffer data as a hexadecimal string, mainly useful for debugging.
-			
+
 				@param b buffer
 				@param separator string -- the separator characters to use between bytes
-			
+
 				@return string
 			]=]
 			function bitbuffer.tohexadecimal(b: buffer, separator: string?): string
 				local separatorLength = if separator then #separator else 0
 				local lookupTable = getLookup(separator or "")
-			
+
 				local str = buffer.tostring(b):gsub(".", lookupTable)
 				return str:sub(1, -1 - separatorLength)
 			end
-			
+
 			--[=[
 				@function fromhexadecimal
 				@within bitbuffer
-			
+
 				Creates a buffer initialized to the contents of the hexadecimal string.
-			
+
 				@param str string
 				@param separator string -- the separator characters to use between bytes
-			
+
 				@return buffer
 			]=]
 			function bitbuffer.fromhexadecimal(str: string, separator: string?)
 				local separatorLength = if separator then #separator else 0
-			
+
 				local codeLength = 2 + separatorLength
 				local b = buffer.create((#str + separatorLength) / codeLength)
-			
+
 				local offset = 0
 				for index = 1, #str, codeLength do
 					local code = str:sub(index, index + 1)
 					buffer.writeu8(b, offset, HEXADECIMAL_TO_NUMBER[code])
 					offset += 1
 				end
-			
+
 				return b
 			end
 		end
@@ -2279,98 +2279,98 @@ do -- main
 				return (value // 256) -- FF00 -> 00FF
 					+ (value % 256 * 256) -- 00FF -> FF00
 			end
-			
+
 			--[=[
 				@function tobase64
 				@within bitbuffer
-			
+
 				Returns the buffer data as a base64 encoded string.
-			
+
 				@param b buffer
 				@return string
 			]=]
 			function bitbuffer.tobase64(b: buffer): string
 				local bufferLength = buffer.len(b)
 				local bitCount = bufferLength * 8
-			
+
 				local paddingLength = 2 - (bufferLength - 1) % (2 + 1)
 				local characterCount = math.ceil(bitCount / 6)
-			
+
 				local endOffset = (characterCount - 1) * 6
 				local overhang = bitCount - endOffset
-			
+
 				local output = buffer.create(characterCount + paddingLength)
 				local outputIndex = 0
-			
+
 				for offset = 0, endOffset - overhang, 6 do
 					local byte, bit = offset // 8, offset % 8
 					local byteWidth = (bit + 13) // 8
 					bit = (byteWidth * 8 - 6) - bit
-			
+
 					local focus = if byteWidth == 1 then buffer.readu8(b, byte) else flipu16(buffer.readu16(b, byte))
 					local code = bit32.extract(focus, bit, 6)
-			
+
 					buffer.writeu8(output, outputIndex, buffer.readu8(NUMBER_TO_BASE64, code))
 					outputIndex += 1
 				end
-			
+
 				if overhang > 0 then
 					local byte, bit = endOffset // 8, (8 - overhang) - endOffset % 8
-			
+
 					local focus = buffer.readu8(b, byte)
 					local code = bit32.lshift(bit32.extract(focus, bit, overhang), 6 - overhang)
-			
+
 					buffer.writeu8(output, outputIndex, buffer.readu8(NUMBER_TO_BASE64, code))
 				end
-			
+
 				buffer.fill(output, characterCount, 61, paddingLength) -- '='
 				return buffer.tostring(output)
 			end
-			
+
 			--[=[
 				@function frombase64
 				@within bitbuffer
-			
+
 				Creates a buffer initialized to the contents of the base64 encoded string.
-			
+
 				@param str string
 				@return buffer
 			]=]
 			function bitbuffer.frombase64(str: string)
 				local paddingStart, paddingEnd = string.find(str, "=*$")
 				local padding = (paddingEnd :: any) - (paddingStart :: any) + 1
-			
+
 				local codeCount = #str - padding
 				local bitCount = (codeCount * 6) - (padding * 2)
-			
+
 				local endOffset = bitCount // 6 * 6
 				local overhang = bitCount - endOffset
-			
+
 				local output = buffer.create(bitCount // 8)
-			
+
 				local inputIndex = 1
 				for outputOffset = 0, endOffset - 6, 6 do
 					local byte, bit = outputOffset // 8, outputOffset % 8
 					local byteWidth = (bit + 13) // 8
 					bit = (byteWidth * 8 - 6) - bit
-			
+
 					local code = BASE64_TO_NUMBER[str:byte(inputIndex)]
 					if byteWidth == 2 then
 						buffer.writeu16(output, byte, flipu16(bit32.replace(flipu16(buffer.readu16(output, byte)), code, bit, 6)))
 					else
 						buffer.writeu8(output, byte, bit32.replace(buffer.readu8(output, byte), code, bit, 6))
 					end
-			
+
 					inputIndex += 1
 				end
-			
+
 				if overhang > 0 then
 					local byte, bit = endOffset // 8, (8 - overhang) - endOffset % 8
 					local code = bit32.rshift(BASE64_TO_NUMBER[str:byte(inputIndex)], 6 - overhang)
-			
+
 					buffer.writeu8(output, byte, bit32.replace(buffer.readu8(output, byte), code, bit, overhang))
 				end
-			
+
 				return output
 			end
 		end
@@ -2379,1591 +2379,1586 @@ do -- main
 end
 
 do -- editors
-	local RAD_90, RAD_180 = math.rad(90), math.rad(180)
-	
-	local CFRAME_SPECIAL_CASES = if CFrame then {
-		CFrame.Angles(0, 0, 0),
-		CFrame.Angles(RAD_90, 0, 0),
-		CFrame.Angles(0, RAD_180, RAD_180),
-		CFrame.Angles(-RAD_90, 0, 0),
-		CFrame.Angles(0, RAD_180, RAD_90),
-		CFrame.Angles(0, RAD_90, RAD_90),
-		CFrame.Angles(0, 0, RAD_90),
-		CFrame.Angles(0, -RAD_90, RAD_90),
-		CFrame.Angles(-RAD_90, -RAD_90, 0),
-		CFrame.Angles(0, -RAD_90, 0),
-		CFrame.Angles(RAD_90, -RAD_90, 0),
-		CFrame.Angles(0, RAD_90, RAD_180),
-		CFrame.Angles(0, -RAD_90, RAD_180),
-		CFrame.Angles(0, RAD_180, 0),
-		CFrame.Angles(-RAD_90, math.rad(-180), 0),
-		CFrame.Angles(0, 0, RAD_180),
-		CFrame.Angles(RAD_90, RAD_180, 0),
-		CFrame.Angles(0, 0, -RAD_90),
-		CFrame.Angles(0, -RAD_90, -RAD_90),
-		CFrame.Angles(0, math.rad(-180), -RAD_90),
-		CFrame.Angles(0, RAD_90, -RAD_90),
-		CFrame.Angles(RAD_90, RAD_90, 0),
-		CFrame.Angles(0, RAD_90, 0),
-		CFrame.Angles(-RAD_90, RAD_90, 0),
-	} else nil
+	do -- offset
+		local Offset = {}
+		Offset.__index = Offset
 
-	do -- writer
-		local Writer = {}
-		Writer.__index = Writer
-		
-		function Writer:IncrementOffset(amount: number)
-			local byte, bit = amount // 8, amount % 8
-		
-			if bit == 0 then
-				self._byte += byte
+		function bitbuffer.offset(byte: number?, bit: number?)
+			local self = {}
+			self.__index = self
+
+			if byte and bit then
+				self.byte, self.bit = byte, bit
+			elseif byte then
+				self.byte, self.bit = byte // 8, byte % 8
 			else
-				self._bit += bit
-				if self._bit >= 8 then
-					self._byte += byte + self._bit // 8
-					self._bit %= 8
+				self.byte, self.bit = 0, 0
+			end
+
+			return setmetatable(self, Offset)
+		end
+
+		function Offset:SetOffset(byte: number, bit: number?)
+			if bit then
+				self.byte = byte
+				self.bit = bit
+			else
+				self.byte = byte // 8
+				self.bit = byte % 8
+			end
+		end
+
+		function Offset:IncrementOffset(byte: number, bit: number?)
+			if bit == nil then
+				byte, bit = byte // 8, byte % 8
+			end
+
+			if bit == 0 then
+				self.byte += byte
+			else
+				self.bit += bit
+				if self.bit >= 8 then
+					self.byte += byte + self.bit // 8
+					self.bit %= 8
 				else
-					self._byte += byte
+					self.byte += byte
 				end
 			end
 		end
-		
-		function Writer:SetOffset(byte: number, bit: number?)
-			if bit then
-				self._byte = byte
-				self._bit = bit
-			else
-				self._byte = byte // 8
-				self._bit = byte % 8
-			end
-		end
-		
-		function Writer:Align()
+
+		function Offset:Align()
 			if self._bit > 0 then
 				self._byte += 1
 				self._bit = 0
 			end
-		end
-		
-		function Writer:UInt1(value: number)
-			bitbuffer.writeu1(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(1)
-		end
-
-		function Writer:UInt2(value: number)
-			bitbuffer.writeu2(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(2)
-		end
-
-		function Writer:UInt3(value: number)
-			bitbuffer.writeu3(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(3)
-		end
-
-		function Writer:UInt4(value: number)
-			bitbuffer.writeu4(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(4)
-		end
-
-		function Writer:UInt5(value: number)
-			bitbuffer.writeu5(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(5)
-		end
-
-		function Writer:UInt6(value: number)
-			bitbuffer.writeu6(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(6)
-		end
-
-		function Writer:UInt7(value: number)
-			bitbuffer.writeu7(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(7)
-		end
-
-		function Writer:UInt8(value: number)
-			bitbuffer.writeu8(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(8)
-		end
-
-		function Writer:UInt9(value: number)
-			bitbuffer.writeu9(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(9)
-		end
-
-		function Writer:UInt10(value: number)
-			bitbuffer.writeu10(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(10)
-		end
-
-		function Writer:UInt11(value: number)
-			bitbuffer.writeu11(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(11)
-		end
-
-		function Writer:UInt12(value: number)
-			bitbuffer.writeu12(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(12)
-		end
-
-		function Writer:UInt13(value: number)
-			bitbuffer.writeu13(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(13)
-		end
-
-		function Writer:UInt14(value: number)
-			bitbuffer.writeu14(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(14)
-		end
-
-		function Writer:UInt15(value: number)
-			bitbuffer.writeu15(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(15)
-		end
-
-		function Writer:UInt16(value: number)
-			bitbuffer.writeu16(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(16)
-		end
-
-		function Writer:UInt17(value: number)
-			bitbuffer.writeu17(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(17)
-		end
-
-		function Writer:UInt18(value: number)
-			bitbuffer.writeu18(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(18)
-		end
-
-		function Writer:UInt19(value: number)
-			bitbuffer.writeu19(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(19)
-		end
-
-		function Writer:UInt20(value: number)
-			bitbuffer.writeu20(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(20)
-		end
-
-		function Writer:UInt21(value: number)
-			bitbuffer.writeu21(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(21)
-		end
-
-		function Writer:UInt22(value: number)
-			bitbuffer.writeu22(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(22)
-		end
-
-		function Writer:UInt23(value: number)
-			bitbuffer.writeu23(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(23)
-		end
-
-		function Writer:UInt24(value: number)
-			bitbuffer.writeu24(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(24)
-		end
-
-		function Writer:UInt25(value: number)
-			bitbuffer.writeu25(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(25)
-		end
-
-		function Writer:UInt26(value: number)
-			bitbuffer.writeu26(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(26)
-		end
-
-		function Writer:UInt27(value: number)
-			bitbuffer.writeu27(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(27)
-		end
-
-		function Writer:UInt28(value: number)
-			bitbuffer.writeu28(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(28)
-		end
-
-		function Writer:UInt29(value: number)
-			bitbuffer.writeu29(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(29)
-		end
-
-		function Writer:UInt30(value: number)
-			bitbuffer.writeu30(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(30)
-		end
-
-		function Writer:UInt31(value: number)
-			bitbuffer.writeu31(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(31)
-		end
-
-		function Writer:UInt32(value: number)
-			bitbuffer.writeu32(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(32)
-		end
-
-		function Writer:UInt33(value: number)
-			bitbuffer.writeu33(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(33)
-		end
-
-		function Writer:UInt34(value: number)
-			bitbuffer.writeu34(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(34)
-		end
-
-		function Writer:UInt35(value: number)
-			bitbuffer.writeu35(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(35)
-		end
-
-		function Writer:UInt36(value: number)
-			bitbuffer.writeu36(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(36)
-		end
-
-		function Writer:UInt37(value: number)
-			bitbuffer.writeu37(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(37)
-		end
-
-		function Writer:UInt38(value: number)
-			bitbuffer.writeu38(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(38)
-		end
-
-		function Writer:UInt39(value: number)
-			bitbuffer.writeu39(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(39)
-		end
-
-		function Writer:UInt40(value: number)
-			bitbuffer.writeu40(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(40)
-		end
-
-		function Writer:UInt41(value: number)
-			bitbuffer.writeu41(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(41)
-		end
-
-		function Writer:UInt42(value: number)
-			bitbuffer.writeu42(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(42)
-		end
-
-		function Writer:UInt43(value: number)
-			bitbuffer.writeu43(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(43)
-		end
-
-		function Writer:UInt44(value: number)
-			bitbuffer.writeu44(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(44)
-		end
-
-		function Writer:UInt45(value: number)
-			bitbuffer.writeu45(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(45)
-		end
-
-		function Writer:UInt46(value: number)
-			bitbuffer.writeu46(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(46)
-		end
-
-		function Writer:UInt47(value: number)
-			bitbuffer.writeu47(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(47)
-		end
-
-		function Writer:UInt48(value: number)
-			bitbuffer.writeu48(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(48)
-		end
-
-		function Writer:UInt49(value: number)
-			bitbuffer.writeu49(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(49)
-		end
-
-		function Writer:UInt50(value: number)
-			bitbuffer.writeu50(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(50)
-		end
-
-		function Writer:UInt51(value: number)
-			bitbuffer.writeu51(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(51)
-		end
-
-		function Writer:UInt52(value: number)
-			bitbuffer.writeu52(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(52)
-		end
-
-		function Writer:UInt53(value: number)
-			bitbuffer.writeu53(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(53)
-		end
-
-		function Writer:Int1(value: number)
-			bitbuffer.writei1(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(1)
-		end
-
-		function Writer:Int2(value: number)
-			bitbuffer.writei2(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(2)
-		end
-
-		function Writer:Int3(value: number)
-			bitbuffer.writei3(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(3)
-		end
-
-		function Writer:Int4(value: number)
-			bitbuffer.writei4(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(4)
-		end
-
-		function Writer:Int5(value: number)
-			bitbuffer.writei5(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(5)
-		end
-
-		function Writer:Int6(value: number)
-			bitbuffer.writei6(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(6)
-		end
-
-		function Writer:Int7(value: number)
-			bitbuffer.writei7(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(7)
-		end
-
-		function Writer:Int8(value: number)
-			bitbuffer.writei8(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(8)
-		end
-
-		function Writer:Int9(value: number)
-			bitbuffer.writei9(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(9)
-		end
-
-		function Writer:Int10(value: number)
-			bitbuffer.writei10(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(10)
-		end
-
-		function Writer:Int11(value: number)
-			bitbuffer.writei11(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(11)
-		end
-
-		function Writer:Int12(value: number)
-			bitbuffer.writei12(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(12)
-		end
-
-		function Writer:Int13(value: number)
-			bitbuffer.writei13(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(13)
-		end
-
-		function Writer:Int14(value: number)
-			bitbuffer.writei14(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(14)
-		end
-
-		function Writer:Int15(value: number)
-			bitbuffer.writei15(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(15)
-		end
-
-		function Writer:Int16(value: number)
-			bitbuffer.writei16(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(16)
-		end
-
-		function Writer:Int17(value: number)
-			bitbuffer.writei17(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(17)
-		end
-
-		function Writer:Int18(value: number)
-			bitbuffer.writei18(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(18)
-		end
-
-		function Writer:Int19(value: number)
-			bitbuffer.writei19(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(19)
-		end
-
-		function Writer:Int20(value: number)
-			bitbuffer.writei20(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(20)
-		end
-
-		function Writer:Int21(value: number)
-			bitbuffer.writei21(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(21)
-		end
-
-		function Writer:Int22(value: number)
-			bitbuffer.writei22(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(22)
-		end
-
-		function Writer:Int23(value: number)
-			bitbuffer.writei23(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(23)
-		end
-
-		function Writer:Int24(value: number)
-			bitbuffer.writei24(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(24)
-		end
-
-		function Writer:Int25(value: number)
-			bitbuffer.writei25(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(25)
-		end
-
-		function Writer:Int26(value: number)
-			bitbuffer.writei26(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(26)
-		end
-
-		function Writer:Int27(value: number)
-			bitbuffer.writei27(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(27)
-		end
-
-		function Writer:Int28(value: number)
-			bitbuffer.writei28(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(28)
-		end
-
-		function Writer:Int29(value: number)
-			bitbuffer.writei29(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(29)
-		end
-
-		function Writer:Int30(value: number)
-			bitbuffer.writei30(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(30)
-		end
-
-		function Writer:Int31(value: number)
-			bitbuffer.writei31(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(31)
-		end
-
-		function Writer:Int32(value: number)
-			bitbuffer.writei32(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(32)
-		end
-
-		function Writer:Int33(value: number)
-			bitbuffer.writei33(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(33)
-		end
-
-		function Writer:Int34(value: number)
-			bitbuffer.writei34(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(34)
-		end
-
-		function Writer:Int35(value: number)
-			bitbuffer.writei35(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(35)
-		end
-
-		function Writer:Int36(value: number)
-			bitbuffer.writei36(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(36)
-		end
-
-		function Writer:Int37(value: number)
-			bitbuffer.writei37(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(37)
-		end
-
-		function Writer:Int38(value: number)
-			bitbuffer.writei38(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(38)
-		end
-
-		function Writer:Int39(value: number)
-			bitbuffer.writei39(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(39)
-		end
-
-		function Writer:Int40(value: number)
-			bitbuffer.writei40(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(40)
-		end
-
-		function Writer:Int41(value: number)
-			bitbuffer.writei41(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(41)
-		end
-
-		function Writer:Int42(value: number)
-			bitbuffer.writei42(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(42)
-		end
-
-		function Writer:Int43(value: number)
-			bitbuffer.writei43(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(43)
-		end
-
-		function Writer:Int44(value: number)
-			bitbuffer.writei44(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(44)
-		end
-
-		function Writer:Int45(value: number)
-			bitbuffer.writei45(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(45)
-		end
-
-		function Writer:Int46(value: number)
-			bitbuffer.writei46(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(46)
-		end
-
-		function Writer:Int47(value: number)
-			bitbuffer.writei47(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(47)
-		end
-
-		function Writer:Int48(value: number)
-			bitbuffer.writei48(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(48)
-		end
-
-		function Writer:Int49(value: number)
-			bitbuffer.writei49(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(49)
-		end
-
-		function Writer:Int50(value: number)
-			bitbuffer.writei50(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(50)
-		end
-
-		function Writer:Int51(value: number)
-			bitbuffer.writei51(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(51)
-		end
-
-		function Writer:Int52(value: number)
-			bitbuffer.writei52(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(52)
-		end
-
-		function Writer:Int53(value: number)
-			bitbuffer.writei53(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(53)
-		end
-
-		function Writer:Float16(value: number)
-			bitbuffer.writef16(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(16)
-		end
-
-		function Writer:Float32(value: number)
-			bitbuffer.writef32(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(32)
-		end
-
-		function Writer:Float64(value: number)
-			bitbuffer.writef64(self._buffer, self._byte, self._bit, value)
-			self:IncrementOffset(64)
-		end
-
-		function Writer:String(value: string)
-			bitbuffer.writeu32(self._buffer, self._byte, self._bit, #value)
-			bitbuffer.writestring(self._buffer, self._byte + 4, self._bit, value)
-			self:IncrementOffset(32 + #value * 8)
-		end
-
-		function Writer:NumberSequence(value: NumberSequence)
-			self:UInt5(#value.Keypoints) -- max length of 20, tested
-			for _, keypoint in value.Keypoints do
-				self:NumberSequenceKeypoint(keypoint)
-			end
-		end
-
-		function Writer:ColorSequence(value: ColorSequence)
-			self:UInt5(#value.Keypoints) -- max length of 20, tested
-			for _, keypoint in value.Keypoints do
-				self:ColorSequenceKeypoint(keypoint)
-			end
-		end
-
-		function Writer:CFrame(value: CFrame)
-			local specialCase = table.find(CFRAME_SPECIAL_CASES, value.Rotation) or 0
-			self:UInt5(specialCase)
-					
-			self:Vector3(value.Position)
-			if specialCase == 0 then
-				local axis, angle = value:ToAxisAngle()
-				self:Vector3(axis * angle)
-			end
-		end
-
-		function Writer:Boolean(value: boolean)
-			bitbuffer.writeu1(self._buffer, self._byte, self._bit, if value then 1 else 0)
-			self:IncrementOffset(1)
-		end
-
-		function Writer:LosslessCFrame(value: CFrame)
-			local specialCase = table.find(CFRAME_SPECIAL_CASES, value.Rotation) or 0
-			self:UInt5(specialCase)
-					
-			self:Vector3(value.Position)
-			if specialCase == 0 then
-				self:Vector3(value.XVector)
-				self:Vector3(value.YVector)
-				self:Vector3(value.ZVector)
-			end
-		end
-
-		function Writer:NumberRange(value: NumberRange)
-			bitbuffer.writef32(self._buffer, self._byte, self._bit, value.Min)
-			bitbuffer.writef32(self._buffer, self._byte + 4, self._bit, value.Max)
-			self:IncrementOffset(64)
-		end
-
-		function Writer:Vector3int16(value: Vector3int16)
-			bitbuffer.writei16(self._buffer, self._byte, self._bit, value.X)
-			bitbuffer.writei16(self._buffer, self._byte + 2, self._bit, value.Y)
-			bitbuffer.writei16(self._buffer, self._byte + 4, self._bit, value.Z)
-			self:IncrementOffset(48)
-		end
-
-		function Writer:Vector2int16(value: Vector2int16)
-			bitbuffer.writei16(self._buffer, self._byte, self._bit, value.X)
-			bitbuffer.writei16(self._buffer, self._byte + 2, self._bit, value.Y)
-			self:IncrementOffset(32)
-		end
-
-		function Writer:UDim2(value: UDim2)
-			self:UDim(value.X)
-			self:UDim(value.Y)
-		end
-
-		function Writer:NumberSequenceKeypoint(value: NumberSequenceKeypoint)
-			bitbuffer.writef32(self._buffer, self._byte, self._bit, value.Time)
-			bitbuffer.writef32(self._buffer, self._byte + 4, self._bit, value.Value)
-			bitbuffer.writef32(self._buffer, self._byte + 8, self._bit, value.Envelope)
-			self:IncrementOffset(96)
-		end
-
-		function Writer:BrickColor(value: BrickColor)
-			bitbuffer.writeu11(self._buffer, self._byte, self._bit, value.Number)
-			self:IncrementOffset(11)
-		end
-
-		function Writer:Vector2(value: Vector2)
-			bitbuffer.writef32(self._buffer, self._byte, self._bit, value.X)
-			bitbuffer.writef32(self._buffer, self._byte + 4, self._bit, value.Y)
-			self:IncrementOffset(64)
-		end
-
-		function Writer:UDim(value: UDim)
-			bitbuffer.writef32(self._buffer, self._byte, self._bit, value.Scale)
-			bitbuffer.writei32(self._buffer, self._byte + 4, self._bit, value.Offset)
-			self:IncrementOffset(64)
-		end
-
-		function Writer:Color3(value: Color3)
-			bitbuffer.writeu8(self._buffer, self._byte, self._bit, math.floor(value.R * 255))
-			bitbuffer.writeu8(self._buffer, self._byte + 1, self._bit, math.floor(value.G * 255))
-			bitbuffer.writeu8(self._buffer, self._byte + 2, self._bit, math.floor(value.B * 255))
-			self:IncrementOffset(24)
-		end
-
-		function Writer:ColorSequenceKeypoint(value: ColorSequenceKeypoint)
-			bitbuffer.writef32(self._buffer, self._byte, self._bit, value.Time)
-			self:IncrementOffset(32)
-			self:Color3(value.Value)
-		end
-
-		function Writer:Vector3(value: Vector3)
-			bitbuffer.writef32(self._buffer, self._byte, self._bit, value.X)
-			bitbuffer.writef32(self._buffer, self._byte + 4, self._bit, value.Y)
-			bitbuffer.writef32(self._buffer, self._byte + 8, self._bit, value.Z)
-			self:IncrementOffset(96)
-		end
-
-		function bitbuffer.writer(b: buffer)
-			return setmetatable({
-				_buffer = b,
-				_byte = 0,
-				_bit = 0,
-			}, Writer)
 		end
 	end
 
-	do -- reader
-		local Reader = {}
-		Reader.__index = Reader
-		
-		function Reader:IncrementOffset(amount: number)
-			local byte, bit = amount // 8, amount % 8
-		
-			if bit == 0 then
-				self._byte += byte
-			else
-				self._bit += bit
-				if self._bit >= 8 then
-					self._byte += byte + self._bit // 8
-					self._bit %= 8
-				else
-					self._byte += byte
+	do -- reader & writer
+		local RAD_90, RAD_180 = math.rad(90), math.rad(180)
+
+		local CFRAME_SPECIAL_CASES = if CFrame then {
+			CFrame.Angles(0, 0, 0),
+			CFrame.Angles(RAD_90, 0, 0),
+			CFrame.Angles(0, RAD_180, RAD_180),
+			CFrame.Angles(-RAD_90, 0, 0),
+			CFrame.Angles(0, RAD_180, RAD_90),
+			CFrame.Angles(0, RAD_90, RAD_90),
+			CFrame.Angles(0, 0, RAD_90),
+			CFrame.Angles(0, -RAD_90, RAD_90),
+			CFrame.Angles(-RAD_90, -RAD_90, 0),
+			CFrame.Angles(0, -RAD_90, 0),
+			CFrame.Angles(RAD_90, -RAD_90, 0),
+			CFrame.Angles(0, RAD_90, RAD_180),
+			CFrame.Angles(0, -RAD_90, RAD_180),
+			CFrame.Angles(0, RAD_180, 0),
+			CFrame.Angles(-RAD_90, math.rad(-180), 0),
+			CFrame.Angles(0, 0, RAD_180),
+			CFrame.Angles(RAD_90, RAD_180, 0),
+			CFrame.Angles(0, 0, -RAD_90),
+			CFrame.Angles(0, -RAD_90, -RAD_90),
+			CFrame.Angles(0, math.rad(-180), -RAD_90),
+			CFrame.Angles(0, RAD_90, -RAD_90),
+			CFrame.Angles(RAD_90, RAD_90, 0),
+			CFrame.Angles(0, RAD_90, 0),
+			CFrame.Angles(-RAD_90, RAD_90, 0),
+		} else nil
+
+		do -- writer
+			local Writer = bitbuffer.offset()
+
+			function bitbuffer.writer(b: buffer)
+				return setmetatable({
+					buffer = b,
+					byte = 0,
+					bit = 0,
+				}, Writer)
+			end
+
+			function Writer:UInt1(value: number)
+				bitbuffer.writeu1(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 1)
+			end
+
+			function Writer:UInt2(value: number)
+				bitbuffer.writeu2(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 2)
+			end
+
+			function Writer:UInt3(value: number)
+				bitbuffer.writeu3(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 3)
+			end
+
+			function Writer:UInt4(value: number)
+				bitbuffer.writeu4(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 4)
+			end
+
+			function Writer:UInt5(value: number)
+				bitbuffer.writeu5(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 5)
+			end
+
+			function Writer:UInt6(value: number)
+				bitbuffer.writeu6(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 6)
+			end
+
+			function Writer:UInt7(value: number)
+				bitbuffer.writeu7(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 7)
+			end
+
+			function Writer:UInt8(value: number)
+				bitbuffer.writeu8(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 0)
+			end
+
+			function Writer:UInt9(value: number)
+				bitbuffer.writeu9(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 1)
+			end
+
+			function Writer:UInt10(value: number)
+				bitbuffer.writeu10(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 2)
+			end
+
+			function Writer:UInt11(value: number)
+				bitbuffer.writeu11(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 3)
+			end
+
+			function Writer:UInt12(value: number)
+				bitbuffer.writeu12(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 4)
+			end
+
+			function Writer:UInt13(value: number)
+				bitbuffer.writeu13(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 5)
+			end
+
+			function Writer:UInt14(value: number)
+				bitbuffer.writeu14(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 6)
+			end
+
+			function Writer:UInt15(value: number)
+				bitbuffer.writeu15(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 7)
+			end
+
+			function Writer:UInt16(value: number)
+				bitbuffer.writeu16(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 0)
+			end
+
+			function Writer:UInt17(value: number)
+				bitbuffer.writeu17(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 1)
+			end
+
+			function Writer:UInt18(value: number)
+				bitbuffer.writeu18(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 2)
+			end
+
+			function Writer:UInt19(value: number)
+				bitbuffer.writeu19(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 3)
+			end
+
+			function Writer:UInt20(value: number)
+				bitbuffer.writeu20(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 4)
+			end
+
+			function Writer:UInt21(value: number)
+				bitbuffer.writeu21(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 5)
+			end
+
+			function Writer:UInt22(value: number)
+				bitbuffer.writeu22(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 6)
+			end
+
+			function Writer:UInt23(value: number)
+				bitbuffer.writeu23(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 7)
+			end
+
+			function Writer:UInt24(value: number)
+				bitbuffer.writeu24(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 0)
+			end
+
+			function Writer:UInt25(value: number)
+				bitbuffer.writeu25(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 1)
+			end
+
+			function Writer:UInt26(value: number)
+				bitbuffer.writeu26(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 2)
+			end
+
+			function Writer:UInt27(value: number)
+				bitbuffer.writeu27(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 3)
+			end
+
+			function Writer:UInt28(value: number)
+				bitbuffer.writeu28(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 4)
+			end
+
+			function Writer:UInt29(value: number)
+				bitbuffer.writeu29(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 5)
+			end
+
+			function Writer:UInt30(value: number)
+				bitbuffer.writeu30(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 6)
+			end
+
+			function Writer:UInt31(value: number)
+				bitbuffer.writeu31(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 7)
+			end
+
+			function Writer:UInt32(value: number)
+				bitbuffer.writeu32(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 0)
+			end
+
+			function Writer:UInt33(value: number)
+				bitbuffer.writeu33(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 1)
+			end
+
+			function Writer:UInt34(value: number)
+				bitbuffer.writeu34(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 2)
+			end
+
+			function Writer:UInt35(value: number)
+				bitbuffer.writeu35(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 3)
+			end
+
+			function Writer:UInt36(value: number)
+				bitbuffer.writeu36(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 4)
+			end
+
+			function Writer:UInt37(value: number)
+				bitbuffer.writeu37(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 5)
+			end
+
+			function Writer:UInt38(value: number)
+				bitbuffer.writeu38(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 6)
+			end
+
+			function Writer:UInt39(value: number)
+				bitbuffer.writeu39(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 7)
+			end
+
+			function Writer:UInt40(value: number)
+				bitbuffer.writeu40(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 0)
+			end
+
+			function Writer:UInt41(value: number)
+				bitbuffer.writeu41(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 1)
+			end
+
+			function Writer:UInt42(value: number)
+				bitbuffer.writeu42(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 2)
+			end
+
+			function Writer:UInt43(value: number)
+				bitbuffer.writeu43(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 3)
+			end
+
+			function Writer:UInt44(value: number)
+				bitbuffer.writeu44(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 4)
+			end
+
+			function Writer:UInt45(value: number)
+				bitbuffer.writeu45(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 5)
+			end
+
+			function Writer:UInt46(value: number)
+				bitbuffer.writeu46(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 6)
+			end
+
+			function Writer:UInt47(value: number)
+				bitbuffer.writeu47(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 7)
+			end
+
+			function Writer:UInt48(value: number)
+				bitbuffer.writeu48(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 0)
+			end
+
+			function Writer:UInt49(value: number)
+				bitbuffer.writeu49(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 1)
+			end
+
+			function Writer:UInt50(value: number)
+				bitbuffer.writeu50(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 2)
+			end
+
+			function Writer:UInt51(value: number)
+				bitbuffer.writeu51(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 3)
+			end
+
+			function Writer:UInt52(value: number)
+				bitbuffer.writeu52(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 4)
+			end
+
+			function Writer:UInt53(value: number)
+				bitbuffer.writeu53(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 5)
+			end
+
+			function Writer:Int1(value: number)
+				bitbuffer.writei1(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 1)
+			end
+
+			function Writer:Int2(value: number)
+				bitbuffer.writei2(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 2)
+			end
+
+			function Writer:Int3(value: number)
+				bitbuffer.writei3(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 3)
+			end
+
+			function Writer:Int4(value: number)
+				bitbuffer.writei4(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 4)
+			end
+
+			function Writer:Int5(value: number)
+				bitbuffer.writei5(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 5)
+			end
+
+			function Writer:Int6(value: number)
+				bitbuffer.writei6(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 6)
+			end
+
+			function Writer:Int7(value: number)
+				bitbuffer.writei7(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(0, 7)
+			end
+
+			function Writer:Int8(value: number)
+				bitbuffer.writei8(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 0)
+			end
+
+			function Writer:Int9(value: number)
+				bitbuffer.writei9(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 1)
+			end
+
+			function Writer:Int10(value: number)
+				bitbuffer.writei10(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 2)
+			end
+
+			function Writer:Int11(value: number)
+				bitbuffer.writei11(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 3)
+			end
+
+			function Writer:Int12(value: number)
+				bitbuffer.writei12(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 4)
+			end
+
+			function Writer:Int13(value: number)
+				bitbuffer.writei13(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 5)
+			end
+
+			function Writer:Int14(value: number)
+				bitbuffer.writei14(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 6)
+			end
+
+			function Writer:Int15(value: number)
+				bitbuffer.writei15(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(1, 7)
+			end
+
+			function Writer:Int16(value: number)
+				bitbuffer.writei16(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 0)
+			end
+
+			function Writer:Int17(value: number)
+				bitbuffer.writei17(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 1)
+			end
+
+			function Writer:Int18(value: number)
+				bitbuffer.writei18(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 2)
+			end
+
+			function Writer:Int19(value: number)
+				bitbuffer.writei19(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 3)
+			end
+
+			function Writer:Int20(value: number)
+				bitbuffer.writei20(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 4)
+			end
+
+			function Writer:Int21(value: number)
+				bitbuffer.writei21(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 5)
+			end
+
+			function Writer:Int22(value: number)
+				bitbuffer.writei22(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 6)
+			end
+
+			function Writer:Int23(value: number)
+				bitbuffer.writei23(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 7)
+			end
+
+			function Writer:Int24(value: number)
+				bitbuffer.writei24(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 0)
+			end
+
+			function Writer:Int25(value: number)
+				bitbuffer.writei25(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 1)
+			end
+
+			function Writer:Int26(value: number)
+				bitbuffer.writei26(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 2)
+			end
+
+			function Writer:Int27(value: number)
+				bitbuffer.writei27(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 3)
+			end
+
+			function Writer:Int28(value: number)
+				bitbuffer.writei28(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 4)
+			end
+
+			function Writer:Int29(value: number)
+				bitbuffer.writei29(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 5)
+			end
+
+			function Writer:Int30(value: number)
+				bitbuffer.writei30(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 6)
+			end
+
+			function Writer:Int31(value: number)
+				bitbuffer.writei31(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(3, 7)
+			end
+
+			function Writer:Int32(value: number)
+				bitbuffer.writei32(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 0)
+			end
+
+			function Writer:Int33(value: number)
+				bitbuffer.writei33(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 1)
+			end
+
+			function Writer:Int34(value: number)
+				bitbuffer.writei34(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 2)
+			end
+
+			function Writer:Int35(value: number)
+				bitbuffer.writei35(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 3)
+			end
+
+			function Writer:Int36(value: number)
+				bitbuffer.writei36(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 4)
+			end
+
+			function Writer:Int37(value: number)
+				bitbuffer.writei37(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 5)
+			end
+
+			function Writer:Int38(value: number)
+				bitbuffer.writei38(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 6)
+			end
+
+			function Writer:Int39(value: number)
+				bitbuffer.writei39(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 7)
+			end
+
+			function Writer:Int40(value: number)
+				bitbuffer.writei40(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 0)
+			end
+
+			function Writer:Int41(value: number)
+				bitbuffer.writei41(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 1)
+			end
+
+			function Writer:Int42(value: number)
+				bitbuffer.writei42(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 2)
+			end
+
+			function Writer:Int43(value: number)
+				bitbuffer.writei43(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 3)
+			end
+
+			function Writer:Int44(value: number)
+				bitbuffer.writei44(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 4)
+			end
+
+			function Writer:Int45(value: number)
+				bitbuffer.writei45(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 5)
+			end
+
+			function Writer:Int46(value: number)
+				bitbuffer.writei46(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 6)
+			end
+
+			function Writer:Int47(value: number)
+				bitbuffer.writei47(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(5, 7)
+			end
+
+			function Writer:Int48(value: number)
+				bitbuffer.writei48(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 0)
+			end
+
+			function Writer:Int49(value: number)
+				bitbuffer.writei49(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 1)
+			end
+
+			function Writer:Int50(value: number)
+				bitbuffer.writei50(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 2)
+			end
+
+			function Writer:Int51(value: number)
+				bitbuffer.writei51(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 3)
+			end
+
+			function Writer:Int52(value: number)
+				bitbuffer.writei52(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 4)
+			end
+
+			function Writer:Int53(value: number)
+				bitbuffer.writei53(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(6, 5)
+			end
+
+			function Writer:Float16(value: number)
+				bitbuffer.writef16(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(2, 0)
+			end
+
+			function Writer:Float32(value: number)
+				bitbuffer.writef32(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(4, 0)
+			end
+
+			function Writer:Float64(value: number)
+				bitbuffer.writef64(self.buffer, self.byte, self.bit, value)
+				self:IncrementOffset(8, 0)
+			end
+
+			function Writer:String(value: string)
+				bitbuffer.writeu32(self.buffer, self.byte, self.bit, #value)
+				bitbuffer.writestring(self.buffer, self.byte + 4, self.bit, value)
+				self:IncrementOffset(4 + #value, 0)
+			end
+
+			function Writer:NumberSequence(value: NumberSequence)
+				self:UInt5(#value.Keypoints) -- max length of 20, tested
+				for _, keypoint in value.Keypoints do
+					self:NumberSequenceKeypoint(keypoint)
 				end
 			end
-		end
-		
-		function Reader:SetOffset(byte: number, bit: number?)
-			if bit then
-				self._byte = byte
-				self._bit = bit
-			else
-				self._byte = byte // 8
-				self._bit = byte % 8
+
+			function Writer:ColorSequence(value: ColorSequence)
+				self:UInt5(#value.Keypoints) -- max length of 20, tested
+				for _, keypoint in value.Keypoints do
+					self:ColorSequenceKeypoint(keypoint)
+				end
 			end
-		end
-		
-		function Reader:Align()
-			if self._bit > 0 then
-				self._byte += 1
-				self._bit = 0
+
+			function Writer:CFrame(value: CFrame)
+				local specialCase = table.find(CFRAME_SPECIAL_CASES, value.Rotation) or 0
+				self:UInt5(specialCase)
+
+				self:Vector3(value.Position)
+				if specialCase == 0 then
+					local axis, angle = value:ToAxisAngle()
+					self:Vector3(axis * angle)
+				end
 			end
-		end
-		
-		function Reader:UInt1(): number
-			local value = bitbuffer.readu1(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(1)
-			return value
-		end
 
-		function Reader:UInt2(): number
-			local value = bitbuffer.readu2(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(2)
-			return value
-		end
-
-		function Reader:UInt3(): number
-			local value = bitbuffer.readu3(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(3)
-			return value
-		end
-
-		function Reader:UInt4(): number
-			local value = bitbuffer.readu4(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(4)
-			return value
-		end
-
-		function Reader:UInt5(): number
-			local value = bitbuffer.readu5(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(5)
-			return value
-		end
-
-		function Reader:UInt6(): number
-			local value = bitbuffer.readu6(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(6)
-			return value
-		end
-
-		function Reader:UInt7(): number
-			local value = bitbuffer.readu7(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(7)
-			return value
-		end
-
-		function Reader:UInt8(): number
-			local value = bitbuffer.readu8(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(8)
-			return value
-		end
-
-		function Reader:UInt9(): number
-			local value = bitbuffer.readu9(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(9)
-			return value
-		end
-
-		function Reader:UInt10(): number
-			local value = bitbuffer.readu10(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(10)
-			return value
-		end
-
-		function Reader:UInt11(): number
-			local value = bitbuffer.readu11(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(11)
-			return value
-		end
-
-		function Reader:UInt12(): number
-			local value = bitbuffer.readu12(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(12)
-			return value
-		end
-
-		function Reader:UInt13(): number
-			local value = bitbuffer.readu13(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(13)
-			return value
-		end
-
-		function Reader:UInt14(): number
-			local value = bitbuffer.readu14(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(14)
-			return value
-		end
-
-		function Reader:UInt15(): number
-			local value = bitbuffer.readu15(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(15)
-			return value
-		end
-
-		function Reader:UInt16(): number
-			local value = bitbuffer.readu16(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(16)
-			return value
-		end
-
-		function Reader:UInt17(): number
-			local value = bitbuffer.readu17(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(17)
-			return value
-		end
-
-		function Reader:UInt18(): number
-			local value = bitbuffer.readu18(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(18)
-			return value
-		end
-
-		function Reader:UInt19(): number
-			local value = bitbuffer.readu19(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(19)
-			return value
-		end
-
-		function Reader:UInt20(): number
-			local value = bitbuffer.readu20(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(20)
-			return value
-		end
-
-		function Reader:UInt21(): number
-			local value = bitbuffer.readu21(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(21)
-			return value
-		end
-
-		function Reader:UInt22(): number
-			local value = bitbuffer.readu22(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(22)
-			return value
-		end
-
-		function Reader:UInt23(): number
-			local value = bitbuffer.readu23(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(23)
-			return value
-		end
-
-		function Reader:UInt24(): number
-			local value = bitbuffer.readu24(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(24)
-			return value
-		end
-
-		function Reader:UInt25(): number
-			local value = bitbuffer.readu25(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(25)
-			return value
-		end
-
-		function Reader:UInt26(): number
-			local value = bitbuffer.readu26(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(26)
-			return value
-		end
-
-		function Reader:UInt27(): number
-			local value = bitbuffer.readu27(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(27)
-			return value
-		end
-
-		function Reader:UInt28(): number
-			local value = bitbuffer.readu28(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(28)
-			return value
-		end
-
-		function Reader:UInt29(): number
-			local value = bitbuffer.readu29(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(29)
-			return value
-		end
-
-		function Reader:UInt30(): number
-			local value = bitbuffer.readu30(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(30)
-			return value
-		end
-
-		function Reader:UInt31(): number
-			local value = bitbuffer.readu31(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(31)
-			return value
-		end
-
-		function Reader:UInt32(): number
-			local value = bitbuffer.readu32(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(32)
-			return value
-		end
-
-		function Reader:UInt33(): number
-			local value = bitbuffer.readu33(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(33)
-			return value
-		end
-
-		function Reader:UInt34(): number
-			local value = bitbuffer.readu34(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(34)
-			return value
-		end
-
-		function Reader:UInt35(): number
-			local value = bitbuffer.readu35(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(35)
-			return value
-		end
-
-		function Reader:UInt36(): number
-			local value = bitbuffer.readu36(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(36)
-			return value
-		end
-
-		function Reader:UInt37(): number
-			local value = bitbuffer.readu37(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(37)
-			return value
-		end
-
-		function Reader:UInt38(): number
-			local value = bitbuffer.readu38(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(38)
-			return value
-		end
-
-		function Reader:UInt39(): number
-			local value = bitbuffer.readu39(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(39)
-			return value
-		end
-
-		function Reader:UInt40(): number
-			local value = bitbuffer.readu40(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(40)
-			return value
-		end
-
-		function Reader:UInt41(): number
-			local value = bitbuffer.readu41(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(41)
-			return value
-		end
-
-		function Reader:UInt42(): number
-			local value = bitbuffer.readu42(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(42)
-			return value
-		end
-
-		function Reader:UInt43(): number
-			local value = bitbuffer.readu43(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(43)
-			return value
-		end
-
-		function Reader:UInt44(): number
-			local value = bitbuffer.readu44(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(44)
-			return value
-		end
-
-		function Reader:UInt45(): number
-			local value = bitbuffer.readu45(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(45)
-			return value
-		end
-
-		function Reader:UInt46(): number
-			local value = bitbuffer.readu46(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(46)
-			return value
-		end
-
-		function Reader:UInt47(): number
-			local value = bitbuffer.readu47(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(47)
-			return value
-		end
-
-		function Reader:UInt48(): number
-			local value = bitbuffer.readu48(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(48)
-			return value
-		end
-
-		function Reader:UInt49(): number
-			local value = bitbuffer.readu49(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(49)
-			return value
-		end
-
-		function Reader:UInt50(): number
-			local value = bitbuffer.readu50(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(50)
-			return value
-		end
-
-		function Reader:UInt51(): number
-			local value = bitbuffer.readu51(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(51)
-			return value
-		end
-
-		function Reader:UInt52(): number
-			local value = bitbuffer.readu52(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(52)
-			return value
-		end
-
-		function Reader:UInt53(): number
-			local value = bitbuffer.readu53(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(53)
-			return value
-		end
-
-		function Reader:Int1(): number
-			local value = bitbuffer.readi1(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(1)
-			return value
-		end
-
-		function Reader:Int2(): number
-			local value = bitbuffer.readi2(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(2)
-			return value
-		end
-
-		function Reader:Int3(): number
-			local value = bitbuffer.readi3(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(3)
-			return value
-		end
-
-		function Reader:Int4(): number
-			local value = bitbuffer.readi4(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(4)
-			return value
-		end
-
-		function Reader:Int5(): number
-			local value = bitbuffer.readi5(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(5)
-			return value
-		end
-
-		function Reader:Int6(): number
-			local value = bitbuffer.readi6(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(6)
-			return value
-		end
-
-		function Reader:Int7(): number
-			local value = bitbuffer.readi7(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(7)
-			return value
-		end
-
-		function Reader:Int8(): number
-			local value = bitbuffer.readi8(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(8)
-			return value
-		end
-
-		function Reader:Int9(): number
-			local value = bitbuffer.readi9(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(9)
-			return value
-		end
-
-		function Reader:Int10(): number
-			local value = bitbuffer.readi10(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(10)
-			return value
-		end
-
-		function Reader:Int11(): number
-			local value = bitbuffer.readi11(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(11)
-			return value
-		end
-
-		function Reader:Int12(): number
-			local value = bitbuffer.readi12(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(12)
-			return value
-		end
-
-		function Reader:Int13(): number
-			local value = bitbuffer.readi13(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(13)
-			return value
-		end
-
-		function Reader:Int14(): number
-			local value = bitbuffer.readi14(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(14)
-			return value
-		end
-
-		function Reader:Int15(): number
-			local value = bitbuffer.readi15(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(15)
-			return value
-		end
-
-		function Reader:Int16(): number
-			local value = bitbuffer.readi16(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(16)
-			return value
-		end
-
-		function Reader:Int17(): number
-			local value = bitbuffer.readi17(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(17)
-			return value
-		end
-
-		function Reader:Int18(): number
-			local value = bitbuffer.readi18(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(18)
-			return value
-		end
-
-		function Reader:Int19(): number
-			local value = bitbuffer.readi19(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(19)
-			return value
-		end
-
-		function Reader:Int20(): number
-			local value = bitbuffer.readi20(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(20)
-			return value
-		end
-
-		function Reader:Int21(): number
-			local value = bitbuffer.readi21(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(21)
-			return value
-		end
-
-		function Reader:Int22(): number
-			local value = bitbuffer.readi22(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(22)
-			return value
-		end
-
-		function Reader:Int23(): number
-			local value = bitbuffer.readi23(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(23)
-			return value
-		end
-
-		function Reader:Int24(): number
-			local value = bitbuffer.readi24(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(24)
-			return value
-		end
-
-		function Reader:Int25(): number
-			local value = bitbuffer.readi25(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(25)
-			return value
-		end
-
-		function Reader:Int26(): number
-			local value = bitbuffer.readi26(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(26)
-			return value
-		end
-
-		function Reader:Int27(): number
-			local value = bitbuffer.readi27(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(27)
-			return value
-		end
-
-		function Reader:Int28(): number
-			local value = bitbuffer.readi28(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(28)
-			return value
-		end
-
-		function Reader:Int29(): number
-			local value = bitbuffer.readi29(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(29)
-			return value
-		end
-
-		function Reader:Int30(): number
-			local value = bitbuffer.readi30(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(30)
-			return value
-		end
-
-		function Reader:Int31(): number
-			local value = bitbuffer.readi31(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(31)
-			return value
-		end
-
-		function Reader:Int32(): number
-			local value = bitbuffer.readi32(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(32)
-			return value
-		end
-
-		function Reader:Int33(): number
-			local value = bitbuffer.readi33(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(33)
-			return value
-		end
-
-		function Reader:Int34(): number
-			local value = bitbuffer.readi34(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(34)
-			return value
-		end
-
-		function Reader:Int35(): number
-			local value = bitbuffer.readi35(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(35)
-			return value
-		end
-
-		function Reader:Int36(): number
-			local value = bitbuffer.readi36(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(36)
-			return value
-		end
-
-		function Reader:Int37(): number
-			local value = bitbuffer.readi37(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(37)
-			return value
-		end
-
-		function Reader:Int38(): number
-			local value = bitbuffer.readi38(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(38)
-			return value
-		end
-
-		function Reader:Int39(): number
-			local value = bitbuffer.readi39(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(39)
-			return value
-		end
-
-		function Reader:Int40(): number
-			local value = bitbuffer.readi40(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(40)
-			return value
-		end
-
-		function Reader:Int41(): number
-			local value = bitbuffer.readi41(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(41)
-			return value
-		end
-
-		function Reader:Int42(): number
-			local value = bitbuffer.readi42(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(42)
-			return value
-		end
-
-		function Reader:Int43(): number
-			local value = bitbuffer.readi43(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(43)
-			return value
-		end
-
-		function Reader:Int44(): number
-			local value = bitbuffer.readi44(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(44)
-			return value
-		end
-
-		function Reader:Int45(): number
-			local value = bitbuffer.readi45(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(45)
-			return value
-		end
-
-		function Reader:Int46(): number
-			local value = bitbuffer.readi46(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(46)
-			return value
-		end
-
-		function Reader:Int47(): number
-			local value = bitbuffer.readi47(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(47)
-			return value
-		end
-
-		function Reader:Int48(): number
-			local value = bitbuffer.readi48(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(48)
-			return value
-		end
-
-		function Reader:Int49(): number
-			local value = bitbuffer.readi49(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(49)
-			return value
-		end
-
-		function Reader:Int50(): number
-			local value = bitbuffer.readi50(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(50)
-			return value
-		end
-
-		function Reader:Int51(): number
-			local value = bitbuffer.readi51(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(51)
-			return value
-		end
-
-		function Reader:Int52(): number
-			local value = bitbuffer.readi52(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(52)
-			return value
-		end
-
-		function Reader:Int53(): number
-			local value = bitbuffer.readi53(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(53)
-			return value
-		end
-
-		function Reader:Float16(): number
-			local value = bitbuffer.readf16(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(16)
-			return value
-		end
-
-		function Reader:Float32(): number
-			local value = bitbuffer.readf32(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(32)
-			return value
-		end
-
-		function Reader:Float64(): number
-			local value = bitbuffer.readf64(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(64)
-			return value
-		end
-
-		function Reader:String(): string
-			local length = bitbuffer.readu32(self._buffer, self._byte, self._bit)
-			local value = bitbuffer.readstring(self._buffer, self._byte + 4, self._bit, length)
-			self:IncrementOffset(32 + length * 8)
-			return value
-		end
-
-		function Reader:NumberSequence(): NumberSequence
-			local length = self:UInt5() -- max length of 20, tested
-			local keypoints = table.create(length)
-				
-			for _ = 1, length do
-				local keypoint = self:NumberSequenceKeypoint()
-				table.insert(keypoints, keypoint)
+			function Writer:Boolean(value: boolean)
+				bitbuffer.writeu1(self.buffer, self.byte, self.bit, if value then 1 else 0)
+				self:IncrementOffset(0, 1)
 			end
-				
-			return NumberSequence.new(keypoints)
-		end
 
-		function Reader:ColorSequence(): ColorSequence
-			local length = self:UInt5() -- max length of 20, tested
-			local keypoints = table.create(length)
-				
-			for _ = 1, length do
-				local keypoint = self:ColorSequenceKeypoint()
-				table.insert(keypoints, keypoint)
+			function Writer:LosslessCFrame(value: CFrame)
+				local specialCase = table.find(CFRAME_SPECIAL_CASES, value.Rotation) or 0
+				self:UInt5(specialCase)
+
+				self:Vector3(value.Position)
+				if specialCase == 0 then
+					self:Vector3(value.XVector)
+					self:Vector3(value.YVector)
+					self:Vector3(value.ZVector)
+				end
 			end
-				
-			return ColorSequence.new(keypoints)
-		end
 
-		function Reader:CFrame(): CFrame
-			local specialCase = self:UInt5()
-			local position = self:Vector3()
-				
-			if specialCase == 0 then
-				local axisAngle = self:Vector3()
-				return CFrame.fromAxisAngle(axisAngle, axisAngle.Magnitude) + position
-			else
-				local specialCase = CFRAME_SPECIAL_CASES[specialCase]
-				return CFrame.fromMatrix(position, specialCase.XVector, specialCase.YVector, specialCase.ZVector)
+			function Writer:NumberRange(value: NumberRange)
+				bitbuffer.writef32(self.buffer, self.byte, self.bit, value.Min)
+				bitbuffer.writef32(self.buffer, self.byte + 4, self.bit, value.Max)
+				self:IncrementOffset(8, 0)
 			end
-		end
 
-		function Reader:Boolean(): boolean
-			local value = bitbuffer.readu1(self._buffer, self._byte, self._bit) == 1
-			self:IncrementOffset(1)
-			return value
-		end
-
-		function Reader:LosslessCFrame(): CFrame
-			local specialCase = self:UInt5()
-			local position = self:Vector3()
-				
-			if specialCase == 0 then
-				return CFrame.fromMatrix(position, self:Vector3(), self:Vector3(), self:Vector3())
-			else
-				local specialCase = CFRAME_SPECIAL_CASES[specialCase]
-				return CFrame.fromMatrix(position, specialCase.XVector, specialCase.YVector, specialCase.ZVector)
+			function Writer:Vector3int16(value: Vector3int16)
+				bitbuffer.writei16(self.buffer, self.byte, self.bit, value.X)
+				bitbuffer.writei16(self.buffer, self.byte + 2, self.bit, value.Y)
+				bitbuffer.writei16(self.buffer, self.byte + 4, self.bit, value.Z)
+				self:IncrementOffset(6, 0)
 			end
+
+			function Writer:Vector2int16(value: Vector2int16)
+				bitbuffer.writei16(self.buffer, self.byte, self.bit, value.X)
+				bitbuffer.writei16(self.buffer, self.byte + 2, self.bit, value.Y)
+				self:IncrementOffset(4, 0)
+			end
+
+			function Writer:UDim2(value: UDim2)
+				self:UDim(value.X)
+				self:UDim(value.Y)
+			end
+
+			function Writer:NumberSequenceKeypoint(value: NumberSequenceKeypoint)
+				bitbuffer.writef32(self.buffer, self.byte, self.bit, value.Time)
+				bitbuffer.writef32(self.buffer, self.byte + 4, self.bit, value.Value)
+				bitbuffer.writef32(self.buffer, self.byte + 8, self.bit, value.Envelope)
+				self:IncrementOffset(12, 0)
+			end
+
+			function Writer:BrickColor(value: BrickColor)
+				bitbuffer.writeu11(self.buffer, self.byte, self.bit, value.Number)
+				self:IncrementOffset(1, 3)
+			end
+
+			function Writer:Vector2(value: Vector2)
+				bitbuffer.writef32(self.buffer, self.byte, self.bit, value.X)
+				bitbuffer.writef32(self.buffer, self.byte + 4, self.bit, value.Y)
+				self:IncrementOffset(8, 0)
+			end
+
+			function Writer:UDim(value: UDim)
+				bitbuffer.writef32(self.buffer, self.byte, self.bit, value.Scale)
+				bitbuffer.writei32(self.buffer, self.byte + 4, self.bit, value.Offset)
+				self:IncrementOffset(8, 0)
+			end
+
+			function Writer:Color3(value: Color3)
+				bitbuffer.writeu8(self.buffer, self.byte, self.bit, math.floor(value.R * 255))
+				bitbuffer.writeu8(self.buffer, self.byte + 1, self.bit, math.floor(value.G * 255))
+				bitbuffer.writeu8(self.buffer, self.byte + 2, self.bit, math.floor(value.B * 255))
+				self:IncrementOffset(3, 0)
+			end
+
+			function Writer:ColorSequenceKeypoint(value: ColorSequenceKeypoint)
+				bitbuffer.writef32(self.buffer, self.byte, self.bit, value.Time)
+				self:IncrementOffset(4, 0)
+				self:Color3(value.Value)
+			end
+
+			function Writer:Vector3(value: Vector3)
+				bitbuffer.writef32(self.buffer, self.byte, self.bit, value.X)
+				bitbuffer.writef32(self.buffer, self.byte + 4, self.bit, value.Y)
+				bitbuffer.writef32(self.buffer, self.byte + 8, self.bit, value.Z)
+				self:IncrementOffset(12, 0)
+			end
+
 		end
 
-		function Reader:NumberRange(): NumberRange
-			local min = bitbuffer.readf32(self._buffer, self._byte, self._bit)
-			local max = bitbuffer.readf32(self._buffer, self._byte + 4, self._bit)
-			self:IncrementOffset(64)
+		do -- reader
+			local Reader = bitbuffer.offset()
 
-			return NumberRange.new(min, max)
-		end
+			function bitbuffer.reader(b: buffer)
+				return setmetatable({
+					buffer = b,
+					byte = 0,
+					bit = 0
+				}, Reader)
+			end
 
-		function Reader:Vector3int16(): Vector3int16
-			local x = bitbuffer.readi16(self._buffer, self._byte, self._bit)
-			local y = bitbuffer.readi16(self._buffer, self._byte + 2, self._bit)
-			local z = bitbuffer.readi16(self._buffer, self._byte + 4, self._bit)
-			self:IncrementOffset(48)
+			function Reader:__index(index)
+				return Reader[index] or bitbuffer.offset[index]
+			end
 
-			return Vector3int16.new(x, y, z)
-		end
+			function Reader:UInt1(): number
+				local value = bitbuffer.readu1(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 1)
+				return value
+			end
 
-		function Reader:Vector2int16(): Vector2int16
-			local x = bitbuffer.readi16(self._buffer, self._byte, self._bit)
-			local y = bitbuffer.readi16(self._buffer, self._byte + 2, self._bit)
-			self:IncrementOffset(32)
+			function Reader:UInt2(): number
+				local value = bitbuffer.readu2(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 2)
+				return value
+			end
 
-			return Vector2int16.new(x, y)
-		end
+			function Reader:UInt3(): number
+				local value = bitbuffer.readu3(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 3)
+				return value
+			end
 
-		function Reader:UDim2(): UDim2
-			local x = self:UDim()
-			local y = self:UDim()
+			function Reader:UInt4(): number
+				local value = bitbuffer.readu4(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 4)
+				return value
+			end
 
-			return UDim2.new(x, y)
-		end
+			function Reader:UInt5(): number
+				local value = bitbuffer.readu5(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 5)
+				return value
+			end
 
-		function Reader:NumberSequenceKeypoint(): NumberSequenceKeypoint
-			local time = bitbuffer.readf32(self._buffer, self._byte, self._bit)
-			local value = bitbuffer.readf32(self._buffer, self._byte + 4, self._bit)
-			local envelope = bitbuffer.readf32(self._buffer, self._byte + 8, self._bit)
-			self:IncrementOffset(96)
+			function Reader:UInt6(): number
+				local value = bitbuffer.readu6(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 6)
+				return value
+			end
 
-			return NumberSequenceKeypoint.new(time, value, envelope)
-		end
+			function Reader:UInt7(): number
+				local value = bitbuffer.readu7(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 7)
+				return value
+			end
 
-		function Reader:BrickColor(): BrickColor
-			local number = bitbuffer.readu11(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(11)
+			function Reader:UInt8(): number
+				local value = bitbuffer.readu8(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 0)
+				return value
+			end
 
-			return BrickColor.new(number)
-		end
+			function Reader:UInt9(): number
+				local value = bitbuffer.readu9(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 1)
+				return value
+			end
 
-		function Reader:Vector2(): Vector2
-			local x = bitbuffer.readf32(self._buffer, self._byte, self._bit)
-			local y = bitbuffer.readf32(self._buffer, self._byte + 4, self._bit)
-			self:IncrementOffset(64)
+			function Reader:UInt10(): number
+				local value = bitbuffer.readu10(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 2)
+				return value
+			end
 
-			return Vector2.new(x, y)
-		end
+			function Reader:UInt11(): number
+				local value = bitbuffer.readu11(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 3)
+				return value
+			end
 
-		function Reader:UDim(): UDim
-			local scale = bitbuffer.readf32(self._buffer, self._byte, self._bit)
-			local offset = bitbuffer.readi32(self._buffer, self._byte + 4, self._bit)
-			self:IncrementOffset(64)
+			function Reader:UInt12(): number
+				local value = bitbuffer.readu12(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 4)
+				return value
+			end
 
-			return UDim.new(scale, offset)
-		end
+			function Reader:UInt13(): number
+				local value = bitbuffer.readu13(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 5)
+				return value
+			end
 
-		function Reader:Color3(): Color3
-			local r = bitbuffer.readu8(self._buffer, self._byte, self._bit) / 255
-			local g = bitbuffer.readu8(self._buffer, self._byte + 1, self._bit) / 255
-			local b = bitbuffer.readu8(self._buffer, self._byte + 2, self._bit) / 255
-			self:IncrementOffset(24)
+			function Reader:UInt14(): number
+				local value = bitbuffer.readu14(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 6)
+				return value
+			end
 
-			return Color3.new(r, g, b)
-		end
+			function Reader:UInt15(): number
+				local value = bitbuffer.readu15(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 7)
+				return value
+			end
 
-		function Reader:ColorSequenceKeypoint(): ColorSequenceKeypoint
-			local time = bitbuffer.readf32(self._buffer, self._byte, self._bit)
-			self:IncrementOffset(32)
-			local value = self:Color3()
+			function Reader:UInt16(): number
+				local value = bitbuffer.readu16(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 0)
+				return value
+			end
 
-			return ColorSequenceKeypoint.new(time, value)
-		end
+			function Reader:UInt17(): number
+				local value = bitbuffer.readu17(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 1)
+				return value
+			end
 
-		function Reader:Vector3(): Vector3
-			local x = bitbuffer.readf32(self._buffer, self._byte, self._bit)
-			local y = bitbuffer.readf32(self._buffer, self._byte + 4, self._bit)
-			local z = bitbuffer.readf32(self._buffer, self._byte + 8, self._bit)
-			self:IncrementOffset(96)
+			function Reader:UInt18(): number
+				local value = bitbuffer.readu18(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 2)
+				return value
+			end
 
-			return Vector3.new(x, y, z)
-		end
+			function Reader:UInt19(): number
+				local value = bitbuffer.readu19(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 3)
+				return value
+			end
 
-		function bitbuffer.reader(b: buffer)
-			return setmetatable({
-				_buffer = b,
-				_byte = 0,
-				_bit = 0,
-			}, Reader)
+			function Reader:UInt20(): number
+				local value = bitbuffer.readu20(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 4)
+				return value
+			end
+
+			function Reader:UInt21(): number
+				local value = bitbuffer.readu21(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 5)
+				return value
+			end
+
+			function Reader:UInt22(): number
+				local value = bitbuffer.readu22(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 6)
+				return value
+			end
+
+			function Reader:UInt23(): number
+				local value = bitbuffer.readu23(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 7)
+				return value
+			end
+
+			function Reader:UInt24(): number
+				local value = bitbuffer.readu24(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 0)
+				return value
+			end
+
+			function Reader:UInt25(): number
+				local value = bitbuffer.readu25(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 1)
+				return value
+			end
+
+			function Reader:UInt26(): number
+				local value = bitbuffer.readu26(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 2)
+				return value
+			end
+
+			function Reader:UInt27(): number
+				local value = bitbuffer.readu27(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 3)
+				return value
+			end
+
+			function Reader:UInt28(): number
+				local value = bitbuffer.readu28(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 4)
+				return value
+			end
+
+			function Reader:UInt29(): number
+				local value = bitbuffer.readu29(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 5)
+				return value
+			end
+
+			function Reader:UInt30(): number
+				local value = bitbuffer.readu30(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 6)
+				return value
+			end
+
+			function Reader:UInt31(): number
+				local value = bitbuffer.readu31(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 7)
+				return value
+			end
+
+			function Reader:UInt32(): number
+				local value = bitbuffer.readu32(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 0)
+				return value
+			end
+
+			function Reader:UInt33(): number
+				local value = bitbuffer.readu33(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 1)
+				return value
+			end
+
+			function Reader:UInt34(): number
+				local value = bitbuffer.readu34(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 2)
+				return value
+			end
+
+			function Reader:UInt35(): number
+				local value = bitbuffer.readu35(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 3)
+				return value
+			end
+
+			function Reader:UInt36(): number
+				local value = bitbuffer.readu36(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 4)
+				return value
+			end
+
+			function Reader:UInt37(): number
+				local value = bitbuffer.readu37(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 5)
+				return value
+			end
+
+			function Reader:UInt38(): number
+				local value = bitbuffer.readu38(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 6)
+				return value
+			end
+
+			function Reader:UInt39(): number
+				local value = bitbuffer.readu39(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 7)
+				return value
+			end
+
+			function Reader:UInt40(): number
+				local value = bitbuffer.readu40(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 0)
+				return value
+			end
+
+			function Reader:UInt41(): number
+				local value = bitbuffer.readu41(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 1)
+				return value
+			end
+
+			function Reader:UInt42(): number
+				local value = bitbuffer.readu42(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 2)
+				return value
+			end
+
+			function Reader:UInt43(): number
+				local value = bitbuffer.readu43(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 3)
+				return value
+			end
+
+			function Reader:UInt44(): number
+				local value = bitbuffer.readu44(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 4)
+				return value
+			end
+
+			function Reader:UInt45(): number
+				local value = bitbuffer.readu45(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 5)
+				return value
+			end
+
+			function Reader:UInt46(): number
+				local value = bitbuffer.readu46(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 6)
+				return value
+			end
+
+			function Reader:UInt47(): number
+				local value = bitbuffer.readu47(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 7)
+				return value
+			end
+
+			function Reader:UInt48(): number
+				local value = bitbuffer.readu48(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 0)
+				return value
+			end
+
+			function Reader:UInt49(): number
+				local value = bitbuffer.readu49(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 1)
+				return value
+			end
+
+			function Reader:UInt50(): number
+				local value = bitbuffer.readu50(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 2)
+				return value
+			end
+
+			function Reader:UInt51(): number
+				local value = bitbuffer.readu51(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 3)
+				return value
+			end
+
+			function Reader:UInt52(): number
+				local value = bitbuffer.readu52(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 4)
+				return value
+			end
+
+			function Reader:UInt53(): number
+				local value = bitbuffer.readu53(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 5)
+				return value
+			end
+
+			function Reader:Int1(): number
+				local value = bitbuffer.readi1(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 1)
+				return value
+			end
+
+			function Reader:Int2(): number
+				local value = bitbuffer.readi2(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 2)
+				return value
+			end
+
+			function Reader:Int3(): number
+				local value = bitbuffer.readi3(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 3)
+				return value
+			end
+
+			function Reader:Int4(): number
+				local value = bitbuffer.readi4(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 4)
+				return value
+			end
+
+			function Reader:Int5(): number
+				local value = bitbuffer.readi5(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 5)
+				return value
+			end
+
+			function Reader:Int6(): number
+				local value = bitbuffer.readi6(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 6)
+				return value
+			end
+
+			function Reader:Int7(): number
+				local value = bitbuffer.readi7(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(0, 7)
+				return value
+			end
+
+			function Reader:Int8(): number
+				local value = bitbuffer.readi8(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 0)
+				return value
+			end
+
+			function Reader:Int9(): number
+				local value = bitbuffer.readi9(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 1)
+				return value
+			end
+
+			function Reader:Int10(): number
+				local value = bitbuffer.readi10(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 2)
+				return value
+			end
+
+			function Reader:Int11(): number
+				local value = bitbuffer.readi11(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 3)
+				return value
+			end
+
+			function Reader:Int12(): number
+				local value = bitbuffer.readi12(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 4)
+				return value
+			end
+
+			function Reader:Int13(): number
+				local value = bitbuffer.readi13(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 5)
+				return value
+			end
+
+			function Reader:Int14(): number
+				local value = bitbuffer.readi14(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 6)
+				return value
+			end
+
+			function Reader:Int15(): number
+				local value = bitbuffer.readi15(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 7)
+				return value
+			end
+
+			function Reader:Int16(): number
+				local value = bitbuffer.readi16(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 0)
+				return value
+			end
+
+			function Reader:Int17(): number
+				local value = bitbuffer.readi17(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 1)
+				return value
+			end
+
+			function Reader:Int18(): number
+				local value = bitbuffer.readi18(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 2)
+				return value
+			end
+
+			function Reader:Int19(): number
+				local value = bitbuffer.readi19(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 3)
+				return value
+			end
+
+			function Reader:Int20(): number
+				local value = bitbuffer.readi20(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 4)
+				return value
+			end
+
+			function Reader:Int21(): number
+				local value = bitbuffer.readi21(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 5)
+				return value
+			end
+
+			function Reader:Int22(): number
+				local value = bitbuffer.readi22(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 6)
+				return value
+			end
+
+			function Reader:Int23(): number
+				local value = bitbuffer.readi23(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 7)
+				return value
+			end
+
+			function Reader:Int24(): number
+				local value = bitbuffer.readi24(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 0)
+				return value
+			end
+
+			function Reader:Int25(): number
+				local value = bitbuffer.readi25(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 1)
+				return value
+			end
+
+			function Reader:Int26(): number
+				local value = bitbuffer.readi26(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 2)
+				return value
+			end
+
+			function Reader:Int27(): number
+				local value = bitbuffer.readi27(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 3)
+				return value
+			end
+
+			function Reader:Int28(): number
+				local value = bitbuffer.readi28(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 4)
+				return value
+			end
+
+			function Reader:Int29(): number
+				local value = bitbuffer.readi29(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 5)
+				return value
+			end
+
+			function Reader:Int30(): number
+				local value = bitbuffer.readi30(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 6)
+				return value
+			end
+
+			function Reader:Int31(): number
+				local value = bitbuffer.readi31(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(3, 7)
+				return value
+			end
+
+			function Reader:Int32(): number
+				local value = bitbuffer.readi32(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 0)
+				return value
+			end
+
+			function Reader:Int33(): number
+				local value = bitbuffer.readi33(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 1)
+				return value
+			end
+
+			function Reader:Int34(): number
+				local value = bitbuffer.readi34(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 2)
+				return value
+			end
+
+			function Reader:Int35(): number
+				local value = bitbuffer.readi35(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 3)
+				return value
+			end
+
+			function Reader:Int36(): number
+				local value = bitbuffer.readi36(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 4)
+				return value
+			end
+
+			function Reader:Int37(): number
+				local value = bitbuffer.readi37(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 5)
+				return value
+			end
+
+			function Reader:Int38(): number
+				local value = bitbuffer.readi38(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 6)
+				return value
+			end
+
+			function Reader:Int39(): number
+				local value = bitbuffer.readi39(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 7)
+				return value
+			end
+
+			function Reader:Int40(): number
+				local value = bitbuffer.readi40(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 0)
+				return value
+			end
+
+			function Reader:Int41(): number
+				local value = bitbuffer.readi41(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 1)
+				return value
+			end
+
+			function Reader:Int42(): number
+				local value = bitbuffer.readi42(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 2)
+				return value
+			end
+
+			function Reader:Int43(): number
+				local value = bitbuffer.readi43(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 3)
+				return value
+			end
+
+			function Reader:Int44(): number
+				local value = bitbuffer.readi44(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 4)
+				return value
+			end
+
+			function Reader:Int45(): number
+				local value = bitbuffer.readi45(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 5)
+				return value
+			end
+
+			function Reader:Int46(): number
+				local value = bitbuffer.readi46(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 6)
+				return value
+			end
+
+			function Reader:Int47(): number
+				local value = bitbuffer.readi47(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(5, 7)
+				return value
+			end
+
+			function Reader:Int48(): number
+				local value = bitbuffer.readi48(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 0)
+				return value
+			end
+
+			function Reader:Int49(): number
+				local value = bitbuffer.readi49(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 1)
+				return value
+			end
+
+			function Reader:Int50(): number
+				local value = bitbuffer.readi50(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 2)
+				return value
+			end
+
+			function Reader:Int51(): number
+				local value = bitbuffer.readi51(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 3)
+				return value
+			end
+
+			function Reader:Int52(): number
+				local value = bitbuffer.readi52(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 4)
+				return value
+			end
+
+			function Reader:Int53(): number
+				local value = bitbuffer.readi53(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(6, 5)
+				return value
+			end
+
+			function Reader:Float16(): number
+				local value = bitbuffer.readf16(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(2, 0)
+				return value
+			end
+
+			function Reader:Float32(): number
+				local value = bitbuffer.readf32(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 0)
+				return value
+			end
+
+			function Reader:Float64(): number
+				local value = bitbuffer.readf64(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(8, 0)
+				return value
+			end
+
+			function Reader:String(): string
+				local length = bitbuffer.readu32(self.buffer, self.byte, self.bit)
+				local value = bitbuffer.readstring(self.buffer, self.byte + 4, self.bit, length)
+				self:IncrementOffset(4 + length, 0)
+				return value
+			end
+
+			function Reader:NumberSequence(): NumberSequence
+				local length = self:UInt5() -- max length of 20, tested
+				local keypoints = table.create(length)
+
+				for _ = 1, length do
+					local keypoint = self:NumberSequenceKeypoint()
+					table.insert(keypoints, keypoint)
+				end
+
+				return NumberSequence.new(keypoints)
+			end
+
+			function Reader:ColorSequence(): ColorSequence
+				local length = self:UInt5() -- max length of 20, tested
+				local keypoints = table.create(length)
+
+				for _ = 1, length do
+					local keypoint = self:ColorSequenceKeypoint()
+					table.insert(keypoints, keypoint)
+				end
+
+				return ColorSequence.new(keypoints)
+			end
+
+			function Reader:CFrame(): CFrame
+				local specialCase = self:UInt5()
+				local position = self:Vector3()
+
+				if specialCase == 0 then
+					local axisAngle = self:Vector3()
+					return CFrame.fromAxisAngle(axisAngle, axisAngle.Magnitude) + position
+				else
+					local specialCase = CFRAME_SPECIAL_CASES[specialCase]
+					return CFrame.fromMatrix(position, specialCase.XVector, specialCase.YVector, specialCase.ZVector)
+				end
+			end
+
+			function Reader:Boolean(): boolean
+				local value = bitbuffer.readu1(self.buffer, self.byte, self.bit) == 1
+				self:IncrementOffset(0, 1)
+				return value
+			end
+
+			function Reader:LosslessCFrame(): CFrame
+				local specialCase = self:UInt5()
+				local position = self:Vector3()
+
+				if specialCase == 0 then
+					return CFrame.fromMatrix(position, self:Vector3(), self:Vector3(), self:Vector3())
+				else
+					local specialCase = CFRAME_SPECIAL_CASES[specialCase]
+					return CFrame.fromMatrix(position, specialCase.XVector, specialCase.YVector, specialCase.ZVector)
+				end
+			end
+
+			function Reader:NumberRange(): NumberRange
+				local min = bitbuffer.readf32(self.buffer, self.byte, self.bit)
+				local max = bitbuffer.readf32(self.buffer, self.byte + 4, self.bit)
+				self:IncrementOffset(8, 0)
+
+				return NumberRange.new(min, max)
+			end
+
+			function Reader:Vector3int16(): Vector3int16
+				local x = bitbuffer.readi16(self.buffer, self.byte, self.bit)
+				local y = bitbuffer.readi16(self.buffer, self.byte + 2, self.bit)
+				local z = bitbuffer.readi16(self.buffer, self.byte + 4, self.bit)
+				self:IncrementOffset(6, 0)
+
+				return Vector3int16.new(x, y, z)
+			end
+
+			function Reader:Vector2int16(): Vector2int16
+				local x = bitbuffer.readi16(self.buffer, self.byte, self.bit)
+				local y = bitbuffer.readi16(self.buffer, self.byte + 2, self.bit)
+				self:IncrementOffset(4, 0)
+
+				return Vector2int16.new(x, y)
+			end
+
+			function Reader:UDim2(): UDim2
+				local x = self:UDim()
+				local y = self:UDim()
+
+				return UDim2.new(x, y)
+			end
+
+			function Reader:NumberSequenceKeypoint(): NumberSequenceKeypoint
+				local time = bitbuffer.readf32(self.buffer, self.byte, self.bit)
+				local value = bitbuffer.readf32(self.buffer, self.byte + 4, self.bit)
+				local envelope = bitbuffer.readf32(self.buffer, self.byte + 8, self.bit)
+				self:IncrementOffset(12, 0)
+
+				return NumberSequenceKeypoint.new(time, value, envelope)
+			end
+
+			function Reader:BrickColor(): BrickColor
+				local number = bitbuffer.readu11(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(1, 3)
+
+				return BrickColor.new(number)
+			end
+
+			function Reader:Vector2(): Vector2
+				local x = bitbuffer.readf32(self.buffer, self.byte, self.bit)
+				local y = bitbuffer.readf32(self.buffer, self.byte + 4, self.bit)
+				self:IncrementOffset(8, 0)
+
+				return Vector2.new(x, y)
+			end
+
+			function Reader:UDim(): UDim
+				local scale = bitbuffer.readf32(self.buffer, self.byte, self.bit)
+				local offset = bitbuffer.readi32(self.buffer, self.byte + 4, self.bit)
+				self:IncrementOffset(8, 0)
+
+				return UDim.new(scale, offset)
+			end
+
+			function Reader:Color3(): Color3
+				local r = bitbuffer.readu8(self.buffer, self.byte, self.bit) / 255
+				local g = bitbuffer.readu8(self.buffer, self.byte + 1, self.bit) / 255
+				local b = bitbuffer.readu8(self.buffer, self.byte + 2, self.bit) / 255
+				self:IncrementOffset(3, 0)
+
+				return Color3.new(r, g, b)
+			end
+
+			function Reader:ColorSequenceKeypoint(): ColorSequenceKeypoint
+				local time = bitbuffer.readf32(self.buffer, self.byte, self.bit)
+				self:IncrementOffset(4, 0)
+				local value = self:Color3()
+
+				return ColorSequenceKeypoint.new(time, value)
+			end
+
+			function Reader:Vector3(): Vector3
+				local x = bitbuffer.readf32(self.buffer, self.byte, self.bit)
+				local y = bitbuffer.readf32(self.buffer, self.byte + 4, self.bit)
+				local z = bitbuffer.readf32(self.buffer, self.byte + 8, self.bit)
+				self:IncrementOffset(12, 0)
+
+				return Vector3.new(x, y, z)
+			end
+
 		end
 	end
 end

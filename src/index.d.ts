@@ -476,14 +476,32 @@ declare interface bitbuffer {
 	tobase64: (b: buffer) => string;
 	frombase64: (str: string) => buffer;
 
+	offset: {
+		(): Offset;
+		(offset: number): Offset;
+		(byte: number, bit: number): Offset;
+	}
 	reader: (b: buffer) => Reader;
 	writer: (b: buffer) => Writer;
 }
 
-declare interface Writer {
-	IncrementOffset: (amount: number) => void;
-	SetOffset: (byte: number, bit?: number) => void;
+declare interface Offset {
+	byte: number;
+	bit: number;
+
+	SetOffset: {
+		(byte: number, bit: number): void;
+		(offset: number): void;
+	}
+	IncrementOffset: {
+		(byte: number, bit: number): void;
+		(offset: number): void;
+	}
 	Align: () => void;
+}
+
+declare interface Writer extends Offset {
+	buffer: buffer;
 
 	UInt1: (value: number) => void;
 	UInt2: (value: number) => void;
@@ -616,10 +634,8 @@ declare interface Writer {
 	Vector3: (value: Vector3) => void;
 }
 
-declare interface Reader {
-	IncrementOffset: (amount: number) => void;
-	SetOffset: (byte: number, bit?: number) => void;
-	Align: () => void;
+declare interface Reader extends Offset {
+	buffer: buffer;
 
 	UInt1: () => number;
 	UInt2: () => number;
