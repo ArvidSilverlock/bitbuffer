@@ -84,15 +84,14 @@ local function pushIncrement(output, width)
 	if bit == 0 then
 		output:Push("outgoingByte += ", byte) -- quick and easy, the bit offset remains the same
 	else
-		output
-			:Push(`outgoingBit += {bit}`) -- first we increment the bit
-			:BlockStart(`if outgoingBit > 7 then`) -- if we should go onto the next byte
-			:Push(`outgoingByte += {byte + 1}`) -- increment the outgoing byte 1 extra than we would if we didn't go onto the next byte
-			:Push(if bit == 1 then "outgoingBit = 0" else "outgoingBit -= 8") -- effectively do `%= 8`, but only for values 8-15
+		output:Push(`outgoingBit += {bit}`) -- first we increment the bit
+		output:BlockStart(`if outgoingBit > 7 then`) -- if we should go onto the next byte
+		output:Push(`outgoingByte += {byte + 1}`) -- increment the outgoing byte 1 extra than we would if we didn't go onto the next byte
+		output:Push(if bit == 1 then "outgoingBit = 0" else "outgoingBit -= 8") -- effectively do `%= 8`, but only for values 8-15
 		
 		if byte > 0 then
 			output:BlockMiddle("else")
-				:Push(`outgoingByte += {byte}`) -- we only need to increment the byte if it's > 0 by default
+			output:Push(`outgoingByte += {byte}`) -- we only need to increment the byte if it's > 0 by default
 		end
 
 		output:BlockEnd()
