@@ -20,8 +20,14 @@ return function(luau, typescript)
 		:Push("")
 		:Block("base conversion", baseconversion, typescript)
 
-	typescript:Push("reader: (b: buffer) => Reader;")
-	typescript:Push("writer: (b: buffer) => Writer;")
+	typescript
+		:BlockStart("offset: {")
+		:Push("(): Offset;")
+		:Push("(offset: number): Offset;")
+		:Push("(byte: number, bit: number): Offset;")
+		:BlockEnd("}")
+		:Push("reader: (b: buffer) => Reader;")
+		:Push("writer: (b: buffer) => Writer;")
 
 	typescript:BlockEnd("}"):Push("")
 end
