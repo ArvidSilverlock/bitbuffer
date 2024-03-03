@@ -30,35 +30,31 @@ local function generateRead(luau, typescript)
 
 		if width < 53 then
 			local alignedCallback = BUILT_IN_READ[width]
-			local unalignedCallback = tostring(Snippet.get(`readu{width}`))
 
-			if alignedCallback then
-				-- stylua: ignore
-				luau:Push(
-					"return if bit > 0", 1,
-						"then (", 1,
-							"(", 1,
-								unalignedCallback,
-							-1, `) + {hexB}`, -1,
-						`) % {hexA} - {hexB}`,
-						`else {alignedCallback}(b, byte)`, -1
-				)
-			else
-				if unalignedCallback:match("^if ") then
+			-- merely a formatting function
+			local function writeCallback(prefix: string, callback: string)
+				if #callback:split("\n") > 1 then
 					-- stylua: ignore
 					luau:Push(
-						"return (", 1,
+						`{prefix} (`, 1,
 							"(", 1,
-								unalignedCallback,
+							callback,
 							-1, `) + {hexB}`, -1,
 						`) % {hexA} - {hexB}`
 					)
 				else
-					-- stylua: ignore
-					luau:Push(
-						`return ( {unalignedCallback} + {hexB} ) % {hexA} - {hexB}`
-					)
+					luau:Push(`{prefix} ( {callback} + {hexB} ) % {hexA} - {hexB}`)
 				end
+			end
+
+			if alignedCallback then
+				local unalignedCallback = tostring(Snippet.get(`unalignedreadu{width}`))
+				luau:Push("return if bit > 0", 1)
+				writeCallback("then", unalignedCallback)
+				luau:Push(`else {alignedCallback}(b, byte)`, -1)
+			else
+				local callback = tostring(Snippet.get(`readu{width}`))
+				writeCallback("return", callback)
 			end
 		else
 			luau:Push(`return bitbuffer.readu53(b, byte, bit) - {b}`)
@@ -92,27 +88,37 @@ local function generateWrite(luau, typescript)
 		)
 
 		local alignedCallback = BUILT_IN_WRITE[width]
-		local unalignedCallback = Snippet.get(`writeu{width}`)
-		local convertToUInt = `value = ( value + {hexA} ) % {hexA}`
+
+		-- this adds the necessary offset, it'll try to avoid doing `+=` if it can
+		local function getCallback(name: string)
+			local callback = tostring(Snippet.get(name))
+			local _, valueCount = callback:gsub("value", "value")
+
+			-- the real formula for 2's compliment is `( value + 2^n ) % 2^n`, but the overflow gets cut off upon writing,
+			-- meaning we can omit the modulo for an extra nanosecond of speed!
+
+			-- stylua: ignore
+			return if valueCount == 1
+				then callback:gsub("value", `value + {hexA}`)
+				else `value += {hexA}\n{callback}`
+		end
 
 		if width == 53 then
-			luau:Push(`value += {string.format("0x%x", 2 ^ 52)}`, unalignedCallback)
+			local callback = Snippet.get("writeu53")
+			luau:Push(`value += {string.format("0x%x", 2 ^ 52)}`, callback)
 		elseif alignedCallback then
-				-- stylua: ignore
-				luau:Push(
-					"if bit > 0 then", 1,
-						convertToUInt,
-						unalignedCallback,
-					-1, "else", 1,
-						`{alignedCallback}(b, byte, value)`,
-					-1, "end"
-				)
+			local unalignedCallback = getCallback(`unalignedwriteu{width}`)
+
+			-- stylua: ignore
+			luau:Push(
+				"if bit > 0 then", 1,
+					unalignedCallback,
+				-1, "else", 1,
+					`{alignedCallback}(b, byte, value)`,
+				-1, "end"
+			)
 		else
-				-- stylua: ignore
-				luau:Push(
-					convertToUInt,
-					unalignedCallback
-				)
+			luau:Push(getCallback(`writeu{width}`))
 		end
 
 		luau:Push(-1, "end"):ConditionalPush(width < 53, "")
