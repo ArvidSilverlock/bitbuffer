@@ -1,8 +1,5 @@
 local Snippet = require("../Snippet.luau")
 
-local readCalls = {}
-local writeCalls = {}
-
 local BYTE_ALIGNED_READ = {
 	[8] = "buffer.readu8",
 	[16] = "buffer.readu16",
@@ -20,8 +17,10 @@ local BYTE_ALIGNED_WRITE = {
 local function alignedRead(width: number)
 	local chunkCount = math.ceil(width / 32)
 
-	local body = Snippet.new("buffer.readu32(b, byte) % ", string.format("0x%x", 2 ^ math.min(width, 32)))
-	body:Indent()
+	local body = Snippet.new()
+
+	local bound = if width < 32 then string.format(" %% 0x%x", 2 ^ width) else ""
+	body:Push(`buffer.readu32(b, byte){bound}`, 1)
 
 	for index = 1, chunkCount - 1 do
 		local position, bytePosition = index * 32, index * 4
@@ -34,9 +33,9 @@ local function alignedRead(width: number)
 		local readCallback = BYTE_ALIGNED_READ[alignedWidth]
 
 		if chunkWidth == alignedWidth then
-			body:Push("+ ", readCallback, "(b, byte + ", bytePosition, ")", multiplier)
+			body:Push(`+ {readCallback}(b, byte + {bytePosition}){multiplier}`)
 		else
-			body:Push("+ ", readCallback, "(b, byte + ", bytePosition, ")", bound, multiplier)
+			body:Push(`+ {readCallback}(b, byte + {bytePosition}){bound}{multiplier}`)
 		end
 	end
 
@@ -47,7 +46,8 @@ local function unalignedRead(width: number)
 	local chunkCount = math.ceil(width / 24)
 	local position, chunkWidth = 0, math.min(width, 24)
 
-	local body = Snippet.new("return bit32.extract(buffer.readu32(b, byte), bit, 24)"):Indent()
+	local body = Snippet.new()
+	body:Push("bit32.extract(buffer.readu32(b, byte), bit, 24)", 1)
 
 	for _ = 2, chunkCount do
 		position += chunkWidth
@@ -57,13 +57,14 @@ local function unalignedRead(width: number)
 		local offset = ` + {position / 8}`
 
 		if chunkWidth == 24 then
-			body:Push("+ bit32.extract(buffer.readu32(b, byte", offset, "), bit, ", chunkWidth, ")", multiplier)
+			body:Push(`+ bit32.extract(buffer.readu32(b, byte{offset}), bit, {chunkWidth}){multiplier}`)
 		else
-			local read = `{readCalls[chunkWidth]:gsub("byte", `byte{offset}`)}`
+			local chunkSnippet = Snippet.get(`unalignedreadu{chunkWidth}`) or Snippet.get(`alignedreadu{chunkWidth}`)
+			local read = tostring(chunkSnippet):gsub("byte", `byte{offset}`)
 			if read:match("^if") then
-				body:BlockStart("+ ("):Push(read):BlockEnd(`){multiplier}`)
+				body:Push("+ (", 1, read, -1, `){multiplier}`)
 			else
-				body:Push("+ ", read, multiplier)
+				body:Push(`+ {read}{multiplier}`)
 			end
 		end
 	end
@@ -88,11 +89,11 @@ local function alignedWrite(width: number)
 		if chunkWidth ~= alignedWidth then
 			local replacement = `bit32.replace({readCallback}(b, byte), value{divisor}, 0, {chunkWidth})`
 			body:ConditionalPush(index > 0, "byte += 4")
-			body:Push(writeCallback, "(b, byte, ", replacement, ")")
+			body:Push(`{writeCallback}(b, byte, {replacement})`)
 		elseif index == 0 then
-			body:Push(writeCallback, "(b, byte, value", divisor, ")")
+			body:Push(`{writeCallback}(b, byte, value{divisor})`)
 		else
-			body:Push(writeCallback, "(b, byte + 4, value", divisor, ")")
+			body:Push(`{writeCallback}(b, byte + 4, value{divisor})`)
 		end
 	end
 
@@ -101,7 +102,9 @@ end
 
 local function unalignedWrite(width: number)
 	local chunkCount = math.ceil(width / 24)
-	local body = Snippet.new("buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 24))")
+
+	local body = Snippet.new()
+	body:Push("buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 24))")
 
 	for index = 1, chunkCount - 1 do
 		local position = 24 * index
@@ -111,9 +114,10 @@ local function unalignedWrite(width: number)
 		body:Push("byte += 3")
 
 		if chunkWidth == 24 then
-			body:Push("buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value", divisor, ", bit, 24))")
+			body:Push(`buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value{divisor}, bit, 24))`)
 		else
-			body:Push((writeCalls[chunkWidth]:gsub("value", `value{divisor}`)))
+			local chunkSnippet = Snippet.get(`unalignedwriteu{chunkWidth}`) or Snippet.get(`alignedwriteu{chunkWidth}`)
+			body:Push(tostring(chunkSnippet):gsub("value", `value{divisor}`))
 		end
 	end
 
@@ -132,9 +136,9 @@ local function getReadCallback(width: number, threshold: number)
 			then `bit32.extract({BYTE_ALIGNED_READ[alignedWidth + 8]}(b, byte), bit, {width})`
 			else nil
 
-		return caseA, caseB, true
+		return caseA, caseB
 	else
-		return alignedRead(width), unalignedRead(width), false
+		return alignedRead(width), unalignedRead(width)
 	end
 end
 
@@ -165,43 +169,50 @@ end
 local function generateRead(luau, typescript)
 	for width = 1, 53 do
 		local bitThreshold = getBitThreshold(width)
-		local alignedCase, unalignedCase, isSingleLine = getReadCallback(width, bitThreshold)
+		local alignedCase, unalignedCase = getReadCallback(width, bitThreshold)
 
-		local body = Snippet.new()
-		if unalignedCase then
-			if isSingleLine then
-				body:Push(`return if bit > {if width > 24 then 0 else bitThreshold}`)
-					:Indent()
-					:Push("then ", unalignedCase)
-					:Push("else ", alignedCase)
-					:Indent(-1)
+		local functionName = `readu{width}`
+
+		local function createSnippet(variable: string)
+			local snippet = Snippet.new(if variable then functionName else nil)
+			local assignment = if variable == nil then "return " else ""
+
+			Snippet.new(`aligned{functionName}`):Push(alignedCase)
+
+			if unalignedCase then
+				-- stylua: ignore
+				snippet:Push(
+					`{assignment}if bit > {if width > 24 then 0 else bitThreshold}`, 1,
+						`then {unalignedCase}`,
+						`else {alignedCase}`, -1
+				)
+
+				Snippet.new(`unaligned{functionName}`):Push(unalignedCase)
 			else
-				body:BlockStart(`if bit > {if width > 24 then 0 else bitThreshold} then`)
-					:Push(unalignedCase)
-					:BlockMiddle("else")
-					:Push(`return {alignedCase}`)
-					:BlockEnd()
+				snippet:Push(`{assignment}{alignedCase}`)
 			end
-		else
-			body:Push(`return {alignedCase}`)
+
+			return snippet
 		end
 
-		readCalls[width] = if bitThreshold > 0
-			then tostring(body):gsub("^return ", "")
-			else unalignedCase or alignedCase
+		local body = createSnippet(nil)
+		createSnippet("value") -- can be retrieved using `Snippet.get(readu<n>)`
 
 		local comment = `Reads a {width} bit unsigned integer [0, {2 ^ width - 1}]`
 
-		luau:Push(`--- {comment}`)
-			:BlockStart(`function bitbuffer.readu{width}(b: buffer, byte: number, bit: number): number`)
-			:Merge(body)
-			:BlockEnd()
-			:ConditionalPush(width < 53, "")
+		-- stylua: ignore
+		luau:Push(
+			`--- {comment}`,
+			`function bitbuffer.{functionName}(b: buffer, byte: number, bit: number): number`, 1,
+				body,
+			-1, "end",
+			if width < 53 then "" else nil
+		):ConditionalPush(width < 53, "")
 
 		-- stylua: ignore
 		typescript
 			:Push(`/** {comment} */`)
-			:Push("readu", width, ": read<number>;")
+			:Push(`readu{width}: read<number>;`)
 	end
 
 	typescript:Push("")
@@ -212,31 +223,41 @@ local function generateWrite(luau, typescript)
 		local bitThreshold = getBitThreshold(width)
 		local alignedCase, unalignedCase = getWriteCallback(width, bitThreshold)
 
-		local body = Snippet.new()
+		local functionName = `writeu{width}`
+		local body = Snippet.new(functionName)
+
+		Snippet.new(`aligned{functionName}`):Push(alignedCase)
+
 		if unalignedCase then
-			body:BlockStart(`if bit > {if width > 24 then 0 else bitThreshold} then`)
-				:Push(unalignedCase)
-				:BlockMiddle("else")
-				:Push(alignedCase)
-				:BlockEnd()
+			-- stylua: ignore
+			body:Push(
+				`if bit > {if width > 24 then 0 else bitThreshold} then`, 1,
+					unalignedCase,
+				-1, "else", 1,
+					alignedCase,
+				-1, "end"
+			)
+
+			Snippet.new(`unaligned{functionName}`):Push(unalignedCase)
 		else
 			body:Push(alignedCase)
 		end
 
-		writeCalls[width] = if bitThreshold > 0 then tostring(body) else unalignedCase or alignedCase
-
 		local comment = `Writes a {width} bit unsigned integer [0, {2 ^ width - 1}]`
 
-		luau:Push(`--- {comment}`)
-			:BlockStart(`function bitbuffer.writeu{width}(b: buffer, byte: number, bit: number, value: number)`)
-			:Merge(body)
-			:BlockEnd()
-			:ConditionalPush(width < 53, "")
+		-- stylua: ignore
+		luau:Push(
+			`--- {comment}`,
+			`function bitbuffer.{functionName}(b: buffer, byte: number, bit: number, value: number)`, 1,
+				body,
+			-1, "end"
+		):ConditionalPush(width < 53, "")
 
 		-- stylua: ignore
-		typescript
-			:Push(`/** {comment} */`)
-			:Push("writeu", width, ": write<number>;")
+		typescript:Push(
+			`/** {comment} */`,
+			`writeu{width}: write<number>;`
+		)
 	end
 
 	typescript:Push("")
@@ -249,12 +270,24 @@ local function finalise(luau, typescript)
 		table.insert(writeLookup, `bitbuffer.writeu{width}`)
 	end
 
-	luau:Push(`bitbuffer.readu = \{ {table.concat(readLookup, ", ")} \}`)
-		:Push(`bitbuffer.writeu = \{ {table.concat(writeLookup, ", ")} \}`)
+	-- stylua: ignore
+	luau:Push(
+		`bitbuffer.readu = \{ {table.concat(readLookup, ", ")} \}`,
+		`bitbuffer.writeu = \{ {table.concat(writeLookup, ", ")} \}`
+	)
 
-	typescript:Push("readu: Array<read<number>>"):Push("writeu: Array<write<number>>"):Push("")
+	-- stylua: ignore
+	typescript:Push(
+		"readu: Array<read<number>>",
+		"writeu: Array<write<number>>",
+		""
+	)
 end
 
 return function(luau, typescript)
-	luau:Block("write", generateWrite, typescript):Block("read", generateRead, typescript):Call(finalise, typescript)
+	luau:LuauBlock("write", generateWrite, typescript)
+		:Break()
+		:LuauBlock("read", generateRead, typescript)
+		:Break()
+		:Call(finalise, typescript)
 end
