@@ -1,3 +1,5 @@
+local Snippet = require("../Snippet.luau")
+
 local FLOAT_WIDTHS = {
 	[16] = { mantissa = 10, exponent = 5, name = "half-precision IEEE 754 number" },
 	[32] = { mantissa = 23, exponent = 8, name = "single-precision IEEE 754 number" },
@@ -14,76 +16,93 @@ local function generateRead(luau, typescript)
 		local mantissaWidth, exponentWidth = componentWidths.mantissa, componentWidths.exponent
 
 		local exponentMax = string.rep("1", exponentWidth)
+		local exponentMin = string.rep("0", exponentWidth)
+		local mantissaMin = string.rep("0", exponentWidth)
+		local mantissaOne = string.rep(0, mantissaWidth - 1) .. "1"
+
 		local exponentBias = 2 ^ (exponentWidth - 1) - 2
 
 		local comment = `Reads a {componentWidths.name}`
 
-		luau:Push(`--- {comment}`)
-			:BlockStart(`function bitbuffer.readf{width}(b: buffer, byte: number, bit: number): number`)
+		-- stylua: ignore
+		luau:Push(
+			`--- {comment}`,
+			`function bitbuffer.readf{width}(b: buffer, byte: number, bit: number): number`, 1
+		)
 
 		if width == 32 or width == 64 then
 			-- stylua: ignore
-			luau:BlockStart("if bit == 0 then")
-				:Push(`return buffer.readf{width}(b, byte)`)
-				:BlockEnd()
-				:Push("")
+			luau:Push("if bit == 0 then", 1,
+					`return buffer.readf{width}(b, byte)`,
+				-1, "end",
+				""
+			)
 		end
 
 		if width == 64 then
-			luau
-				:Push(`local mantissa = bitbuffer.readu{mantissaWidth}(b, byte, bit)`)
-				:Push(`local offset = byte * 8 + bit + {mantissaWidth}`)
-				:Push(`local exponent = bitbuffer.readu{exponentWidth}(b, offset // 8, offset % 8)`)
-				:Push(`offset += {exponentWidth}`)
-				:Push("local sign = bitbuffer.readu1(b, offset // 8, offset % 8) == 1\n")
-				-- Handle infinity
-				:BlockStart("if mantissa == 0 and exponent == ", exponentMax, " then")
-				:Push("return if sign then -math.huge else math.huge")
-				-- Handle NaN
-				:BlockMiddle("elseif mantissa == 1 and exponent == ", exponentMax, " then")
-				:Push("return 0 / 0")
-				-- Handle 0
-				:BlockMiddle("elseif mantissa == 0 and exponent == 0 then")
-				:Push("return 0")
-				:BlockMiddle("else")
-		else
-			local infinity = `0b{exponentMax}_{string.rep(0, mantissaWidth)}`
-			local nan = `0b{exponentMax}_{string.rep(0, mantissaWidth - 1)}1`
-			local zero = `0b{string.rep(0, exponentWidth)}_{string.rep(0, mantissaWidth)}`
+			local readFirst = tostring(Snippet.get("unalignedreadu48"))
+			local readSecond = tostring(Snippet.get("unalignedreadu16")):gsub("byte", "byte + 6")
 
-			luau
-				:Push(`local uintForm = bitbuffer.readu{width}(b, byte, bit)`)
-				:Push(`local exponent_mantissa = uintForm % {tohex(2 ^ (width - 1))}`)
-				:Push("")
-				-- Handle infinity
-				:BlockStart(`if exponent_mantissa == {infinity} then`)
-				:Push(`return if uintForm // {tohex(2 ^ (width - 1))} == 1 then -math.huge else math.huge`)
-				-- Handle NaN
-				:BlockMiddle(`elseif exponent_mantissa == {nan} then`)
-				:Push("return 0 / 0")
-				-- Handle 0
-				:BlockMiddle(`elseif exponent_mantissa == {zero} then`)
-				:Push("return 0")
-				-- Handle everything else
-				:BlockMiddle("else")
-				:Push(`local mantissa = exponent_mantissa % {tohex(2 ^ mantissaWidth)}`)
-				:Push(`local exponent = exponent_mantissa // {tohex(2 ^ mantissaWidth)}`)
-				:Push(`local sign = uintForm // {tohex(2 ^ (width - 1))} == 1`)
+			local sign = `local sign = secondHalf // {tohex(2 ^ 15)} == 1`
+
+			-- stylua: ignore
+			luau:Push(
+				`local firstHalf = {readFirst}`,
+				`local secondHalf = {readSecond}`,
+				"",
+				`local mantissa = firstHalf`, 1,
+					`+ secondHalf % {tohex(2 ^ 4)} * {tohex(2 ^ 48)}`, -1,
+				`local exponent = secondHalf // {tohex(2 ^ 4)} % {tohex(2 ^ 11)}`,
+				"",
+				`if exponent == 0b{exponentMax} and mantissa == 0b{mantissaMin} then`, 1,
+					sign,
+					"return if sign then -math.huge else math.huge",
+				-1, `elseif exponent == 0b{exponentMin} and mantissa == 0b{mantissaOne} then`, 1,
+					"return 0 / 0",
+				-1, `elseif exponent == 0b{exponentMin} and mantissa == 0b{mantissaMin} then`, 1,
+					"return 0",
+				-1, "else", 1,
+					sign
+			)
+		else
+			local readCallName = if width == 32 then `unalignedreadu{width}` else `readu{width}`
+			local readCall = tostring(Snippet.get(readCallName)):gsub("value", "uintForm")
+
+			-- stylua: ignore
+			luau:Push(
+				`local uintForm = {readCall}`,
+				`local exponent_mantissa = uintForm % {tohex(2 ^ (width - 1))}`,
+				"",
+				`if exponent_mantissa == 0b{exponentMax}_{mantissaMin} then`, 1,
+					`return if uintForm // {tohex(2 ^ (width - 1))} == 1 then -math.huge else math.huge`,
+				-1, `elseif exponent_mantissa == 0b{exponentMax}_{mantissaOne} then`, 1,
+					"return 0 / 0",
+				-1, `elseif exponent_mantissa == 0b{exponentMin}_{mantissaMin} then`, 1,
+					"return 0",
+				-1, "else", 1,
+					`local mantissa = exponent_mantissa % {tohex(2 ^ mantissaWidth)}`,
+					`local exponent = exponent_mantissa // {tohex(2 ^ mantissaWidth)}`,
+					`local sign = uintForm // {tohex(2 ^ (width - 1))} == 1`
+			)
 		end
 
-		luau:Push("mantissa = if exponent == 0")
-			:Push(`\tthen mantissa / {tohex(2 ^ mantissaWidth)}`)
-			:Push(`\telse mantissa / {tohex(2 ^ (mantissaWidth + 1))} + 0.5\n`)
-			:Push(`local value = math.ldexp(mantissa, exponent - {exponentBias})`)
-			:Push("return if sign then -value else value")
-			:BlockEnd()
-			:BlockEnd()
-			:ConditionalPush(width < 64, "")
+		-- stylua: ignore
+		luau:Push(
+			"mantissa = if exponent == 0", 1,
+				`then mantissa / {tohex(2 ^ mantissaWidth)}`,
+				`else mantissa / {tohex(2 ^ (mantissaWidth + 1))} + 0.5`, -1,
+			"",
+			`local value = math.ldexp(mantissa, exponent - {exponentBias})`,
+			"return if sign then -value else value",
+			-1, "end",
+			-1, "end"
+		):ConditionalPush(width < 64, "")
 
 		-- stylua: ignore
-		typescript
-			:Push(`/** {comment} */`)
-			:Push(`readf{width}: read<number>;`)
+		typescript:Push(
+			`/** {comment} */`,
+			`readf{width}: read<number>;`
+		)
 	end
 
 	typescript:Push("")
@@ -96,20 +115,28 @@ local function generateWrite(luau, typescript)
 
 		local exponentMax = `0b{string.rep("1", exponentWidth)}`
 		local exponentBias = 2 ^ (exponentWidth - 1) - 2
-		local signValue = if width == 64 then tohex(2 ^ 31) else tohex(2 ^ (mantissaWidth + exponentWidth))
+
+		-- float64s write the first 48 bits and the last 16 bits separately, the sign is in the last 16 bits, so it needs to be `2^15`.
+		local signValue = if width == 64 then tohex(2 ^ 15) else tohex(2 ^ (width - 1))
 
 		local comment = `Writes a {floatData.name}`
 
-		luau:Push(`--- {comment}`)
-			:BlockStart(`function bitbuffer.writef{width}(b: buffer, byte: number, bit: number, value: number)`)
+		-- stylua: ignore
+		luau:Push(
+			`--- {comment}`,
+			`function bitbuffer.writef{width}(b: buffer, byte: number, bit: number, value: number)`, 1
+		)
 
 		-- Handle byte aligned cases when applicable
 		if width == 32 or width == 64 then
-			luau:BlockStart("if bit == 0 then")
-				:Push(`buffer.writef{width}(b, byte, value)`)
-				:Push("return")
-				:BlockEnd()
-				:Push("")
+			-- stylua: ignore
+			luau:Push(
+				"if bit == 0 then", 1,
+					`buffer.writef{width}(b, byte, value)`,
+					"return",
+				-1, "end",
+				""
+			)
 		end
 
 		-- Set default values, this automatically handles the 0 case
@@ -118,58 +145,81 @@ local function generateWrite(luau, typescript)
 		-- Handle infinity
 		if width ~= 64 then
 			local maxValue = (2 - 2 ^ -mantissaWidth) * 2 ^ (exponentBias + 1)
-			luau:BlockStart(`if math.abs(value) > {maxValue} then`)
+			luau:Push(`if math.abs(value) > {maxValue} then`, 1)
 		else
-			luau:BlockStart("if math.abs(value) >= math.huge then")
+			luau:Push("if math.abs(value) >= math.huge then", 1)
 		end
-		luau:Push(`exponent, sign = {exponentMax}, if value < 0 then {signValue} else 0`)
 
-		-- Handle NaN
 		-- stylua: ignore
-		luau:BlockMiddle("elseif value ~= value then")
-			:Push(`mantissa, exponent, sign = 1, {exponentMax}, {signValue}`)
-			-- Handle everything else
-			:BlockMiddle("elseif value ~= 0 then")
-			:Push("local absValue = math.abs(value)")
+		luau:Push(
+			`exponent, sign = {exponentMax}, if value < 0 then {signValue} else 0`,
+			-1, "elseif value ~= value then", 1,
+				`mantissa, exponent, sign = 1, {exponentMax}, {signValue}`,
+			-1, "elseif value ~= 0 then", 1,
+				"local absValue = math.abs(value)"
+		)
 
 		-- Round the value to the nearest epsilon, only for halfs and singles, since
 		-- luau numbers are already doubles, so it would just yield the same result
 		if width ~= 64 then
-			luau:Push(`local interval = math.ldexp(1, math.floor(math.log(absValue, 2)) - {mantissaWidth})`)
-				:Push("absValue = math.floor(absValue / interval) * interval")
+			luau:Push(`local epsilon = math.ldexp(1, math.floor(math.log(absValue, 2)) - {mantissaWidth})`)
+				:Push("absValue = math.floor(absValue / epsilon) * epsilon")
 				:Push("")
 		end
 
-		luau:Push("mantissa, exponent = math.frexp(absValue)")
-			:Push(`exponent += {exponentBias}`)
-			:Push("")
-			:Push("mantissa = math.round(if exponent <= 0")
-			:Push(`\tthen mantissa * {tohex(2 ^ mantissaWidth)} / math.ldexp(1, math.abs(exponent))`)
-			:Push(`\telse mantissa * {tohex(2 ^ (mantissaWidth + 1))})`)
-			:Push("exponent = math.max(exponent, 0)")
-			:Push(`sign = if value < 0 then {signValue} else 0`)
-			:BlockEnd()
-			:Push("")
+		-- stylua: ignore
+		luau:Push(
+			"mantissa, exponent = math.frexp(absValue)",
+			`exponent += {exponentBias}`,
+			"",
+			"mantissa = math.round(if exponent <= 0", 1,
+				`then mantissa * {tohex(2 ^ mantissaWidth)} / math.ldexp(1, math.abs(exponent))`,
+				`else mantissa * {tohex(2 ^ (mantissaWidth + 1))})`, -1,
+			"exponent = math.max(exponent, 0)",
+			`sign = if value < 0 then {signValue} else 0`,
+			-1, "end",
+			""
+		)
 
 		-- If we can utilise a single write call, do so
-		if width ~= 64 then
+		if width < 64 then
 			local hexExponent = tohex(2 ^ mantissaWidth)
-			luau:Push("bitbuffer.writeu", width, "(b, byte, bit, mantissa % ", hexExponent)
-				:Push("\t+ exponent * ", hexExponent)
-				:Push("\t+ sign)")
+
+			local writeCallName = if width == 32 then `unalignedwriteu{width}` else `writeu{width}`
+			local writeCall = tostring(Snippet.get(writeCallName)):gsub("value", "uintForm")
+
+			-- stylua: ignore
+			luau:Push(
+				`local uintForm = mantissa % {hexExponent}`, 1,
+					`+ exponent * {hexExponent}`,
+					"+ sign", -1,
+				"",
+				writeCall
+			)
 		else
-			luau:Push("bitbuffer.writeu32(b, byte, bit, mantissa % ", tohex(2 ^ 32), ")")
-				:Push("bitbuffer.writeu32(b, byte + 4, bit, mantissa // ", tohex(2 ^ 32), " % ", tohex(2 ^ 20))
-				:Push("\t+ exponent * ", tohex(2 ^ 20))
-				:Push("\t+ sign)")
+			local firstWrite = tostring(Snippet.get("unalignedwriteu48")):gsub("value", "firstHalf")
+			local secondWrite = tostring(Snippet.get("unalignedwriteu16")):gsub("value", "secondHalf")
+
+			-- stylua: ignore
+			luau:Push(
+				`local firstHalf = mantissa % {tohex(2 ^ 48)}`,
+				`local secondHalf = mantissa // {tohex(2 ^ 48)} % {tohex(2 ^ 4)}`, 1,
+					`+ exponent * {tohex(2 ^ 4)}`,
+					"+ sign", -1,
+				"",
+				firstWrite,
+				"byte += 3",
+				secondWrite
+			)
 		end
 
-		luau:BlockEnd()
+		luau:Push(-1, "end"):ConditionalPush(width < 64, "")
 
 		-- stylua: ignore
-		typescript
-			:Push(`/** {comment} */`)
-			:Push(`writef{width}: write<number>;`)
+		typescript:Push(
+			`/** {comment} */`,
+			`writef{width}: write<number>;`
+		)
 	end
 
 	typescript:Push("")
@@ -177,7 +227,7 @@ end
 
 return function(luau, typescript)
 	-- stylua: ignore
-	luau
-		:Block("write", generateWrite, typescript)
-		:Block("read", generateRead, typescript)
+	luau:LuauBlock("write", generateWrite, typescript)
+		:Push("")
+		:LuauBlock("read", generateRead, typescript)
 end
