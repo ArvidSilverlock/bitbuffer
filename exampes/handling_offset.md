@@ -95,9 +95,9 @@ local function generateIncrement(width: number): string
 				else "\tbit -= 8", -- effectively do `bit %= 8`
 			if byte > 0
 				then `else\n\tbyte += {byte}` -- only increment the byte if need be
-				else nil,
-			"end"
-		}, "\n")
+				else "",
+			"end",
+		}, "\n"):gsub("\n\n", "\n")
 	end
 end
 ```
