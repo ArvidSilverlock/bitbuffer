@@ -59,7 +59,11 @@ local function unalignedRead(width: number)
 		if chunkWidth == 24 then
 			body:Push(`+ bit32.extract(buffer.readu32(b, byte{offset}), bit, {chunkWidth}){multiplier}`)
 		else
-			local chunkSnippet = Snippet.get(`unalignedreadu{chunkWidth}`) or Snippet.get(`alignedreadu{chunkWidth}`)
+			local chunkSnippet = tostring(Snippet.get(`readu{chunkWidth}`))
+			if chunkSnippet:match("^if bit > 0") then
+				chunkSnippet = tostring(Snippet.get(`unalignedreadu{chunkWidth}`))
+			end
+
 			local read = tostring(chunkSnippet):gsub("byte", `byte{offset}`)
 			if read:match("^if") then
 				body:Push("+ (", 1, read, -1, `){multiplier}`)
@@ -116,8 +120,12 @@ local function unalignedWrite(width: number)
 		if chunkWidth == 24 then
 			body:Push(`buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value{divisor}, bit, 24))`)
 		else
-			local chunkSnippet = Snippet.get(`unalignedwriteu{chunkWidth}`) or Snippet.get(`alignedwriteu{chunkWidth}`)
-			body:Push(tostring(chunkSnippet):gsub("value", `value{divisor}`))
+			local chunkSnippet = tostring(Snippet.get(`writeu{chunkWidth}`))
+			if chunkSnippet:match("^if bit > 0") then
+				chunkSnippet = tostring(Snippet.get(`unalignedwriteu{chunkWidth}`))
+			end
+
+			body:Push(chunkSnippet:gsub("value", `value{divisor}`))
 		end
 	end
 
@@ -196,7 +204,7 @@ local function generateRead(luau, typescript)
 		end
 
 		local body = createSnippet(nil)
-		createSnippet("value") -- can be retrieved using `Snippet.get(readu<n>)`
+		createSnippet("value") -- can be retrieved using `Snippet.get("readu<n>")`
 
 		local comment = `Reads a {width} bit unsigned integer [0, {2 ^ width - 1}]`
 
@@ -207,7 +215,7 @@ local function generateRead(luau, typescript)
 				body,
 			-1, "end",
 			if width < 53 then "" else nil
-		):ConditionalPush(width < 53, "")
+		)
 
 		-- stylua: ignore
 		typescript
@@ -215,7 +223,7 @@ local function generateRead(luau, typescript)
 			:Push(`readu{width}: read<number>;`)
 	end
 
-	typescript:Push("")
+	typescript:Break()
 end
 
 local function generateWrite(luau, typescript)
@@ -250,8 +258,9 @@ local function generateWrite(luau, typescript)
 			`--- {comment}`,
 			`function bitbuffer.{functionName}(b: buffer, byte: number, bit: number, value: number)`, 1,
 				body,
-			-1, "end"
-		):ConditionalPush(width < 53, "")
+			-1, "end",
+			if width < 53 then "" else nil
+		)
 
 		-- stylua: ignore
 		typescript:Push(
@@ -260,7 +269,7 @@ local function generateWrite(luau, typescript)
 		)
 	end
 
-	typescript:Push("")
+	typescript:Break()
 end
 
 local function finalise(luau, typescript)
