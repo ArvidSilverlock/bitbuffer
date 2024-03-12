@@ -68,7 +68,7 @@ local function generateRead(luau, typescript)
 			:Push(`readi{width}: read<number>;`)
 	end
 
-	typescript:Push("")
+	typescript:Break()
 end
 
 local function generateWrite(luau, typescript)
@@ -129,7 +129,7 @@ local function generateWrite(luau, typescript)
 			:Push(`writei{width}: write<number>;`)
 	end
 
-	typescript:Push("")
+	typescript:Break()
 end
 
 local function finalise(luau, typescript)

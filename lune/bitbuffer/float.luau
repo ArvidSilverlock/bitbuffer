@@ -105,7 +105,7 @@ local function generateRead(luau, typescript)
 		)
 	end
 
-	typescript:Push("")
+	typescript:Break()
 end
 
 local function generateWrite(luau, typescript)
@@ -164,7 +164,7 @@ local function generateWrite(luau, typescript)
 		if width ~= 64 then
 			luau:Push(`local epsilon = math.ldexp(1, math.floor(math.log(absValue, 2)) - {mantissaWidth})`)
 				:Push("absValue = math.floor(absValue / epsilon) * epsilon")
-				:Push("")
+				:Break()
 		end
 
 		-- stylua: ignore
@@ -222,12 +222,12 @@ local function generateWrite(luau, typescript)
 		)
 	end
 
-	typescript:Push("")
+	typescript:Break()
 end
 
 return function(luau, typescript)
 	-- stylua: ignore
 	luau:LuauBlock("write", generateWrite, typescript)
-		:Push("")
+		:Break()
 		:LuauBlock("read", generateRead, typescript)
 end
