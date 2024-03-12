@@ -3,24 +3,25 @@ local fs = require("@lune/fs")
 
 local output = Snippet.new()
 
-output
-	:Push("--!native")
-	:Push("--!optimize 2")
-	:Push("")
-	:Push("local TEST_BUFFER = buffer.create(2^16 + 1)")
-	:Push("local TEST_COUNT = 100_000")
-	:Push("local STRING_TEST_COUNT = 1_000")
-	:Push("")
-	:Push("local bitbuffer = require(workspace.ModuleScript)")
-	:Push("")
-	:Push("local uBenchmarks, iBenchmarks, fBenchmarks, sBenchmarks = {}, {}, {}, {}")
-	:Push("")
+output:Push(
+	"--!native",
+	"--!optimize 2",
+	"",
+	"local TEST_BUFFER = buffer.create(2^16 + 1)",
+	"local TEST_COUNT = 100_000",
+	"local STRING_TEST_COUNT = 1_000",
+	"",
+	"local bitbuffer = require(workspace.ModuleScript)",
+	"",
+	"local uBenchmarks, iBenchmarks, fBenchmarks, sBenchmarks = {}, {}, {}, {}",
+	""
+)
 
 local function benchmarkNumber(numberType: "u" | "i" | "f")
 	if numberType == "f" then
-		output:BlockStart("for _, width in { 16, 32, 64 } do")
+		output:Push("for _, width in { 16, 32, 64 } do", 1)
 	else
-		output:BlockStart("for width = 1, 53 do")
+		output:Push("for width = 1, 53 do", 1)
 	end
 
 	local times = {}
@@ -31,60 +32,76 @@ local function benchmarkNumber(numberType: "u" | "i" | "f")
 			output:Push(`local callback = bitbuffer.{mode}{numberType}[width]`)
 		end
 
-		output
-			:Push(`local {mode}StartTime = os.clock()`)
-			:BlockStart("for offset = 0, 7 do")
-			:BlockStart("for _ = 1, TEST_COUNT do")
-			:Push(`callback(TEST_BUFFER, 0, offset{if mode == "write" then ", 0" else ""})`)
-			:BlockEnd()
-			:BlockEnd()
-			:Push(`local {mode}EndTime = os.clock()`)
-			:Push("")
+		output:Push(
+			`local {mode}StartTime = os.clock()`,
+			"for offset = 0, 7 do",
+			1,
+			"for _ = 1, TEST_COUNT do",
+			1,
+			`callback(TEST_BUFFER, 0, offset{if mode == "write" then ", 0" else ""})`,
+			-1,
+			"end",
+			-1,
+			"end",
+			`local {mode}EndTime = os.clock()`,
+			""
+		)
 
 		times[mode] = `( {mode}EndTime - {mode}StartTime ) / 8 / TEST_COUNT`
 	end
 
-	output
-		:Push(`table.insert({numberType}Benchmarks, \{ tostring(width), {times.read}, {times.write} \})`)
-		:Push(`print(\`Benchmarked {numberType}\{width}\`)`)
-		:Push("task.wait()")
-		:BlockEnd()
-		:Push("")
+	output:Push(
+		`table.insert({numberType}Benchmarks, \{ tostring(width), {times.read}, {times.write} \})`,
+		`print(\`Benchmarked {numberType}\{width}\`)`,
+		"task.wait()",
+		-1,
+		"end",
+		""
+	)
 end
 
 benchmarkNumber("u")
 benchmarkNumber("i")
 benchmarkNumber("f")
 
-output
-	:BlockStart(`for width = 0, 16 do`)
-	:Push("local count = 2 ^ width")
-	:Push(`local b = buffer.create(count)`)
-	:Push("buffer.fill(b, 0, 0b01100110) -- arbitrary value")
-	:Push("local str = buffer.tostring(b)")
-	:Push("")
+output:Push(
+	`for width = 0, 16 do`,
+	1,
+	"local count = 2 ^ width",
+	`local b = buffer.create(count)`,
+	"buffer.fill(b, 0, 0b01100110) -- arbitrary value",
+	"local str = buffer.tostring(b)",
+	""
+)
 
 local times = {}
 for _, mode in { "read", "write" } do
-	output
-		:Push(`local {mode}StartTime = os.clock()`)
-		:BlockStart("for _ = 1, STRING_TEST_COUNT do")
-		:BlockStart("for offset = 1, 7 do")
-		:Push(`bitbuffer.{mode}string(TEST_BUFFER, 0, offset{if mode == "write" then ", str" else ""}, count)`)
-		:BlockEnd()
-		:BlockEnd()
-		:Push(`local {mode}EndTime = os.clock()`)
-		:Push("")
+	output:Push(
+		`local {mode}StartTime = os.clock()`,
+		"for _ = 1, STRING_TEST_COUNT do",
+		1,
+		"for offset = 1, 7 do",
+		1,
+		`bitbuffer.{mode}string(TEST_BUFFER, 0, offset{if mode == "write" then ", str" else ""}, count)`,
+		-1,
+		"end",
+		-1,
+		"end",
+		`local {mode}EndTime = os.clock()`,
+		""
+	)
 
 	times[mode] = `( {mode}EndTime - {mode}StartTime ) / 7 / STRING_TEST_COUNT`
 end
 
-output
-	:Push(`table.insert(sBenchmarks, \{ tostring(count), {times.read}, {times.write} \})`)
-	:Push("print(`Benchmarked string (#{count})`)")
-	:Push("task.wait()")
-	:BlockEnd()
-	:Push("")
+output:Push(
+	`table.insert(sBenchmarks, \{ tostring(count), {times.read}, {times.write} \})`,
+	"print(`Benchmarked string (#{count})`)",
+	"task.wait()",
+	-1,
+	"end",
+	""
+)
 
 output:Push([[
 	
