@@ -28,6 +28,9 @@ local function writeu24(b: buffer, offset: number, value: number)
 	buffer.writeu16(b, offset + 1, value // 256)
 end
 
+local bit32_extract = bit32.extract
+local bit32_replace = bit32.replace
+
 --- @class bitbuffer
 local bitbuffer = {}]])
 	:Break()

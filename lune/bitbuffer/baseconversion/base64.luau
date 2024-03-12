@@ -31,7 +31,7 @@ function bitbuffer.tobase64(b: buffer): string
 		bit = (byteWidth * 8 - 6) - bit
 
 		local focus = if byteWidth == 1 then buffer.readu8(b, byte) else flipu16(buffer.readu16(b, byte))
-		local code = bit32.extract(focus, bit, 6)
+		local code = bit32_extract(focus, bit, 6)
 
 		buffer.writeu8(output, outputIndex, buffer.readu8(NUMBER_TO_BASE64, code))
 		outputIndex += 1
@@ -41,7 +41,7 @@ function bitbuffer.tobase64(b: buffer): string
 		local byte, bit = endOffset // 8, (8 - overhang) - endOffset % 8
 
 		local focus = buffer.readu8(b, byte)
-		local code = bit32.lshift(bit32.extract(focus, bit, overhang), 6 - overhang)
+		local code = bit32.lshift(bit32_extract(focus, bit, overhang), 6 - overhang)
 
 		buffer.writeu8(output, outputIndex, buffer.readu8(NUMBER_TO_BASE64, code))
 	end
@@ -79,9 +79,9 @@ function bitbuffer.frombase64(str: string)
 
 		local code = BASE64_TO_NUMBER[str:byte(inputIndex)]
 		if byteWidth == 2 then
-			buffer.writeu16(output, byte, flipu16(bit32.replace(flipu16(buffer.readu16(output, byte)), code, bit, 6)))
+			buffer.writeu16(output, byte, flipu16(bit32_replace(flipu16(buffer.readu16(output, byte)), code, bit, 6)))
 		else
-			buffer.writeu8(output, byte, bit32.replace(buffer.readu8(output, byte), code, bit, 6))
+			buffer.writeu8(output, byte, bit32_replace(buffer.readu8(output, byte), code, bit, 6))
 		end
 
 		inputIndex += 1
@@ -91,7 +91,7 @@ function bitbuffer.frombase64(str: string)
 		local byte, bit = endOffset // 8, (8 - overhang) - endOffset % 8
 		local code = bit32.rshift(BASE64_TO_NUMBER[str:byte(inputIndex)], 6 - overhang)
 
-		buffer.writeu8(output, byte, bit32.replace(buffer.readu8(output, byte), code, bit, overhang))
+		buffer.writeu8(output, byte, bit32_replace(buffer.readu8(output, byte), code, bit, overhang))
 	end
 
 	return output

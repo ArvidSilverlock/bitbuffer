@@ -61,8 +61,8 @@ function bitbuffer.copy(
 		targetByte += 1
 
 		for _ = 1, chunkCount do
-			local value = bit32.extract(buffer.readu32(source, sourceByte), sourceBit, 24)
-				+ bit32.extract(buffer.readu32(source, sourceByte + 3), sourceBit, 24) * 0x1000000
+			local value = bit32_extract(buffer.readu32(source, sourceByte), sourceBit, 24)
+				+ bit32_extract(buffer.readu32(source, sourceByte + 3), sourceBit, 24) * 0x1000000
 
 			buffer.writeu32(target, targetByte, value)
 			buffer.writeu16(target, targetByte + 4, value // 0x100000000)

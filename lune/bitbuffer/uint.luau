@@ -47,7 +47,7 @@ local function unalignedRead(width: number)
 	local position, chunkWidth = 0, math.min(width, 24)
 
 	local body = Snippet.new()
-	body:Push("bit32.extract(buffer.readu32(b, byte), bit, 24)", 1)
+	body:Push("bit32_extract(buffer.readu32(b, byte), bit, 24)", 1)
 
 	for _ = 2, chunkCount do
 		position += chunkWidth
@@ -57,7 +57,7 @@ local function unalignedRead(width: number)
 		local offset = ` + {position / 8}`
 
 		if chunkWidth == 24 then
-			body:Push(`+ bit32.extract(buffer.readu32(b, byte{offset}), bit, {chunkWidth}){multiplier}`)
+			body:Push(`+ bit32_extract(buffer.readu32(b, byte{offset}), bit, {chunkWidth}){multiplier}`)
 		else
 			local chunkSnippet = tostring(Snippet.get(`readu{chunkWidth}`))
 			if chunkSnippet:match("^if bit > 0") then
@@ -91,7 +91,7 @@ local function alignedWrite(width: number)
 		local divisor = if index > 0 then string.format(" // 0x%x", 2 ^ position) else ""
 
 		if chunkWidth ~= alignedWidth then
-			local replacement = `bit32.replace({readCallback}(b, byte), value{divisor}, 0, {chunkWidth})`
+			local replacement = `bit32_replace({readCallback}(b, byte), value{divisor}, 0, {chunkWidth})`
 			body:ConditionalPush(index > 0, "byte += 4")
 			body:Push(`{writeCallback}(b, byte, {replacement})`)
 		elseif index == 0 then
@@ -108,7 +108,7 @@ local function unalignedWrite(width: number)
 	local chunkCount = math.ceil(width / 24)
 
 	local body = Snippet.new()
-	body:Push("buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value, bit, 24))")
+	body:Push("buffer.writeu32(b, byte, bit32_replace(buffer.readu32(b, byte), value, bit, 24))")
 
 	for index = 1, chunkCount - 1 do
 		local position = 24 * index
@@ -118,7 +118,7 @@ local function unalignedWrite(width: number)
 		body:Push("byte += 3")
 
 		if chunkWidth == 24 then
-			body:Push(`buffer.writeu32(b, byte, bit32.replace(buffer.readu32(b, byte), value{divisor}, bit, 24))`)
+			body:Push(`buffer.writeu32(b, byte, bit32_replace(buffer.readu32(b, byte), value{divisor}, bit, 24))`)
 		else
 			local chunkSnippet = tostring(Snippet.get(`writeu{chunkWidth}`))
 			if chunkSnippet:match("^if bit > 0") then
@@ -137,11 +137,11 @@ local function getReadCallback(width: number, threshold: number)
 		local alignedWidth = math.ceil(width / 8) * 8
 
 		local caseA = if width ~= alignedWidth
-			then `bit32.extract({BYTE_ALIGNED_READ[alignedWidth]}(b, byte), bit, {width})`
+			then `bit32_extract({BYTE_ALIGNED_READ[alignedWidth]}(b, byte), bit, {width})`
 			else `{BYTE_ALIGNED_READ[alignedWidth]}(b, byte)`
 
 		local caseB = if threshold >= 0
-			then `bit32.extract({BYTE_ALIGNED_READ[alignedWidth + 8]}(b, byte), bit, {width})`
+			then `bit32_extract({BYTE_ALIGNED_READ[alignedWidth + 8]}(b, byte), bit, {width})`
 			else nil
 
 		return caseA, caseB
@@ -157,11 +157,11 @@ local function getWriteCallback(width: number, threshold: number)
 		local writeCallback = BYTE_ALIGNED_WRITE[alignedWidth]
 
 		local caseA = if width ~= alignedWidth
-			then `{writeCallback}(b, byte, bit32.replace({readCallback}(b, byte), value, bit, {width}))`
+			then `{writeCallback}(b, byte, bit32_replace({readCallback}(b, byte), value, bit, {width}))`
 			else `{writeCallback}(b, byte, value)`
 
 		local caseB = if threshold >= 0
-			then `{BYTE_ALIGNED_WRITE[alignedWidth + 8]}(b, byte, bit32.replace({BYTE_ALIGNED_READ[alignedWidth + 8]}(b, byte), value, bit, {width}))`
+			then `{BYTE_ALIGNED_WRITE[alignedWidth + 8]}(b, byte, bit32_replace({BYTE_ALIGNED_READ[alignedWidth + 8]}(b, byte), value, bit, {width}))`
 			else nil
 
 		return caseA, caseB
