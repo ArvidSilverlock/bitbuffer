@@ -11,7 +11,7 @@ output:Push(
 	"local TEST_COUNT = 100_000",
 	"local STRING_TEST_COUNT = 1_000",
 	"",
-	"local bitbuffer = require(workspace.ModuleScript)",
+	"local bitbuffer = require(workspace.bitbuffer)",
 	"",
 	"local uBenchmarks, iBenchmarks, fBenchmarks, sBenchmarks = {}, {}, {}, {}",
 	""
