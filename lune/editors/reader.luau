@@ -1,5 +1,4 @@
-local fs = require("@lune/fs")
-
+local pushIncrementOffset = require("./pushIncrementOffset")
 local VALUE_DATA = require("./values.luau")
 
 local READER_CONSTRUCTOR = [[function bitbuffer.reader(b: buffer)
@@ -19,13 +18,17 @@ local READ_CALLBACKS = {
 		type = "string",
 		callback = [[local length = bitbuffer.readu32(self.buffer, self.byte, self.bit)
 local value = bitbuffer.readstring(self.buffer, self.byte + 4, self.bit, length)
-self:IncrementOffset(4 + length, 0)
+self.byte += 4 + length
 return value]],
 	},
 	Boolean = {
 		type = "boolean",
 		callback = [[local value = bitbuffer.readu1(self.buffer, self.byte, self.bit) == 1
-self:IncrementOffset(0, 1)
+self.bit += 1
+if self.bit > 7 then
+	self.byte += 1
+	self.bit = 0
+end
 return value]],
 	},
 	CFrame = {
@@ -83,11 +86,11 @@ local function generateType(readType: "UInt" | "Int" | "Float")
 	local prefix = readType:sub(1, 1):lower()
 	return function(luau, typescript, width: number): string
 		typescript:Push(`{readType}{width}: () => number;`)
-		luau:BlockStart(`function Reader:{readType}{width}(): number`)
+		luau:Push(`function Reader:{readType}{width}(): number`, 1)
 			:Push(`local value = bitbuffer.read{prefix}{width}(self.buffer, self.byte, self.bit)`)
-			:Push(`self:IncrementOffset({width // 8}, {width % 8})`)
+			:Call(pushIncrementOffset, width)
 			:Push("return value")
-			:BlockEnd()
+			:Push(-1, "end")
 	end
 end
 
@@ -97,10 +100,10 @@ local generateFloat = generateType("Float")
 
 local function insertSimpleValues(luau, typescript)
 	for valueType, valueData in VALUE_DATA do
-		typescript:Push(valueType, ": () => ", valueType, ";")
+		typescript:Push(`{valueType}: () => {valueType};`)
 
 		local constructor = valueData.Constructor or `{valueType}.new`
-		luau:BlockStart(`function Reader:{valueType}(): {valueType}`)
+		luau:Push(`function Reader:{valueType}(): {valueType}`, 1)
 
 		local variables = {}
 
@@ -119,82 +122,81 @@ local function insertSimpleValues(luau, typescript)
 			elseif offset % 8 == 0 then
 				currentOffset = `self.byte + {offset // 8}, self.bit`
 			else
-				luau:Push(`self:IncrementOffset({offset // 8}, {offset % 8})`)
-				currentOffset = "self.byte, self.bit"
-				offset = 0
+				pushIncrementOffset(luau, offset)
+				currentOffset, offset = "self.byte, self.bit", 0
 			end
 
 			if type(data) == "string" then
 				if offset > 0 then
-					luau:Push(`self:IncrementOffset({offset // 8}, {offset % 8})`)
+					pushIncrementOffset(luau, offset)
 					offset = 0
 				end
-				luau:Push(assignment, `self:{data}()`)
+				luau:Push(`{assignment}self:{data}()`)
 			elseif data.type == "Alpha" then
 				local divisor = 2 ^ data.width - 1
-				luau:Push(assignment, `bitbuffer.readu{data.width}(self.buffer, {currentOffset}) / {divisor}`)
+				luau:Push(`{assignment}bitbuffer.readu{data.width}(self.buffer, {currentOffset}) / {divisor}`)
 				offset += data.width
 			else
 				local prefix = data.type:sub(1, 1):lower()
-				luau:Push(assignment, `bitbuffer.read{prefix}{data.width}(self.buffer, {currentOffset})`)
+				luau:Push(`{assignment}bitbuffer.read{prefix}{data.width}(self.buffer, {currentOffset})`)
 				offset += data.width
 			end
 		end
 
 		if offset > 0 then
-			luau:Push(`self:IncrementOffset({offset // 8}, {offset % 8})`)
+			pushIncrementOffset(luau, offset)
 		end
 
 		-- stylua: ignore
-		luau:Push("")
+		luau:Break()
 			:Push(`return {constructor}({table.concat(variables, ", ")})`)
-			:BlockEnd()
-			:Push("")
+			:Push(-1, "end")
+			:Break()
 	end
 end
 
 return function(luau, typescript)
 	-- stylua: ignore
 	typescript
-		:BlockStart("declare interface Reader extends Offset {")
+		:Push("declare interface Reader extends Offset {", 1)
 		:Push("buffer: buffer;")
-		:Push("")
+		:Break()
 
 	-- stylua: ignore
 	luau:Push("local Reader = bitbuffer.offset()")
-		:Push("")
+		:Break()
 		:Push(READER_CONSTRUCTOR)
-		:Push("")
+		:Break()
 
 	for width = 1, 53 do
-		luau:Call(generateUInt, typescript, width):Push("")
+		luau:Call(generateUInt, typescript, width):Break()
 	end
-	typescript:Push("")
+	typescript:Break()
 
 	for width = 1, 53 do
-		luau:Call(generateInt, typescript, width):Push("")
+		luau:Call(generateInt, typescript, width):Break()
 	end
-	typescript:Push("")
+	typescript:Break()
 
 	luau:Call(generateFloat, typescript, 16)
-		:Push("")
+		:Break()
 		:Call(generateFloat, typescript, 32)
-		:Push("")
+		:Break()
 		:Call(generateFloat, typescript, 64)
-		:Push("")
+		:Break()
 
-	typescript:Push("")
+	typescript:Break()
 
 	for name, data in READ_CALLBACKS do
-		typescript:Push(name, ": () => ", data.type, ";")
+		typescript:Push(`{name}: () => {data.type};`)
 		-- stylua: ignore
-		luau:BlockStart(`function Reader:{name}(): {data.type}`)
+		luau:Push(`function Reader:{name}(): {data.type}`, 1)
 			:Push(data.callback)
-			:BlockEnd()
-			:Push("")
+			:Push(-1, "end")
+			:Break()
 	end
 
 	luau:Call(insertSimpleValues, typescript)
 
-	typescript:BlockEnd("}"):Push("")
+	typescript:Push(-1, "}"):Break()
 end
