@@ -17,3 +17,6 @@
 
 # ignore DS_Store (mac specific)
 .DS_Store
+
+# wally.lock
+wally.lock
