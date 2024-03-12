@@ -241,7 +241,7 @@ if BrickColor then
 	}
 end
 
-return function(b, bitbuffer, test, testbase, random, randomString, testCount)
+local function execute(b, bitbuffer, test, testbase, random, randomString, testCount)
 	local reader, writer = bitbuffer.reader(b), bitbuffer.writer(b)
 
 	for name, test in tests do
@@ -263,3 +263,17 @@ return function(b, bitbuffer, test, testbase, random, randomString, testCount)
 		writer:SetOffset(0)
 	end
 end
+
+if game then -- assume roblox
+	local bitbuffer = require(workspace.bitbuffer)
+	local b = buffer.create(2 ^ 16 + 1)
+
+	local success, response = pcall(execute, b, bitbuffer, nil, nil, nil, nil, 100)
+	if success then
+		print("Success!")
+	else
+		error(response)
+	end
+end
+
+return execute
