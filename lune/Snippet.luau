@@ -1,7 +1,5 @@
 local function indentString(amount: number, str: string): string
-	if str == nil then
-		return ""
-	elseif str:match("^%s*$") then -- entirely whitespace
+	if str:match("^%s*$") then -- entirely whitespace
 		return ""
 	end
 
@@ -40,7 +38,7 @@ function Snippet:Push(...: any)
 			for _, subLine in line._lines or line do
 				table.insert(self._lines, indentString(self._indent, subLine))
 			end
-		else
+		elseif line ~= nil then
 			table.insert(self._lines, indentString(self._indent, line))
 		end
 	end
