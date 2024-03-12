@@ -27,12 +27,16 @@ end]]
 
 return function(luau, typescript)
 	-- stylua: ignore start
-	luau:Push(WRITE_STRING)
-		:Push("")
-		:Push(READ_STRING)
+	luau:Push(
+		WRITE_STRING,
+		"",
+		READ_STRING
+	)
 
-	typescript:Push("writestring: write<string>;")
-		:Push("readstring: read<string>;")
-		:Push("")
+	typescript:Push(
+		"writestring: write<string>;",
+		"readstring: read<string>;",
+		""
+	)
 	-- stylua: ignore end
 end

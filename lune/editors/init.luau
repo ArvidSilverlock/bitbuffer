@@ -34,13 +34,15 @@ local offset = require("./offset/init.luau")
 
 return function(luau, typescript)
 	-- stylua: ignore
-	luau:Block("offset", offset, typescript)
-		:Push("")
-		:BlockStart("do -- reader & writer")
-		:Push(CFRAME_SPECIAL_CASES)
-		:Push("")
-		:Block("writer", writer, typescript)
-		:Push("")
-		:Block("reader", reader, typescript)
-		:BlockEnd()
+	luau:LuauBlock("offset", offset, typescript)
+		:Break()
+		:Push(
+			"do -- reader & writer", 1,
+			CFRAME_SPECIAL_CASES
+		)
+		:Break()
+		:LuauBlock("writer", writer, typescript)
+		:Break()
+		:LuauBlock("reader", reader, typescript)
+		:Push(-1, "end")
 end

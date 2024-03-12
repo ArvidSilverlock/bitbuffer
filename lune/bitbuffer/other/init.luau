@@ -49,15 +49,18 @@ local COPY_TYPE = [[copy: (
 
 return function(luau, typescript)
 	-- stylua: ignore start
-	luau:Push(CONSTANTS)
-		:Push("")
-		:Push(BUFFER_FILL)
-		:Push("")
-		:Push(BUFFER_COPY)
+	luau:Push(CONSTANTS,
+		"",
+		BUFFER_FILL,
+		"",
+		BUFFER_COPY
+	)
 
-	typescript:Push(FILL_TYPE)
-		:Push("")
-		:Push(COPY_TYPE)
-		:Push("")
+	typescript:Push(
+		FILL_TYPE,
+		"",
+		COPY_TYPE,
+		""
+	)
 	-- stylua: ignore end
 end

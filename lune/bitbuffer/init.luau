@@ -6,28 +6,30 @@ local other = require("./other/init.luau")
 local baseconversion = require("./baseconversion/init.luau")
 
 return function(luau, typescript)
-	typescript:BlockStart("declare interface bitbuffer {")
+	typescript:Push("declare interface bitbuffer {", 1)
 
-	luau:Block("uint", uint, typescript)
-		:Push("")
-		:Block("int", int, typescript)
-		:Push("")
-		:Block("float", float, typescript)
-		:Push("")
-		:Block("string", string, typescript)
-		:Push("")
-		:Block("other", other, typescript)
-		:Push("")
-		:Block("base conversion", baseconversion, typescript)
+	luau:LuauBlock("uint", uint, typescript)
+		:Break()
+		:LuauBlock("int", int, typescript)
+		:Break()
+		:LuauBlock("float", float, typescript)
+		:Break()
+		:LuauBlock("string", string, typescript)
+		:Break()
+		:LuauBlock("other", other, typescript)
+		:Break()
+		:LuauBlock("base conversion", baseconversion, typescript)
 
-	typescript
-		:BlockStart("offset: {")
-		:Push("(): Offset;")
-		:Push("(offset: number): Offset;")
-		:Push("(byte: number, bit: number): Offset;")
-		:BlockEnd("}")
-		:Push("reader: (b: buffer) => Reader;")
-		:Push("writer: (b: buffer) => Writer;")
+	-- stylua: ignore
+	typescript:Push(
+		"offset: {", 1,
+			"(): Offset;",
+			"(offset: number): Offset;",
+			"(byte: number, bit: number): Offset;",
+		-1, "}",
+		"reader: (b: buffer) => Reader;",
+		"writer: (b: buffer) => Writer;"
+	)
 
-	typescript:BlockEnd("}"):Push("")
+	typescript:Push(-1, "}"):Break()
 end

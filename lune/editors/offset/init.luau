@@ -7,20 +7,22 @@ end
 return function(luau, typescript)
 	luau:Push(getFile("source"))
 
-	typescript
-		:BlockStart("declare interface Offset {")
-		:Push("byte: number;")
-		:Push("bit: number;")
-		:Push("")
-		:BlockStart("SetOffset: {")
-		:Push("(byte: number, bit: number): void;")
-		:Push("(offset: number): void;")
-		:BlockEnd("}")
-		:BlockStart("IncrementOffset: {")
-		:Push("(byte: number, bit: number): void;")
-		:Push("(offset: number): void;")
-		:BlockEnd("}")
-		:Push("Align: () => void;")
-		:BlockEnd("}")
-		:Push("")
+	-- stylua: ignore
+	typescript:Push(
+		"declare interface Offset {", 1,
+			"byte: number;",
+			"bit: number;",
+			"",
+			"SetOffset: {", 1,
+				"(byte: number, bit: number): void;",
+				"(offset: number): void;",
+			-1, "}",
+			"IncrementOffset: {", 1,
+				"(byte: number, bit: number): void;",
+				"(offset: number): void;",
+			-1, "}",
+			"Align: () => void;",
+		-1, "}",
+		""
+	)
 end

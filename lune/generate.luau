@@ -1,7 +1,18 @@
 local Snippet = require("./Snippet.luau")
 local fs = require("@lune/fs")
 
-local luau = Snippet.new([[--!native
+local luau = Snippet.new()
+local typescript = Snippet.new()
+
+local editors = require("./editors/init.luau")
+local main = require("./bitbuffer/init.luau")
+
+typescript:Push([[type write<T> = (b: buffer, byte: number, bit: number, value: T) => void
+type read<T> = (b: buffer, byte: number, bit: number) => T
+]])
+
+-- stylua: ignore start
+luau:Push([[--!native
 --!optimize 2
 --!strict
 
@@ -18,24 +29,19 @@ local function writeu24(b: buffer, offset: number, value: number)
 end
 
 --- @class bitbuffer
-local bitbuffer = {}
-]])
-
-local typescript = Snippet.new([[type write<T> = (b: buffer, byte: number, bit: number, value: T) => void
-type read<T> = (b: buffer, byte: number, bit: number) => T
-]])
-
-local editors = require("./editors/init.luau")
-local main = require("./bitbuffer/init.luau")
-
--- stylua: ignore
-luau:Block("main", main, typescript)
-	:Push("")
-	:Block("editors", editors, typescript)
-	:Push("")
+local bitbuffer = {}]])
+	:Break()
+	:LuauBlock("main", main, typescript)
+	:Break()
+	:LuauBlock("editors", editors, typescript)
+	:Break()
 	:Push("return bitbuffer")
 
-typescript:Push("declare const bitbuffer: bitbuffer;\nexport = bitbuffer")
+typescript:Push(
+	"declare const bitbuffer: bitbuffer;",
+	"export = bitbuffer"
+)
+-- stylua: ignore end
 
 fs.writeFile("./src/init.luau", tostring(luau))
 fs.writeFile("./src/index.d.ts", tostring(typescript))
