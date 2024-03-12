@@ -20,12 +20,12 @@ luau:Push([[--!native
 ---@diagnostic disable: undefined-type
 
 local function readu24(b: buffer, offset: number)
-	return buffer.readu8(b, offset) + buffer.readu16(b, offset + 1) * 256
+	return buffer.readu8(b, offset) + buffer.readu16(b, offset + 1) * 0x100
 end
 
 local function writeu24(b: buffer, offset: number, value: number)
 	buffer.writeu8(b, offset, value)
-	buffer.writeu16(b, offset + 1, value // 256)
+	buffer.writeu16(b, offset + 1, value // 0x100)
 end
 
 local bit32_extract = bit32.extract

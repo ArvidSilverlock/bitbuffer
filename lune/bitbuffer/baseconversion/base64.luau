@@ -1,6 +1,6 @@
 local function flipu16(value: number): number
-	return (value // 256) -- FF00 -> 00FF
-		+ (value % 256 * 256) -- 00FF -> FF00
+	return (value // 0x100) -- FF00 -> 00FF
+		+ (value % 0x100 * 0x100) -- 00FF -> FF00
 end
 
 --[=[
