@@ -1,17 +1,17 @@
 local Snippet = require("../Snippet.luau")
 
 local BYTE_ALIGNED_READ = {
-	[8] = "buffer.readu8",
-	[16] = "buffer.readu16",
+	[8] = "readu8",
+	[16] = "readu16",
 	[24] = "readu24",
-	[32] = "buffer.readu32",
+	[32] = "readu32",
 }
 
 local BYTE_ALIGNED_WRITE = {
-	[8] = "buffer.writeu8",
-	[16] = "buffer.writeu16",
+	[8] = "writeu8",
+	[16] = "writeu16",
 	[24] = "writeu24",
-	[32] = "buffer.writeu32",
+	[32] = "writeu32",
 }
 
 local function alignedRead(width: number)
@@ -20,7 +20,7 @@ local function alignedRead(width: number)
 	local body = Snippet.new()
 
 	local bound = if width < 32 then string.format(" %% 0x%x", 2 ^ width) else ""
-	body:Push(`buffer.readu32(b, byte){bound}`, 1)
+	body:Push(`{BYTE_ALIGNED_READ[32]}(b, byte){bound}`, 1)
 
 	for index = 1, chunkCount - 1 do
 		local position, bytePosition = index * 32, index * 4
@@ -47,7 +47,7 @@ local function unalignedRead(width: number)
 	local position, chunkWidth = 0, math.min(width, 24)
 
 	local body = Snippet.new()
-	body:Push("bit32_extract(buffer.readu32(b, byte), bit, 24)", 1)
+	body:Push(`bit32_extract({BYTE_ALIGNED_READ[32]}(b, byte), bit, 24)`, 1)
 
 	for _ = 2, chunkCount do
 		position += chunkWidth
@@ -57,7 +57,7 @@ local function unalignedRead(width: number)
 		local offset = ` + {position / 8}`
 
 		if chunkWidth == 24 then
-			body:Push(`+ bit32_extract(buffer.readu32(b, byte{offset}), bit, {chunkWidth}){multiplier}`)
+			body:Push(`+ bit32_extract({BYTE_ALIGNED_READ[32]}(b, byte{offset}), bit, {chunkWidth}){multiplier}`)
 		else
 			local chunkSnippet = tostring(Snippet.get(`readu{chunkWidth}`))
 			if chunkSnippet:match("^if bit > 0") then
@@ -108,7 +108,7 @@ local function unalignedWrite(width: number)
 	local chunkCount = math.ceil(width / 24)
 
 	local body = Snippet.new()
-	body:Push("buffer.writeu32(b, byte, bit32_replace(buffer.readu32(b, byte), value, bit, 24))")
+	body:Push("writeu32(b, byte, bit32_replace(readu32(b, byte), value, bit, 24))")
 
 	for index = 1, chunkCount - 1 do
 		local position = 24 * index
@@ -118,7 +118,7 @@ local function unalignedWrite(width: number)
 		body:Push("byte += 3")
 
 		if chunkWidth == 24 then
-			body:Push(`buffer.writeu32(b, byte, bit32_replace(buffer.readu32(b, byte), value{divisor}, bit, 24))`)
+			body:Push(`writeu32(b, byte, bit32_replace(readu32(b, byte), value{divisor}, bit, 24))`)
 		else
 			local chunkSnippet = tostring(Snippet.get(`writeu{chunkWidth}`))
 			if chunkSnippet:match("^if bit > 0") then

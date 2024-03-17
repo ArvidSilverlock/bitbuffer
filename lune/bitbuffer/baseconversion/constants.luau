@@ -1,4 +1,4 @@
-local NUMBER_TO_BASE64 = buffer.fromstring("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+local NUMBER_TO_BASE64 = buffer_fromstring("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
 local BASE64_TO_NUMBER = {}
 
 local CHARACTER_TO_BINARY = {}
@@ -26,7 +26,7 @@ for index = 0, 255 do
 end
 
 for index = 0, 63 do
-	BASE64_TO_NUMBER[buffer.readu8(NUMBER_TO_BASE64, index)] = index
+	BASE64_TO_NUMBER[readu8(NUMBER_TO_BASE64, index)] = index
 end
 
 local function baseLookupGenerator(default: { [string]: string })

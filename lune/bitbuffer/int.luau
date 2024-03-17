@@ -1,15 +1,15 @@
 local Snippet = require("../Snippet.luau")
 
 local BUILT_IN_READ = {
-	[8] = "buffer.readi8",
-	[16] = "buffer.readi16",
-	[32] = "buffer.readi32",
+	[8] = "readi8",
+	[16] = "readi16",
+	[32] = "readi32",
 }
 
 local BUILT_IN_WRITE = {
-	[8] = "buffer.writei8",
-	[16] = "buffer.writei16",
-	[32] = "buffer.writei32",
+	[8] = "writei8",
+	[16] = "writei16",
+	[32] = "writei32",
 }
 
 local function generateRead(luau, typescript)
