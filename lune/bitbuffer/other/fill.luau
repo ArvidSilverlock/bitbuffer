@@ -4,10 +4,10 @@
 	If `count` is ‘nil’ or is omitted, all bytes from the specified offset until the end of the buffer are set.
 ]=]
 function bitbuffer.fill(b: buffer, byte: number, bit: number, value: number, count: number?)
-	local count: number = count or (buffer.len(b) - byte) * 8 - bit
+	local count: number = count or (buffer_len(b) - byte) * 8 - bit
 
 	if bit == 0 and count % 8 == 0 then
-		buffer.fill(b, byte, value, count // 8)
+		buffer_fill(b, byte, value, count // 8)
 	elseif count <= 8 then
 		bitbuffer.writeu[count](b, byte, bit, value)
 	elseif count <= 53 and (value == 0 or value == 255) then
@@ -27,7 +27,7 @@ function bitbuffer.fill(b: buffer, byte: number, bit: number, value: number, cou
 
 		local midWidthBytes = (count - preWidth) // 8
 		if midWidthBytes > 0 then
-			buffer.fill(b, byte, mid, midWidthBytes)
+			buffer_fill(b, byte, mid, midWidthBytes)
 			byte += midWidthBytes
 		end
 

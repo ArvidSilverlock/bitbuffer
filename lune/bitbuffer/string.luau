@@ -7,9 +7,9 @@ local READ_STRING = [[--[=[
 ]=]
 function bitbuffer.writestring(b: buffer, byte: number, bit: number, value: string, count: number?)
 	if bit == 0 then
-		buffer.writestring(b, byte, value, count)
+		buffer_writestring(b, byte, value, count)
 	else
-		local input = buffer.fromstring(value)
+		local input = buffer_fromstring(value)
 		bitbuffer.copy(b, byte, bit, input, 0, 0, ( count or #value ) * 8)
 	end
 end]]
@@ -17,11 +17,11 @@ end]]
 local WRITE_STRING = [[--- Used to read a string of length ‘count’ from the buffer at specified offset.
 function bitbuffer.readstring(b: buffer, byte: number, bit: number, count: number): string
 	if bit == 0 then
-		return buffer.readstring(b, byte, count)
+		return buffer_readstring(b, byte, count)
 	else
-		local output = buffer.create(count)
+		local output = buffer_create(count)
 		bitbuffer.copy(output, 0, 0, b, byte, bit, count * 8)
-		return buffer.tostring(output)
+		return buffer_tostring(output)
 	end
 end]]
 

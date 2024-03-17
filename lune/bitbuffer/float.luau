@@ -33,7 +33,7 @@ local function generateRead(luau, typescript)
 		if width == 32 or width == 64 then
 			-- stylua: ignore
 			luau:Push("if bit == 0 then", 1,
-					`return buffer.readf{width}(b, byte)`,
+					`return buffer_readf{width}(b, byte)`,
 				-1, "end",
 				""
 			)
@@ -132,7 +132,7 @@ local function generateWrite(luau, typescript)
 			-- stylua: ignore
 			luau:Push(
 				"if bit == 0 then", 1,
-					`buffer.writef{width}(b, byte, value)`,
+					`writef{width}(b, byte, value)`,
 					"return",
 				-1, "end",
 				""

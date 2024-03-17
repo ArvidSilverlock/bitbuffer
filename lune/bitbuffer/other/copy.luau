@@ -16,12 +16,12 @@ function bitbuffer.copy(
 	sourceBit: number?,
 	count: number?
 )
-	local count = count or (buffer.len(source) - targetByte) * 8 - targetBit
+	local count = count or (buffer_len(source) - targetByte) * 8 - targetBit
 	local sourceByte = sourceByte or 0
 	local sourceBit = sourceBit or 0
 
 	if targetBit == 0 and sourceBit == 0 and count % 8 == 0 then
-		buffer.copy(target, targetByte, source, sourceByte, count // 8)
+		buffer_copy(target, targetByte, source, sourceByte, count // 8)
 	elseif count <= 53 then
 		local value = bitbuffer.readu[count](source, sourceByte, sourceBit)
 		bitbuffer.writeu[count](target, targetByte, targetBit, value)
@@ -34,7 +34,7 @@ function bitbuffer.copy(
 
 		local midWidthBytes = (count - preWidth) // 8
 		if midWidthBytes > 0 then
-			buffer.copy(target, targetByte + 1, source, sourceByte + 1, midWidthBytes)
+			buffer_copy(target, targetByte + 1, source, sourceByte + 1, midWidthBytes)
 		end
 
 		if postWidth > 0 then
@@ -61,11 +61,11 @@ function bitbuffer.copy(
 		targetByte += 1
 
 		for _ = 1, chunkCount do
-			local value = bit32_extract(buffer.readu32(source, sourceByte), sourceBit, 24)
-				+ bit32_extract(buffer.readu32(source, sourceByte + 3), sourceBit, 24) * 0x1000000
+			local value = bit32_extract(readu32(source, sourceByte), sourceBit, 24)
+				+ bit32_extract(readu32(source, sourceByte + 3), sourceBit, 24) * 0x1000000
 
-			buffer.writeu32(target, targetByte, value)
-			buffer.writeu16(target, targetByte + 4, value // 0x100000000)
+			writeu32(target, targetByte, value)
+			writeu16(target, targetByte + 4, value // 0x100000000)
 
 			sourceByte += 6
 			targetByte += 6
