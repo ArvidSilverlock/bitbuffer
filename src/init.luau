@@ -21,11 +21,14 @@ local writeu8 = buffer.writeu8
 local writeu16 = buffer.writeu16
 local writeu32 = buffer.writeu32
 
+local readf32 = buffer.readf32
+local readf64 = buffer.readf64
+
 local writef32 = buffer.writef32
 local writef64 = buffer.writef64
 
-local buffer_create, buffer_fromstring, buffer_copy, buffer_fill, buffer_len, buffer_readstring, buffer_writestring, buffer_tostring, buffer_readf32, buffer_readf64 =
-	buffer.create, buffer.fromstring, buffer.copy, buffer.fill, buffer.len, buffer.readstring, buffer.writestring, buffer.tostring, buffer.readf32, buffer.readf64
+local buffer_create, buffer_fromstring, buffer_copy, buffer_fill, buffer_len, buffer_readstring, buffer_writestring, buffer_tostring =
+	buffer.create, buffer.fromstring, buffer.copy, buffer.fill, buffer.len, buffer.readstring, buffer.writestring, buffer.tostring
 
 local function readu24(b: buffer, offset: number)
 	return readu8(b, offset) + readu16(b, offset + 1) * 0x100
@@ -2682,7 +2685,7 @@ do -- main
 				end
 
 				local mantissa, exponent, sign = 0, 0, 0
-				if math.abs(value) >= math.huge then
+				if math.abs(value) == math.huge then
 					exponent, sign = 0b11111111111, if value < 0 then 0x8000 else 0
 				elseif value ~= value then
 					mantissa, exponent, sign = 1, 0b11111111111, 0x8000
@@ -2741,7 +2744,7 @@ do -- main
 			--- Reads a single-precision IEEE 754 number
 			function bitbuffer.readf32(b: buffer, byte: number, bit: number): number
 				if bit == 0 then
-					return buffer_readf32(b, byte)
+					return readf32(b, byte)
 				end
 
 				local uintForm = bit32_extract(readu32(b, byte), bit, 24)
@@ -2770,7 +2773,7 @@ do -- main
 			--- Reads a double-precision IEEE 754 number
 			function bitbuffer.readf64(b: buffer, byte: number, bit: number): number
 				if bit == 0 then
-					return buffer_readf64(b, byte)
+					return readf64(b, byte)
 				end
 
 				local firstHalf = bit32_extract(readu32(b, byte), bit, 24)
@@ -2782,9 +2785,8 @@ do -- main
 				local exponent = secondHalf // 0x10 % 0x800
 
 				if exponent == 0b11111111111 and mantissa == 0b00000000000 then
-					local sign = secondHalf // 0x8000 == 1
-					return if sign then -math.huge else math.huge
-				elseif exponent == 0b00000000000 and mantissa == 0b0000000000000000000000000000000000000000000000000001 then
+					return if secondHalf // 0x8000 == 1 then -math.huge else math.huge
+				elseif exponent == 0b11111111111 and mantissa == 0b0000000000000000000000000000000000000000000000000001 then
 					return 0 / 0
 				elseif exponent == 0b00000000000 and mantissa == 0b00000000000 then
 					return 0
@@ -3214,21 +3216,6 @@ do -- editors
 		local Offset = {}
 		Offset.__index = Offset
 
-		function bitbuffer.offset(byte: number?, bit: number?)
-			local self = {}
-			self.__index = self
-
-			if byte and bit then
-				self.byte, self.bit = byte, bit
-			elseif byte then
-				self.byte, self.bit = byte // 8, byte % 8
-			else
-				self.byte, self.bit = 0, 0
-			end
-
-			return setmetatable(self, Offset)
-		end
-
 		function Offset:SetOffset(byte: number, bit: number?)
 			if bit then
 				self.byte = byte
@@ -3258,10 +3245,25 @@ do -- editors
 		end
 
 		function Offset:Align()
-			if self._bit > 0 then
-				self._byte += 1
-				self._bit = 0
+			if self.bit > 0 then
+				self.byte += 1
+				self.bit = 0
 			end
+		end
+
+		function bitbuffer.offset(byte: number?, bit: number?)
+			local self = {}
+			self.__index = self
+
+			if byte and bit then
+				self.byte, self.bit = byte, bit
+			elseif byte then
+				self.byte, self.bit = byte // 8, byte % 8
+			else
+				self.byte, self.bit = 0, 0
+			end
+
+			return setmetatable(self, Offset)
 		end
 	end
 
@@ -3296,14 +3298,42 @@ do -- editors
 		} else nil
 
 		do -- writer
-			local Writer = bitbuffer.offset()
+			local Writer = {}
+			Writer.__index = Writer
 
-			function bitbuffer.writer(b: buffer)
-				return setmetatable({
-					buffer = b,
-					byte = 0,
-					bit = 0,
-				}, Writer)
+			function Writer:SetOffset(byte: number, bit: number?)
+				if bit then
+					self.byte = byte
+					self.bit = bit
+				else
+					self.byte = byte // 8
+					self.bit = byte % 8
+				end
+			end
+
+			function Writer:IncrementOffset(byte: number, bit: number?)
+				if bit == nil then
+					byte, bit = byte // 8, byte % 8
+				end
+
+				if bit == 0 then
+					self.byte += byte
+				else
+					self.bit += bit
+					if self.bit >= 8 then
+						self.byte += byte + self.bit // 8
+						self.bit %= 8
+					else
+						self.byte += byte
+					end
+				end
+			end
+
+			function Writer:Align()
+				if self.bit > 0 then
+					self.byte += 1
+					self.bit = 0
+				end
 			end
 
 			function Writer:UInt1(value: number)
@@ -4513,21 +4543,52 @@ do -- editors
 				self.byte += 12
 			end
 
-		end
-
-		do -- reader
-			local Reader = bitbuffer.offset()
-
-			function bitbuffer.reader(b: buffer)
+			function bitbuffer.writer(b: buffer)
 				return setmetatable({
 					buffer = b,
 					byte = 0,
-					bit = 0
-				}, Reader)
+					bit = 0,
+				}, Writer)
+			end
+		end
+
+		do -- reader
+			local Reader = {}
+			Reader.__index = Reader
+
+			function Reader:SetOffset(byte: number, bit: number?)
+				if bit then
+					self.byte = byte
+					self.bit = bit
+				else
+					self.byte = byte // 8
+					self.bit = byte % 8
+				end
 			end
 
-			function Reader:__index(index)
-				return Reader[index] or bitbuffer.offset[index]
+			function Reader:IncrementOffset(byte: number, bit: number?)
+				if bit == nil then
+					byte, bit = byte // 8, byte % 8
+				end
+
+				if bit == 0 then
+					self.byte += byte
+				else
+					self.bit += bit
+					if self.bit >= 8 then
+						self.byte += byte + self.bit // 8
+						self.bit %= 8
+					else
+						self.byte += byte
+					end
+				end
+			end
+
+			function Reader:Align()
+				if self.bit > 0 then
+					self.byte += 1
+					self.bit = 0
+				end
 			end
 
 			function Reader:UInt1(): number
@@ -5882,6 +5943,13 @@ do -- editors
 				return Vector3.new(x, y, z)
 			end
 
+			function bitbuffer.reader(b: buffer)
+				return setmetatable({
+					buffer = b,
+					byte = 0,
+					bit = 0
+				}, Reader)
+			end
 		end
 	end
 end
