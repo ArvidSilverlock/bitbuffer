@@ -18,7 +18,7 @@ local function generateRead(luau, typescript)
 		local exponentMax = string.rep("1", exponentWidth)
 		local exponentMin = string.rep("0", exponentWidth)
 		local mantissaMin = string.rep("0", exponentWidth)
-		local mantissaOne = string.rep(0, mantissaWidth - 1) .. "1"
+		local mantissaOne = string.rep("0", mantissaWidth - 1) .. "1"
 
 		local exponentBias = 2 ^ (exponentWidth - 1) - 2
 
@@ -33,7 +33,7 @@ local function generateRead(luau, typescript)
 		if width == 32 or width == 64 then
 			-- stylua: ignore
 			luau:Push("if bit == 0 then", 1,
-					`return buffer_readf{width}(b, byte)`,
+					`return readf{width}(b, byte)`,
 				-1, "end",
 				""
 			)
@@ -43,7 +43,7 @@ local function generateRead(luau, typescript)
 			local readFirst = tostring(Snippet.get("unalignedreadu48"))
 			local readSecond = tostring(Snippet.get("unalignedreadu16")):gsub("byte", "byte + 6")
 
-			local sign = `local sign = secondHalf // {tohex(2 ^ 15)} == 1`
+			local sign = `secondHalf // {tohex(2 ^ 15)} == 1`
 
 			-- stylua: ignore
 			luau:Push(
@@ -55,14 +55,13 @@ local function generateRead(luau, typescript)
 				`local exponent = secondHalf // {tohex(2 ^ 4)} % {tohex(2 ^ 11)}`,
 				"",
 				`if exponent == 0b{exponentMax} and mantissa == 0b{mantissaMin} then`, 1,
-					sign,
-					"return if sign then -math.huge else math.huge",
-				-1, `elseif exponent == 0b{exponentMin} and mantissa == 0b{mantissaOne} then`, 1,
+					`return if {sign} then -math.huge else math.huge`,
+				-1, `elseif exponent == 0b{exponentMax} and mantissa == 0b{mantissaOne} then`, 1,
 					"return 0 / 0",
 				-1, `elseif exponent == 0b{exponentMin} and mantissa == 0b{mantissaMin} then`, 1,
 					"return 0",
 				-1, "else", 1,
-					sign
+					`local sign = {sign}`
 			)
 		else
 			local readCallName = if width == 32 then `unalignedreadu{width}` else `readu{width}`
@@ -118,7 +117,6 @@ local function generateWrite(luau, typescript)
 
 		-- float64s write the first 48 bits and the last 16 bits separately, the sign is in the last 16 bits, so it needs to be `2^15`.
 		local signValue = if width == 64 then tohex(2 ^ 15) else tohex(2 ^ (width - 1))
-
 		local comment = `Writes a {floatData.name}`
 
 		-- stylua: ignore
@@ -147,12 +145,12 @@ local function generateWrite(luau, typescript)
 			local maxValue = (2 - 2 ^ -mantissaWidth) * 2 ^ (exponentBias + 1)
 			luau:Push(`if math.abs(value) > {maxValue} then`, 1)
 		else
-			luau:Push("if math.abs(value) >= math.huge then", 1)
+			luau:Push("if math.abs(value) == math.huge then", 1)
 		end
 
 		-- stylua: ignore
 		luau:Push(
-			`exponent, sign = {exponentMax}, if value < 0 then {signValue} else 0`,
+				`exponent, sign = {exponentMax}, if value < 0 then {signValue} else 0`,
 			-1, "elseif value ~= value then", 1,
 				`mantissa, exponent, sign = 1, {exponentMax}, {signValue}`,
 			-1, "elseif value ~= 0 then", 1,
