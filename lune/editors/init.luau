@@ -30,7 +30,7 @@ local CFRAME_SPECIAL_CASES = if CFrame then {
 
 local reader = require("./reader.luau")
 local writer = require("./writer.luau")
-local offset = require("./offset/init.luau")
+local offset = require("./offset.luau")
 
 return function(luau, typescript)
 	-- stylua: ignore

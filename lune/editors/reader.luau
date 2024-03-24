@@ -1,3 +1,5 @@
+local fs = require("@lune/fs")
+
 local pushIncrementOffset = require("./pushIncrementOffset")
 local VALUE_DATA = require("./values.luau")
 
@@ -7,10 +9,6 @@ local READER_CONSTRUCTOR = [[function bitbuffer.reader(b: buffer)
 		byte = 0,
 		bit = 0
 	}, Reader)
-end
-
-function Reader:__index(index)
-	return Reader[index] or bitbuffer.offset[index]
 end]]
 
 local READ_CALLBACKS = {
@@ -81,6 +79,10 @@ end
 return ColorSequence.new(keypoints)]],
 	},
 }
+
+local function getFile(fileName: string)
+	return (fs.readFile(`lune/editors/{fileName}.luau`):gsub("\n$", ""))
+end
 
 local function generateType(readType: "UInt" | "Int" | "Float")
 	local prefix = readType:sub(1, 1):lower()
@@ -163,9 +165,7 @@ return function(luau, typescript)
 		:Break()
 
 	-- stylua: ignore
-	luau:Push("local Reader = bitbuffer.offset()")
-		:Break()
-		:Push(READER_CONSTRUCTOR)
+	luau:Push((getFile("offsetHandler"):gsub("CLASS", "Reader")))
 		:Break()
 
 	for width = 1, 53 do
@@ -196,7 +196,7 @@ return function(luau, typescript)
 			:Break()
 	end
 
-	luau:Call(insertSimpleValues, typescript)
+	luau:Call(insertSimpleValues, typescript):Push(READER_CONSTRUCTOR)
 
 	typescript:Push(-1, "}"):Break()
 end

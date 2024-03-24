@@ -1,4 +1,4 @@
-local Snippet = require("../Snippet.luau")
+local fs = require("@lune/fs")
 
 local pushIncrementOffset = require("./pushIncrementOffset")
 local VALUE_DATA = require("./values.luau")
@@ -66,6 +66,10 @@ end]],
 	},
 }
 
+local function getFile(fileName: string)
+	return (fs.readFile(`lune/editors/{fileName}.luau`):gsub("\n$", ""))
+end
+
 local function generateType(writeType: "UInt" | "Int" | "Float")
 	local prefix = writeType:sub(1, 1):lower()
 	return function(luau, typescript, width: number): string
@@ -132,9 +136,7 @@ return function(luau, typescript)
 		:Break()
 
 	-- stylua: ignore
-	luau:Push("local Writer = bitbuffer.offset()")
-		:Break()
-		:Push(WRITER_CONSTRUCTOR)
+	luau:Push((getFile("offsetHandler"):gsub("CLASS", "Writer")))
 		:Break()
 
 	for width = 1, 53 do
@@ -165,7 +167,7 @@ return function(luau, typescript)
 			:Break()
 	end
 
-	luau:Call(insertSimpleValues, typescript)
+	luau:Call(insertSimpleValues, typescript):Push(WRITER_CONSTRUCTOR)
 
 	typescript:Push(-1, "}"):Break()
 end
