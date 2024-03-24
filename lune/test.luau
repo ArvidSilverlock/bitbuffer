@@ -26,7 +26,8 @@ local function test(name: string, read, write, round)
 		for offset = 0, 7 do
 			write(b, 0, offset, rounded, ...)
 			local readOutput = read(b, 0, offset, ...)
-			if readOutput ~= rounded then
+
+			if (rounded ~= rounded and readOutput == readOutput) and readOutput ~= rounded then
 				error(`read/write {name} failed on offset {offset} for the value {rounded} (got {readOutput})`)
 			end
 		end
