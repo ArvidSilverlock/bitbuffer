@@ -35,11 +35,14 @@ local writeu8 = buffer.writeu8
 local writeu16 = buffer.writeu16
 local writeu32 = buffer.writeu32
 
+local readf32 = buffer.readf32
+local readf64 = buffer.readf64
+
 local writef32 = buffer.writef32
 local writef64 = buffer.writef64
 
-local buffer_create, buffer_fromstring, buffer_copy, buffer_fill, buffer_len, buffer_readstring, buffer_writestring, buffer_tostring, buffer_readf32, buffer_readf64 =
-	buffer.create, buffer.fromstring, buffer.copy, buffer.fill, buffer.len, buffer.readstring, buffer.writestring, buffer.tostring, buffer.readf32, buffer.readf64
+local buffer_create, buffer_fromstring, buffer_copy, buffer_fill, buffer_len, buffer_readstring, buffer_writestring, buffer_tostring =
+	buffer.create, buffer.fromstring, buffer.copy, buffer.fill, buffer.len, buffer.readstring, buffer.writestring, buffer.tostring
 
 local function readu24(b: buffer, offset: number)
 	return readu8(b, offset) + readu16(b, offset + 1) * 0x100
